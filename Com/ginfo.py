@@ -1,55 +1,59 @@
-# Com/ginfo.py
-from telethon import events, functions, types
+from telethon import events
+from telethon.tl.functions.messages import GetHistoryRequest
+from telethon.tl.types import Channel, Chat
 
-__HELP__ = "!ginfo → Shows group/channel info including name, ID, members, total messages, description, and profile picture"
+__HELP__ = "!ginfo → Shows detailed info about the current group or channel"
 
 
 def setup(client, my_id):
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!ginfo$"))
-    async def ginfo(event):
+    async def group_info(event):
         try:
-            # Fetch chat info
             chat = await event.get_chat()
-            chat_id = chat.id
-            title = getattr(chat, "title", "N/A")
-            username = f"@{chat.username}" if getattr(chat, "username",
-                                                      None) else "N/A"
+            chat_id = chat.id  # keeps -100 prefix
+            name = getattr(chat, "title", getattr(chat, "first_name",
+                                                  "Unknown"))
+            username = getattr(chat, "username", None)
+            invite_link = f"https://t.me/{username}" if username else "N/A"
+            description = getattr(chat, "about", None) or getattr(
+                chat, "description", None) or "No description"
 
-            # Fetch full channel info
-            if isinstance(chat, types.Channel) or isinstance(chat, types.Chat):
-                full = await client(
-                    functions.channels.GetFullChannelRequest(channel=chat))
-                description = getattr(full.full_chat, "about", "N/A")
-                total_members = getattr(full.full_chat, "participants_count",
-                                        "N/A")
-            else:
-                description = "N/A"
-                total_members = "N/A"
-
-            # Count total text messages
-            messages = await client.get_messages(chat_id, limit=None)
-            total_msgs = sum(1 for msg in messages if msg.text)
-
-            # Send initial message
-            msg_text = (f"📌 Name: {title}\n"
-                        f"🆔 ID: {chat_id}\n"
-                        f"💬 Username: {username}\n"
-                        f"👥 Members: {total_members}\n"
-                        f"✉️ Total text messages: {total_msgs}\n"
-                        f"📝 Description: {description}")
-            info_msg = await event.reply(msg_text)
-
-            # Send main profile picture
+            # Get member count
             try:
-                photos = await client.get_profile_photos(chat)
-                if photos.total > 0:
-                    await client.send_file(event.chat_id,
-                                           photos[0],
-                                           reply_to=info_msg.id)
-            except Exception:
-                # Ignore if no photo
-                pass
+                if isinstance(chat, (Channel, Chat)):
+                    member_count = getattr(chat, "participants_count", None)
+                    if member_count is None:
+                        members = await client.get_participants(chat)
+                        member_count = len(members)
+                else:
+                    member_count = "N/A"
+            except:
+                member_count = "N/A"
 
+            # Total messages
+            try:
+                history = await client(
+                    GetHistoryRequest(peer=chat,
+                                      limit=0,
+                                      offset_date=None,
+                                      offset_id=0,
+                                      max_id=0,
+                                      min_id=0,
+                                      add_offset=0,
+                                      hash=0))
+                total_messages = history.count
+            except:
+                total_messages = "N/A"
+
+            info_text = (f"📌 Group Info:\n"
+                         f"Name: {name}\n"
+                         f"ID: {chat_id}\n"
+                         f"Link: {invite_link}\n"
+                         f"Description: {description}\n"
+                         f"Members: {member_count}\n"
+                         f"Total Messages: {total_messages}\n")
+
+            await event.edit(info_text)
         except Exception as e:
-            await event.reply(f"❌ Failed to fetch group info: {str(e)}")
+            await event.edit(f"❌ Failed to fetch info: {str(e)}")
