@@ -1,0 +1,136 @@
+{
+  "timestamp": "2026-07-14 18:26:01",
+  "cpu": {
+    "cores": 2,
+    "threads": 2,
+    "freq": 2300.0,
+    "per_core_usage": [
+      12.7,
+      13.8
+    ]
+  },
+  "memory": {
+    "total": 8353161216,
+    "used": 1063489536,
+    "percent": 28.7,
+    "swap_total": 0,
+    "swap_used": 0,
+    "swap_percent": 0.0
+  },
+  "disks": [
+    {
+      "device": "/dev/vdc",
+      "mount": "/mnt/4d5157a2-0e4f-4e24-bdd3-e33a7a4d01d9",
+      "used": 6131712,
+      "total": 34359738368,
+      "percent": 0.0
+    },
+    {
+      "device": "/dev/vdc",
+      "mount": "/mnt/scratch",
+      "used": 6131712,
+      "total": 34359738368,
+      "percent": 0.0
+    },
+    {
+      "device": "/dev/pmem7",
+      "mount": "/mnt/pid2",
+      "used": 256983040,
+      "total": 256983040,
+      "percent": 100.0
+    },
+    {
+      "device": "/dev/pmem6",
+      "mount": "/mnt/1475dc8d-4f7d-4b7b-9236-d516ba92b1fc",
+      "used": 244879360,
+      "total": 244879360,
+      "percent": 100.0
+    },
+    {
+      "device": "/dev/pmem5",
+      "mount": "/mnt/a324c431-f17a-4873-9f52-4f0a812da386",
+      "used": 4555882496,
+      "total": 4555882496,
+      "percent": 100.0
+    },
+    {
+      "device": "/dev/vdb",
+      "mount": "/mnt/nixmodules",
+      "used": 22270705664,
+      "total": 22270705664,
+      "percent": 100.0
+    },
+    {
+      "device": "/dev/vda",
+      "mount": "/mnt/snix",
+      "used": 1763779883008,
+      "total": 1901254856704,
+      "percent": 92.8
+    },
+    {
+      "device": "/dev/vda",
+      "mount": "/mnt/cacache/nix",
+      "used": 1763779883008,
+      "total": 1901254856704,
+      "percent": 92.8
+    },
+    {
+      "device": "/dev/vdc",
+      "mount": "/tmp",
+      "used": 6131712,
+      "total": 34359738368,
+      "percent": 0.0
+    },
+    {
+      "device": "/dev/vdc",
+      "mount": "/repl",
+      "used": 6131712,
+      "total": 34359738368,
+      "percent": 0.0
+    },
+    {
+      "device": "/dev/vdd",
+      "mount": "/mnt/c388215c-2ef2-4067-9909-a1cd61a3a23d",
+      "used": 909615104,
+      "total": 274877906944,
+      "percent": 0.3
+    },
+    {
+      "device": "/dev/vdd",
+      "mount": "/home/runner/workspace",
+      "used": 909615104,
+      "total": 274877906944,
+      "percent": 0.3
+    },
+    {
+      "device": "/dev/vdd",
+      "mount": "/mnt/nix",
+      "used": 909615104,
+      "total": 274877906944,
+      "percent": 0.3
+    },
+    {
+      "device": "/dev/vdd",
+      "mount": "/var/lib/docker",
+      "used": 909615104,
+      "total": 274877906944,
+      "percent": 0.3
+    },
+    {
+      "device": "/dev/vdd",
+      "mount": "/nix/var",
+      "used": 909615104,
+      "total": 274877906944,
+      "percent": 0.3
+    }
+  ],
+  "network": {
+    "sent": 1562874,
+    "recv": 1187069,
+    "connections": 46
+  },
+  "uptime": "0d 0h 8m (since 2026-07-14 18:17:51 IRST)",
+  "platform": "Linux 6.18.34 (x86_64)",
+  "python": "3.8.18",
+  "gpus": []
+}

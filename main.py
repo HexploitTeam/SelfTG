@@ -63,7 +63,7 @@ async def main():
     # Now that client is started, load commands
     load_commands()
     print(
-        "📌 Bot is ready. Send commands from your account (e.g., !ping, !info, !help, !log)."
+        "📌 Bot is ready."
     )
 
     # Keep running

@@ -3,7 +3,7 @@ from telethon import events
 from googletrans import Translator
 
 __HELP__ = "!translate <lang_code> <text> → Translate text to the specified language (e.g., !translate en سلام)"
-
+__CATEGORY__ = "Utilities"
 
 def setup(client, my_id):
     translator = Translator()

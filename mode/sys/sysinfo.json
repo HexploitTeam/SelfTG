@@ -1,0 +1,214 @@
+{
+  "CPU": {
+    "cores": 4,
+    "threads": 8,
+    "usage_percent": 61.6,
+    "frequency": "3050.00 MHz",
+    "model": ""
+  },
+  "Memory": {
+    "total": "62.81GB",
+    "used": "26.97GB",
+    "available": "35.06GB",
+    "percent": 44.2
+  },
+  "Disks": [
+    {
+      "device": "/dev/disk/by-label/nixos",
+      "mountpoint": "/nix",
+      "fstype": "ext4",
+      "total": "32.00GB",
+      "used": "3.97MB",
+      "free": "31.48GB",
+      "percent": 0.0
+    },
+    {
+      "device": "/dev/nbd95",
+      "mountpoint": "/repl",
+      "fstype": "btrfs",
+      "total": "32.00GB",
+      "used": "3.97MB",
+      "free": "31.48GB",
+      "percent": 0.0
+    },
+    {
+      "device": "/dev/disk/by-label/nixos",
+      "mountpoint": "/pid2",
+      "fstype": "ext4",
+      "total": "49.12GB",
+      "used": "37.38GB",
+      "free": "9.67GB",
+      "percent": 79.5
+    },
+    {
+      "device": "/dev/disk/by-label/nixos",
+      "mountpoint": "/etc/nix",
+      "fstype": "ext4",
+      "total": "49.12GB",
+      "used": "37.38GB",
+      "free": "9.67GB",
+      "percent": 79.5
+    },
+    {
+      "device": "/dev/nbd95",
+      "mountpoint": "/mnt/scratch",
+      "fstype": "btrfs",
+      "total": "32.00GB",
+      "used": "3.97MB",
+      "free": "31.48GB",
+      "percent": 0.0
+    },
+    {
+      "device": "/dev/disk/by-id/google-nixmodules-b023e33-us-west1-b",
+      "mountpoint": "/mnt/nixmodules",
+      "fstype": "squashfs",
+      "total": "14.40GB",
+      "used": "14.40GB",
+      "free": "0.00B",
+      "percent": 100.0
+    },
+    {
+      "device": "/dev/disk/by-label/nixos",
+      "mountpoint": "/etc/zoneinfo",
+      "fstype": "ext4",
+      "total": "49.12GB",
+      "used": "37.38GB",
+      "free": "9.67GB",
+      "percent": 79.5
+    },
+    {
+      "device": "/dev/disk/by-id/google-nixmodules-b023e33-us-west1-b",
+      "mountpoint": "/etc/nixmodules",
+      "fstype": "squashfs",
+      "total": "14.40GB",
+      "used": "14.40GB",
+      "free": "0.00B",
+      "percent": 100.0
+    },
+    {
+      "device": "/dev/disk/by-label/nixos",
+      "mountpoint": "/etc/replit",
+      "fstype": "ext4",
+      "total": "49.12GB",
+      "used": "37.38GB",
+      "free": "9.67GB",
+      "percent": 79.5
+    },
+    {
+      "device": "/dev/disk/by-label/nixos",
+      "mountpoint": "/etc/localtime",
+      "fstype": "ext4",
+      "total": "49.12GB",
+      "used": "37.38GB",
+      "free": "9.67GB",
+      "percent": 79.5
+    },
+    {
+      "device": "/dev/disk/by-label/nixos",
+      "mountpoint": "/etc/.gitignore",
+      "fstype": "ext4",
+      "total": "49.12GB",
+      "used": "37.38GB",
+      "free": "9.67GB",
+      "percent": 79.5
+    },
+    {
+      "device": "/dev/disk/by-label/nixos",
+      "mountpoint": "/etc/resolv.conf",
+      "fstype": "ext4",
+      "total": "49.12GB",
+      "used": "37.38GB",
+      "free": "9.67GB",
+      "percent": 79.5
+    },
+    {
+      "device": "/dev/disk/by-label/nixos",
+      "mountpoint": "/etc/hostname",
+      "fstype": "ext4",
+      "total": "49.12GB",
+      "used": "37.38GB",
+      "free": "9.67GB",
+      "percent": 79.5
+    },
+    {
+      "device": "/dev/disk/by-label/nixos",
+      "mountpoint": "/etc/hosts",
+      "fstype": "ext4",
+      "total": "49.12GB",
+      "used": "37.38GB",
+      "free": "9.67GB",
+      "percent": 79.5
+    },
+    {
+      "device": "/dev/nbd95",
+      "mountpoint": "/tmp",
+      "fstype": "btrfs",
+      "total": "32.00GB",
+      "used": "3.97MB",
+      "free": "31.48GB",
+      "percent": 0.0
+    },
+    {
+      "device": "/dev/nbd95",
+      "mountpoint": "/run",
+      "fstype": "btrfs",
+      "total": "32.00GB",
+      "used": "3.97MB",
+      "free": "31.48GB",
+      "percent": 0.0
+    },
+    {
+      "device": "/dev/nbd95",
+      "mountpoint": "/run/replit/socks",
+      "fstype": "btrfs",
+      "total": "32.00GB",
+      "used": "3.97MB",
+      "free": "31.48GB",
+      "percent": 0.0
+    },
+    {
+      "device": "/dev/nbd36",
+      "mountpoint": "/home/runner/workspace",
+      "fstype": "btrfs",
+      "total": "256.00GB",
+      "used": "891.71MB",
+      "free": "255.13GB",
+      "percent": 0.3
+    },
+    {
+      "device": "/dev/nbd36",
+      "mountpoint": "/mnt/nix",
+      "fstype": "btrfs",
+      "total": "256.00GB",
+      "used": "891.71MB",
+      "free": "255.13GB",
+      "percent": 0.3
+    },
+    {
+      "device": "/dev/nbd36",
+      "mountpoint": "/nix/var",
+      "fstype": "btrfs",
+      "total": "256.00GB",
+      "used": "891.71MB",
+      "free": "255.13GB",
+      "percent": 0.3
+    }
+  ],
+  "Disk IO": {
+    "read": "142.93GB",
+    "write": "233.10GB"
+  },
+  "Network": {
+    "sent": "22.81MB",
+    "recv": "24.00MB",
+    "connections": 12
+  },
+  "GPU": [],
+  "Temperatures": {},
+  "Battery": {},
+  "Uptime": {
+    "boot_time": "2025-09-12 12:21:59",
+    "uptime": "22:27:14",
+    "kernel": "6.2.16"
+  }
+}

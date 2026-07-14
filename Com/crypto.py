@@ -3,7 +3,7 @@ import aiohttp
 from telethon import events
 
 __HELP__ = "!crypto <coin> → Show crypto price and 24h changes"
-
+__CATEGORY__ = "Utilities"
 
 def setup(client, my_id):
 

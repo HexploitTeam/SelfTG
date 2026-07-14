@@ -1,0 +1,6 @@
+Host: Telegram.org
+Scan ID: 1758550098065
+Date: 2025-09-22_14-16-53
+Open Ports:
+80
+443

@@ -2,6 +2,8 @@
 from telethon import events
 
 __HELP__ = "!info → Show your profile info in the chat\n!info (reply) → Show info of replied user"
+__CATEGORY__ = "Information"
+
 
 def setup(client, my_id):
 

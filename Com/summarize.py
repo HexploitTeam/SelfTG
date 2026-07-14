@@ -4,7 +4,7 @@ import aiohttp
 from telethon import events
 
 __HELP__ = "!summarize <text> → Summarize the given text using Google Gemini AI"
-
+__CATEGORY__ = "Utilities"
 
 def setup(client, my_id):
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")

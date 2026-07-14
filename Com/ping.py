@@ -2,7 +2,7 @@ from telethon import events
 import time
 
 __HELP__ = "!ping → Shows the bot's latency"
-
+__CATEGORY__ = "Setup"
 
 def setup(client, my_id):
 

@@ -6,6 +6,7 @@ import json
 __HELP__ = (
     "!countdown <number><s/m/h> <reason> → Start a countdown in this chat\n"
     "!countdown stop → Stop the countdown running in this chat")
+__CATEGORY__ = "Utilities"
 
 # -----------------------------
 # Ensure mods folder exists

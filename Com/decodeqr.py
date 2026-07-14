@@ -4,7 +4,7 @@ from telethon import events
 from io import BytesIO
 
 __HELP__ = "!decodeqr → Decode a QR code from a replied image using a free API"
-
+__CATEGORY__ = "Utilities"
 
 def setup(client, my_id):
 
@@ -24,7 +24,6 @@ def setup(client, my_id):
             await reply_msg.download_media(file=bio)
             bio.seek(0)
 
-            # Send image to free QR code API
             async with aiohttp.ClientSession() as session:
                 data = aiohttp.FormData()
                 data.add_field("file",

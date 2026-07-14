@@ -4,7 +4,7 @@ import qrcode
 from io import BytesIO
 
 __HELP__ = "!qr <text> → Generate a QR code from the given text"
-
+__CATEGORY__ = "Utilities"
 
 def setup(client, my_id):
 

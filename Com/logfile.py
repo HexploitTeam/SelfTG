@@ -1,8 +1,8 @@
 from telethon import events
 import os
 
-__HELP__ = "!logfile <Channel|PV|Group> <NumberID> → Sends the log file of the specified chat"
-
+__HELP__ = "!logfile <Channel|Group> <NumberID> → Sends the log file of the specified chat"
+__CATEGORY__ = "Information"
 LOG_FOLDER = "Logs"
 PV_FOLDER = os.path.join(LOG_FOLDER, "PV")
 GROUP_FOLDER = os.path.join(LOG_FOLDER, "Groups")
@@ -14,7 +14,7 @@ def setup(client, my_id):
     @client.on(
         events.NewMessage(
             from_users=my_id,
-            pattern=r"^!logfile\s+(Channel|PV|Group)\s+(-?\d+)$"))
+            pattern=r"^!logfile\s+(Channel|Group)\s+(-?\d+)$"))
     async def send_log_file(event):
         folder_map = {
             "PV": PV_FOLDER,
@@ -28,7 +28,7 @@ def setup(client, my_id):
 
         folder = folder_map.get(log_type)
         if not folder:
-            await event.edit("❌ Invalid type. Use Channel, PV, or Group.")
+            await event.edit("❌ Invalid type. Use Channel, or Group.")
             return
 
         # Ensure the folder exists
@@ -61,5 +61,5 @@ def setup(client, my_id):
         parts = event.text.split()
         if len(parts) != 3 or parts[1] not in ["Channel", "PV", "Group"]:
             await event.edit(
-                "❌ Wrong format. Correct usage: !logfile <Channel|PV|Group> <NumberID>"
+                "❌ Wrong format. Correct usage: !logfile <Channel|Group> <NumberID>"
             )
