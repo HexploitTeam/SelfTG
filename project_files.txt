@@ -1,0 +1,4435 @@
+1- ./Com/__init__.py
+
+
+
+---
+
+2- ./Com/blockuser.py
+
+# Com/blockuser.py
+from telethon import events
+from telethon import functions
+
+__HELP__ = "!block @username / reply → Block user\n!unblock @username / reply → Unblock user"
+__CATEGORY__ = "Utilities"
+
+
+def setup(client, my_id):
+
+    @client.on(
+        events.NewMessage(from_users=my_id, pattern=r"^!block(?:\s+(\S+))?"))
+    async def block_user(event):
+        try:
+            target = event.pattern_match.group(1)
+            # Determine target user
+            if event.is_reply:
+                reply_msg = await event.get_reply_message()
+                user = await reply_msg.get_sender()
+            elif target:
+                user = await client.get_entity(target)
+            else:
+                await event.edit(
+                    "❌ Reply to a user or provide @username to block.")
+                return
+
+            await client(functions.contacts.BlockRequest(id=user.id))
+            await event.edit(
+                f"✅ Blocked user: {getattr(user, 'first_name', 'Unknown')} (@{getattr(user, 'username', 'N/A')})"
+            )
+        except Exception as e:
+            await event.edit(f"❌ Error blocking user: {str(e)}")
+
+    @client.on(
+        events.NewMessage(from_users=my_id, pattern=r"^!unblock(?:\s+(\S+))?"))
+    async def unblock_user(event):
+        try:
+            target = event.pattern_match.group(1)
+            # Determine target user
+            if event.is_reply:
+                reply_msg = await event.get_reply_message()
+                user = await reply_msg.get_sender()
+            elif target:
+                user = await client.get_entity(target)
+            else:
+                await event.edit(
+                    "❌ Reply to a user or provide @username to unblock.")
+                return
+
+            await client(functions.contacts.UnblockRequest(id=user.id))
+            await event.edit(
+                f"✅ Unblocked user: {getattr(user, 'first_name', 'Unknown')} (@{getattr(user, 'username', 'N/A')})"
+            )
+        except Exception as e:
+            await event.edit(f"❌ Error unblocking user: {str(e)}")
+
+
+---
+
+3- ./Com/calc.py
+
+# Com/calc.py
+from telethon import events
+
+__HELP__ = "!calc <num1> <op> <num2> → Calculate (supports + - × /). Must be used as reply."
+__CATEGORY__ = "Utilities"
+
+def setup(client, my_id):
+
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!calc\s+(.+)$"))
+    async def calc_handler(event):
+        try:
+            if not event.is_reply:
+                await event.edit(
+                    "❌ Reply to a message and use !calc <num1> <op> <num2>")
+                return
+
+            expression = event.pattern_match.group(1).strip()
+            # Normalize × to *
+            expression = expression.replace("×", "*").replace("÷", "/")
+
+            # Only allow digits, operators, dots, and spaces
+            allowed = set("0123456789+-*/. ")
+            if not all(c in allowed for c in expression):
+                await event.edit("❌ Invalid expression")
+                return
+
+            # Evaluate safely
+            try:
+                result = eval(expression, {"__builtins__": {}})
+            except Exception:
+                await event.edit("❌ Calculation error")
+                return
+
+            # Delete command
+            await event.delete()
+
+            # Reply with result
+            reply_msg = await event.get_reply_message()
+            await client.send_message(event.chat_id,
+                                      f"{result}",
+                                      reply_to=reply_msg.id)
+
+        except Exception as e:
+            await event.edit(f"❌ Error: {str(e)}")
+
+
+---
+
+4- ./Com/cauto.py
+
+# Com/cauto.py
+from telethon import events
+from datetime import datetime
+import re
+import os
+import json
+
+__HELP__ = "!cauto ON/OFF → Auto solve math challenges in groups/DMs"
+
+# Store state
+AUTO_SOLVE = False
+LOG_FILE = "mods/cauto_log.json"
+os.makedirs("mods", exist_ok=True)
+
+# Ensure log file exists
+if not os.path.exists(LOG_FILE):
+    with open(LOG_FILE, "w", encoding="utf-8") as f:
+        json.dump([], f, indent=2)
+
+
+def setup(client, my_id):
+    global AUTO_SOLVE
+
+    # Toggle ON/OFF
+    @client.on(
+        events.NewMessage(from_users=my_id, pattern=r"^!cauto\s+(on|off)$"))
+    async def toggle_cauto(event):
+        global AUTO_SOLVE
+        state = event.pattern_match.group(1).lower()
+
+        if state == "on":
+            AUTO_SOLVE = True
+            await event.edit("✅ Auto Challenge Solver: ON")
+        else:
+            AUTO_SOLVE = False
+            await event.edit("❌ Auto Challenge Solver: OFF")
+
+    # Logging helper
+    async def log_challenge(chat_id, msg_id, challenge_type, equation, result):
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_entry = {
+            "chat_id": chat_id,
+            "message_id": msg_id,
+            "type": challenge_type,
+            "equation": equation,
+            "result": result,
+            "timestamp": now
+        }
+        try:
+            with open(LOG_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception:
+            data = []
+
+        data.append(log_entry)
+        with open(LOG_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+
+    # Auto-solver
+    @client.on(events.NewMessage())
+    async def auto_solver(event):
+        global AUTO_SOLVE
+        if not AUTO_SOLVE:
+            return
+
+        text = event.raw_text
+        if not text:
+            return
+
+        # --------------------------
+        # Old style: "چالش ریاضی"
+        # --------------------------
+        if "چالش ریاضی" in text and "=" in text:
+            match = re.search(r"([\d\s\+\-\×\*/÷]+)= ?", text)
+            if not match:
+                return
+
+            expression = match.group(1).strip()
+            expression = expression.replace("×", "*").replace("÷", "/")
+
+            try:
+                result = eval(expression, {"__builtins__": {}})
+                await client.send_message(event.chat_id,
+                                          str(result),
+                                          reply_to=event.id)
+                await log_challenge(event.chat_id, event.id, "چالش ریاضی",
+                                    expression, str(result))
+            except Exception:
+                pass
+
+        # --------------------------
+        # New style: "برای باز کردن جعبه حماسی"
+        # --------------------------
+        elif "برای باز کردن جعبه حماسی" in text:
+            match = re.search(r"(\d+)\s*([\+\-\*/×÷])\s*(\d+)", text)
+            if not match:
+                return
+
+            a, op, b = match.groups()
+            op = op.replace("×", "*").replace("÷", "/")
+            expr = f"{a}{op}{b}"
+
+            try:
+                result = str(eval(expr, {"__builtins__": {}}))
+            except Exception:
+                return
+
+            # Click the correct button if exists
+            clicked = False
+            if event.message.buttons:
+                for row in event.message.buttons:
+                    for btn in row:
+                        if btn.text.strip() == result:
+                            try:
+                                await event.click(btn)
+                                clicked = True
+                                break
+                            except Exception:
+                                pass
+                    if clicked:
+                        break
+
+            await log_challenge(event.chat_id, event.id, "جعبه حماسی", expr,
+                                result)
+
+
+---
+
+5- ./Com/checkexp.py
+
+# Com/checkexp.py
+from telethon import events
+import aiohttp
+import os
+import json
+import uuid
+
+__HELP__ = (
+    "!checkexp <domain> → Scan domain for safe vulnerabilities (XSS, SQLi, headers, TLS, etc.)\n"
+    "!checkexp del <ID> → Delete saved scan report")
+
+SCAN_FOLDER = "mode/checkexp"
+os.makedirs(SCAN_FOLDER, exist_ok=True)
+
+
+def setup(client, my_id):
+
+    async def safe_get(session, url):
+        try:
+            async with session.get(url, timeout=10,
+                                   allow_redirects=True) as resp:
+                text = await resp.text(errors='ignore')
+                headers = dict(resp.headers)
+                return resp.status, text, headers
+        except:
+            return None, None, {}
+
+    @client.on(
+        events.NewMessage(from_users=my_id,
+                          pattern=r"^!checkexp\s+del\s+(\S+)$"))
+    async def delete_scan(event):
+        scan_id = event.pattern_match.group(1)
+        file_path = os.path.join(SCAN_FOLDER, f"{scan_id}.txt")
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            await event.edit(f"✅ Scan report {scan_id} deleted.")
+        else:
+            await event.edit(f"❌ No scan report with ID {scan_id} found.")
+
+    @client.on(
+        events.NewMessage(from_users=my_id, pattern=r"^!checkexp\s+(\S+)$"))
+    async def checkexp(event):
+        domain = event.pattern_match.group(1).lower()
+        scan_id = str(uuid.uuid4().int)[:12]  # unique short ID
+        file_path = os.path.join(SCAN_FOLDER, f"{scan_id}.txt")
+
+        await event.edit(
+            f"🔍 Starting safe scan for {domain}...\nScan ID: {scan_id}")
+
+        async with aiohttp.ClientSession() as session:
+            results = []
+
+            # Basic HTTP/S check
+            for proto in ["https://", "http://"]:
+                url = proto + domain
+                status, text, headers = await safe_get(session, url)
+                if status:
+                    results.append(f"Protocol: {proto} Status: {status}")
+                    results.append(f"Server headers: {headers}")
+                    break
+
+            # Header security checks
+            security_headers = [
+                "X-Frame-Options", "Content-Security-Policy",
+                "Strict-Transport-Security", "X-Content-Type-Options"
+            ]
+            missing_headers = [h for h in security_headers if h not in headers]
+            results.append(
+                f"Missing security headers: {missing_headers or 'None'}")
+
+            # Basic XSS safe test
+            if text:
+                xss_payload = "<script>alert(1)</script>"
+                if "form" in text.lower() or "input" in text.lower():
+                    results.append(
+                        "⚠️ Forms detected, potential XSS targets (safe payload not executed)"
+                    )
+
+            # SQLi safe check
+            sqli_test = "' OR '1'='1"
+            if "sql" in text.lower() or "database" in text.lower():
+                results.append(
+                    "⚠️ Possible SQLi points detected (safe payload not executed)"
+                )
+
+            # Robots.txt
+            robots_url = f"https://{domain}/robots.txt"
+            status, robots_text, _ = await safe_get(session, robots_url)
+            if status == 200 and robots_text:
+                results.append(f"robots.txt found:\n{robots_text[:300]}..."
+                               )  # limit preview
+
+            # Sitemap.xml
+            sitemap_url = f"https://{domain}/sitemap.xml"
+            status, sitemap_text, _ = await safe_get(session, sitemap_url)
+            if status == 200 and sitemap_text:
+                results.append(f"sitemap.xml found:\n{sitemap_text[:300]}..."
+                               )  # limit preview
+
+            # TLS / HTTPS check
+            if proto == "https://":
+                results.append("✅ HTTPS enabled")
+
+            # CVE hint (mock example, can integrate with CVE APIs)
+            results.append(
+                "ℹ️ CVE lookup: passive only, check official CVE sources manually"
+            )
+
+        # Save results
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write("\n\n".join(results))
+
+        # Send file to chat
+        try:
+            await client.send_file(
+                event.chat_id,
+                file_path,
+                caption=f"✅ Scan completed for {domain}\nScan ID: {scan_id}",
+                reply_to=event.id)
+        except Exception as e:
+            await event.edit(
+                f"❌ Scan completed but failed to send file: {str(e)}")
+            return
+
+        await event.delete()  # remove original command
+
+
+---
+
+6- ./Com/countdown.py
+
+from telethon import events
+import asyncio
+import os
+import json
+
+__HELP__ = (
+    "!countdown <number><s/m/h> <reason> → Start a countdown in this chat\n"
+    "!countdown stop → Stop the countdown running in this chat")
+__CATEGORY__ = "Utilities"
+
+# -----------------------------
+# Ensure mods folder exists
+# -----------------------------
+os.makedirs("mods", exist_ok=True)
+CD_FILE = "mods/cd.json"
+
+# -----------------------------
+# Active countdowns dict
+# -----------------------------
+active_countdowns = {
+}  # chat_id: {"remaining": seconds, "reason": str, "msg": Message, "task": Task}
+
+
+# -----------------------------
+# Setup function for Telethon
+# -----------------------------
+def setup(client, my_id):
+
+    def format_hms(seconds: int) -> str:
+        h = seconds // 3600
+        m = (seconds % 3600) // 60
+        s = seconds % 60
+        return f"{h:02d}:{m:02d}:{s:02d}"
+
+    async def save_cd():
+        data = {}
+        for chat_id, info in active_countdowns.items():
+            data[str(chat_id)] = {
+                "remaining": info["remaining"],
+                "reason": info["reason"]
+            }
+        with open(CD_FILE, "w") as f:
+            json.dump(data, f)
+
+    async def load_cd():
+        if not os.path.exists(CD_FILE):
+            return {}
+        try:
+            with open(CD_FILE, "r") as f:
+                return json.load(f)
+        except:
+            return {}
+
+    async def run_countdown(chat_id: int, total_seconds: int, reason: str,
+                            msg):
+        active_countdowns[chat_id] = {
+            "remaining": total_seconds,
+            "reason": reason,
+            "msg": msg,
+            "task": asyncio.current_task()
+        }
+        remaining = total_seconds
+        try:
+            while remaining > 0:
+                display = format_hms(remaining)
+                try:
+                    await msg.edit(f"⏳ Countdown: {display}")
+                except:
+                    pass
+                active_countdowns[chat_id]["remaining"] = remaining
+                await save_cd()
+                await asyncio.sleep(1)
+                remaining -= 1
+            try:
+                await msg.edit(f"✅ Countdown finished! Reason: {reason}")
+            except:
+                pass
+        except asyncio.CancelledError:
+            try:
+                await msg.edit("❌ Countdown stopped!")
+            except:
+                pass
+        finally:
+            active_countdowns.pop(chat_id, None)
+            await save_cd()
+
+    # -----------------------------
+    # Resume countdowns from cd.json
+    # -----------------------------
+    async def resume_cds():
+        data = await load_cd()
+        for chat_id_str, info in data.items():
+            chat_id = int(chat_id_str)
+            remaining = info.get("remaining", 0)
+            reason = info.get("reason", "")
+            msg = await client.send_message(
+                chat_id, f"⏳ Countdown resumed: {format_hms(remaining)}")
+            asyncio.create_task(run_countdown(chat_id, remaining, reason, msg))
+
+    asyncio.create_task(resume_cds())
+
+    # -----------------------------
+    # Start a countdown
+    # -----------------------------
+    @client.on(
+        events.NewMessage(from_users=my_id,
+                          pattern=r"^!countdown\s+(\d+)([smh])\s+(.+)$"))
+    async def countdown(event):
+        chat_id = event.chat_id
+        if chat_id in active_countdowns:
+            await event.reply(
+                "❌ A countdown is already running in this chat! Stop it first with !countdown stop."
+            )
+            return
+
+        number = int(event.pattern_match.group(1))
+        unit = event.pattern_match.group(2).lower()
+        reason = event.pattern_match.group(3)
+
+        if unit == "s":
+            total_seconds = number
+        elif unit == "m":
+            total_seconds = number * 60
+        elif unit == "h":
+            total_seconds = number * 3600
+        else:
+            await event.reply("❌ Invalid unit! Use s, m, or h.")
+            return
+
+        msg = await event.reply(f"⏳ Countdown: {format_hms(total_seconds)}")
+        asyncio.create_task(run_countdown(chat_id, total_seconds, reason, msg))
+
+        await event.delete()  # remove the command
+
+    # -----------------------------
+    # Stop countdown
+    # -----------------------------
+    @client.on(
+        events.NewMessage(from_users=my_id, pattern=r"^!countdown stop$"))
+    async def stop(event):
+        chat_id = event.chat_id
+        info = active_countdowns.get(chat_id)
+        if info:
+            task = info.get("task")
+            msg = info.get("msg")
+            if msg:
+                await msg.edit("❌ Countdown stopping...")
+            if task:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+            active_countdowns.pop(chat_id, None)
+            await save_cd()
+            await event.delete()
+        else:
+            await event.reply(
+                "❌ No countdown is currently running in this chat!")
+
+
+---
+
+7- ./Com/crypto.py
+
+# Com/crypto.py
+import aiohttp
+from telethon import events
+
+__HELP__ = "!crypto <coin> → Show crypto price and 24h changes"
+__CATEGORY__ = "Utilities"
+
+def setup(client, my_id):
+
+    @client.on(events.NewMessage(from_users=my_id,
+                                 pattern=r"^!crypto\s+(\w+)"))
+    async def crypto(event):
+        try:
+            coin = event.pattern_match.group(1).lower()
+
+            async with aiohttp.ClientSession() as session:
+                url = f"https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids={coin}"
+                async with session.get(url) as resp:
+                    if resp.status != 200:
+                        await event.reply(
+                            f"❌ Failed to fetch data. Status code: {resp.status}"
+                        )
+                        return
+                    data = await resp.json()
+
+            if not data:
+                await event.reply(f"❌ Coin '{coin}' not found!")
+                return
+
+            coin_data = data[0]
+            name = coin_data.get("name", "N/A")
+            symbol = coin_data.get("symbol", "N/A").upper()
+            price = coin_data.get("current_price", "N/A")
+            change_24h = coin_data.get("price_change_percentage_24h", "N/A")
+            market_cap = coin_data.get("market_cap", "N/A")
+            volume = coin_data.get("total_volume", "N/A")
+
+            message = (f"💰 {name} ({symbol})\n"
+                       f"Price: ${price}\n"
+                       f"24h Change: {change_24h}%\n"
+                       f"Market Cap: ${market_cap}\n"
+                       f"24h Volume: ${volume}")
+
+            await event.reply(message)
+
+        except Exception as e:
+            await event.reply(f"❌ Error: {str(e)}")
+
+
+---
+
+8- ./Com/decodeqr.py
+
+# Com/decodeqr.py
+import aiohttp
+from telethon import events
+from io import BytesIO
+
+__HELP__ = "!decodeqr → Decode a QR code from a replied image using a free API"
+__CATEGORY__ = "Utilities"
+
+def setup(client, my_id):
+
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!decodeqr"))
+    async def decode_qr(event):
+        try:
+            if not event.is_reply:
+                await event.reply("❌ Reply to an image containing a QR code.")
+                return
+
+            reply_msg = await event.get_reply_message()
+            if not reply_msg.media:
+                await event.reply("❌ The replied message has no media.")
+                return
+
+            bio = BytesIO()
+            await reply_msg.download_media(file=bio)
+            bio.seek(0)
+
+            async with aiohttp.ClientSession() as session:
+                data = aiohttp.FormData()
+                data.add_field("file",
+                               bio,
+                               filename="qr.png",
+                               content_type="image/png")
+
+                async with session.post(
+                        "https://api.qrserver.com/v1/read-qr-code/",
+                        data=data) as resp:
+                    if resp.status != 200:
+                        await event.reply(
+                            f"❌ API request failed with status {resp.status}")
+                        return
+                    result = await resp.json()
+
+            # Parse the response
+            decoded_texts = []
+            for item in result:
+                for symbol in item.get("symbol", []):
+                    text = symbol.get("data")
+                    if text:
+                        decoded_texts.append(text)
+
+            if not decoded_texts:
+                await event.reply("❌ No QR code found in the image.")
+                return
+
+            await event.reply("🔓 Decoded QR Code:\n" +
+                              "\n".join(decoded_texts))
+
+        except Exception as e:
+            await event.reply(f"❌ Error: {str(e)}")
+
+
+---
+
+9- ./Com/dnsprobe.py
+
+# Com/dnsprobe.py
+from telethon import events
+import os
+import json
+import asyncio
+import dns.resolver
+from datetime import datetime
+
+__HELP__ = "!dnsprobe <domain1> <domain2> ... → Bulk DNS record enumerator (A, AAAA, MX, TXT, CNAME)\n!dnsprobe del <ID> → Delete a previous probe file by ID"
+
+MODE_FOLDER = "mode/dns"
+os.makedirs(MODE_FOLDER, exist_ok=True)
+ID_FILE = os.path.join(MODE_FOLDER, "dns_id.txt")
+if not os.path.exists(ID_FILE):
+    with open(ID_FILE, "w") as f:
+        f.write("0")
+
+active_dns_tasks = {}  # id: task_info
+
+
+def setup(client, my_id):
+
+    def get_next_id():
+        with open(ID_FILE, "r") as f:
+            last_id = int(f.read().strip())
+        next_id = last_id + 1
+        with open(ID_FILE, "w") as f:
+            f.write(str(next_id))
+        return next_id
+
+    async def probe_domain(domain):
+        records = {}
+        for rtype in ["A", "AAAA", "MX", "TXT", "CNAME"]:
+            try:
+                answers = dns.resolver.resolve(domain, rtype, lifetime=5)
+                records[rtype] = [str(r.to_text()) for r in answers]
+            except Exception:
+                records[rtype] = []
+        return records
+
+    @client.on(
+        events.NewMessage(from_users=my_id, pattern=r"^!dnsprobe(?:\s+(.+))?"))
+    async def dnsprobe_handler(event):
+        try:
+            args = event.pattern_match.group(1)
+            if not args:
+                await event.reply(
+                    "❌ Provide at least one domain or use !dnsprobe del <ID>")
+                return
+
+            parts = args.split()
+            if parts[0].lower() == "del":
+                del_id = int(parts[1])
+                # Delete previous file
+                for filename in os.listdir(MODE_FOLDER):
+                    if filename.startswith(f"{del_id}_dnsprobe_"):
+                        os.remove(os.path.join(MODE_FOLDER, filename))
+                        await event.edit(
+                            f"✅ Deleted DNS probe file with ID {del_id}")
+                        return
+                await event.edit(f"❌ No DNS probe found with ID {del_id}")
+                return
+
+            domains = parts
+            probe_id = get_next_id()
+            now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            temp_file = os.path.join(MODE_FOLDER,
+                                     f"{probe_id}_dnsprobe_{now}.txt")
+
+            await event.edit(
+                f"⏳ Probing {len(domains)} domain(s)... Task ID: {probe_id}")
+
+            results = []
+            for domain in domains:
+                records = await probe_domain(domain)
+                result_str = f"Domain: {domain}\n"
+                for rtype, values in records.items():
+                    result_str += f"  {rtype}: {', '.join(values) if values else 'None'}\n"
+                result_str += "\n"
+                results.append(result_str)
+
+            with open(temp_file, "w", encoding="utf-8") as f:
+                f.writelines(results)
+
+            active_dns_tasks[probe_id] = {
+                "file": temp_file,
+                "domains": domains,
+                "timestamp": now
+            }
+
+            await client.send_file(
+                event.chat_id,
+                temp_file,
+                caption=f"✅ DNS Probe complete. Task ID: {probe_id}",
+                reply_to=event.id)
+            await event.delete()
+
+        except Exception as e:
+            await event.reply(f"❌ Error: {str(e)}")
+
+
+---
+
+10- ./Com/f.py
+
+# Com/f.py
+from telethon import events
+import os
+import json
+import asyncio
+import random
+
+__HELP__ = "!f → Manage and send random replies with IDs"
+__CATEGORY__ = "Utilities"
+
+F_FILE = "mode/f.json"
+ID_FILE = "mode/f_id.txt"
+os.makedirs("mode", exist_ok=True)
+
+# Initialize JSON and ID file
+if not os.path.exists(F_FILE):
+    with open(F_FILE, "w", encoding="utf-8") as f:
+        json.dump([], f, indent=2)
+
+if not os.path.exists(ID_FILE):
+    with open(ID_FILE, "w", encoding="utf-8") as f:
+        f.write("0")  # last ID
+
+active_f_tasks = {}  # code_id: task
+
+
+def setup(client, my_id):
+
+    def load_items():
+        with open(F_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    def save_items(items):
+        with open(F_FILE, "w", encoding="utf-8") as f:
+            json.dump(items, f, indent=2)
+
+    def get_next_id():
+        with open(ID_FILE, "r", encoding="utf-8") as f:
+            last_id = int(f.read().strip())
+        next_id = last_id + 1
+        with open(ID_FILE, "w", encoding="utf-8") as f:
+            f.write(str(next_id))
+        return next_id
+
+    # ------------------------
+    # Add text
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!f\s+add$"))
+    async def f_add(event):
+        if not event.is_reply:
+            await event.edit("❌ WRONG usage!\n!f add (reply to message)")
+            return
+
+        reply_msg = await event.get_reply_message()
+        text = reply_msg.text
+        if not text:
+            await event.edit("❌ Replied message has no text!")
+            return
+
+        items = load_items()
+        code_id = get_next_id()
+        items.append({"id": code_id, "text": text})
+        save_items(items)
+        await event.edit(f"✅ Text saved. Code: {code_id}")
+
+    # ------------------------
+    # Delete text
+    @client.on(
+        events.NewMessage(from_users=my_id, pattern=r"^!f\s+del\s+(\d+)$"))
+    async def f_del(event):
+        del_id = int(event.pattern_match.group(1))
+        items = load_items()
+        found = False
+        for i, item in enumerate(items):
+            if item["id"] == del_id:
+                items.pop(i)
+                found = True
+                break
+        if found:
+            save_items(items)
+            await event.edit(f"✅ Deleted Code: {del_id}")
+        else:
+            await event.edit(f"❌ Code {del_id} not found!")
+
+    # ------------------------
+    # Start sending randomly
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!f\s+start$"))
+    async def f_start(event):
+        if not event.is_reply:
+            await event.edit("❌ WRONG usage!\n!f start (reply to message)")
+            return
+
+        reply_msg = await event.get_reply_message()
+        items = load_items()
+        if not items:
+            await event.edit("❌ f.json is empty!")
+            return
+
+        code_id = get_next_id()
+        chat_id = event.chat_id
+        await event.edit(f"✅ Started! Code: {code_id}")
+
+        async def task():
+            while True:
+                try:
+                    item = random.choice(items)
+                    await reply_msg.reply(item["text"])
+                    await asyncio.sleep(5)
+                except asyncio.CancelledError:
+                    break
+
+        t = asyncio.create_task(task())
+        active_f_tasks[code_id] = t
+
+    # ------------------------
+    # Stop sending
+    @client.on(
+        events.NewMessage(from_users=my_id, pattern=r"^!f\s+stop\s+(\d+)$"))
+    async def f_stop(event):
+        stop_id = int(event.pattern_match.group(1))
+        task = active_f_tasks.get(stop_id)
+        if task:
+            task.cancel()
+            del active_f_tasks[stop_id]
+            await event.edit(
+                f"✅ Stopped sending random replies for Code: {stop_id}")
+        else:
+            await event.edit(f"❌ No active task with Code: {stop_id}")
+
+    # ------------------------
+    # Fallback for wrong usage
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!f\b"))
+    async def f_fallback(event):
+        text = event.text.strip().lower()
+        if not any(
+                text.startswith(cmd)
+                for cmd in ["!f add", "!f del", "!f start", "!f stop"]):
+            await event.edit("❌ WRONG usage!\n"
+                             "!f add (reply to message)\n"
+                             "!f del <Code>\n"
+                             "!f start (reply to message)\n"
+                             "!f stop <Code>")
+
+
+---
+
+11- ./Com/fileinfo.py
+
+# Com/fileinfo.py
+from telethon import events
+import hashlib
+import os
+import datetime
+
+__HELP__ = "!fileinfo (reply) → Get detailed info about a replied file (size, type, hashes, etc.)"
+__CATEGORY__ = "Utilities"
+
+
+def setup(client, my_id):
+
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!fileinfo$"))
+    async def fileinfo(event):
+        if not event.is_reply:
+            await event.reply("❌ Reply to a file to get its info.")
+            return
+
+        reply_msg = await event.get_reply_message()
+        if not reply_msg.media:
+            await event.reply("❌ The replied message doesn’t contain a file.")
+            return
+
+        try:
+            file = reply_msg.file
+            if not file:
+                await event.reply("❌ No file information found.")
+                return
+
+            # Download file temporarily to calculate hashes
+            path = await reply_msg.download_media(file="./temp_fileinfo")
+            md5_hash = sha1_hash = sha256_hash = "N/A"
+            if path and os.path.exists(path):
+                with open(path, "rb") as f:
+                    data = f.read()
+                    md5_hash = hashlib.md5(data).hexdigest()
+                    sha1_hash = hashlib.sha1(data).hexdigest()
+                    sha256_hash = hashlib.sha256(data).hexdigest()
+                os.remove(path)
+
+            # Human-readable size
+            def human_size(size):
+                if size is None:
+                    return "Unknown"
+                for unit in ["B", "KB", "MB", "GB", "TB"]:
+                    if size < 1024:
+                        return f"{size:.2f} {unit}"
+                    size /= 1024
+                return f"{size:.2f} PB"
+
+            # Format message
+            msg = "📂 **File Information**\n\n"
+            if file.name:
+                msg += f"**Name:** `{file.name}`\n"
+            if file.size:
+                msg += f"**Size:** {human_size(file.size)} ({file.size} bytes)\n"
+            if file.mime_type:
+                msg += f"**MIME Type:** `{file.mime_type}`\n"
+            if file.id:
+                msg += f"**File ID:** `{file.id}`\n"
+            if reply_msg.date:
+                msg += f"**Upload Date:** `{reply_msg.date.strftime('%Y-%m-%d %H:%M:%S')}`\n"
+
+            # Try to extract document-specific fields
+            if hasattr(reply_msg.media, "document"):
+                doc = reply_msg.media.document
+                if hasattr(doc, "dc_id"):
+                    msg += f"**Data Center ID:** `{doc.dc_id}`\n"
+                if hasattr(doc, "mime_type"):
+                    msg += f"**MIME Type (Doc):** `{doc.mime_type}`\n"
+
+            # Media specific info
+            if file.width and file.height:
+                msg += f"**Dimensions:** {file.width}×{file.height}\n"
+            if file.duration:
+                duration = str(datetime.timedelta(seconds=file.duration))
+                msg += f"**Duration:** {duration}\n"
+
+            # Hashes
+            msg += "\n🔑 **Hashes:**\n"
+            msg += f"MD5: `{md5_hash}`\n"
+            msg += f"SHA1: `{sha1_hash}`\n"
+            msg += f"SHA256: `{sha256_hash}`\n"
+
+            await event.reply(msg)
+
+        except Exception as e:
+            await event.reply(f"❌ Error: {str(e)}")
+
+
+---
+
+12- ./Com/finduser.py
+
+# Com/finduser.py
+from telethon import events
+import os
+from datetime import datetime
+import pytz
+
+__HELP__ = "!finduser <username/ID> → Gather all messages sent by a user in all group logs."
+__CATEGORY__ = "Information"
+GROUP_FOLDER = "Logs/Groups"
+tz = pytz.timezone("Asia/Tehran")
+
+
+def setup(client, my_id):
+
+    @client.on(
+        events.NewMessage(from_users=my_id,
+                          pattern=r"^!finduser(?:\s+(here|.+))?$"))
+    async def finduser(event):
+        try:
+            args = event.pattern_match.group(1)
+            send_here = False
+            target_user_id = None
+
+            # -------------------------------
+            # Reply case
+            # -------------------------------
+            if event.is_reply:
+                reply_msg = await event.get_reply_message()
+                sender = await reply_msg.get_sender()
+                target_user_id = sender.id
+
+                if args and args.lower() == "here":
+                    send_here = True  # send in command chat
+                else:
+                    send_here = False  # send in Saved Messages
+
+            # -------------------------------
+            # Mention/ID case
+            # -------------------------------
+            elif args:
+                parts = args.split()
+                if parts[0].lower() == "here":
+                    send_here = True
+                    if len(parts) > 1:
+                        user_str = parts[1]
+                        if user_str.isdigit():
+                            target_user_id = int(user_str)
+                        else:
+                            try:
+                                user_entity = await client.get_entity(user_str)
+                                target_user_id = user_entity.id
+                            except:
+                                await event.reply(
+                                    f"❌ Cannot find user '{user_str}'")
+                                return
+                else:
+                    send_here = False
+                    user_str = parts[0]
+                    if user_str.isdigit():
+                        target_user_id = int(user_str)
+                    else:
+                        try:
+                            user_entity = await client.get_entity(user_str)
+                            target_user_id = user_entity.id
+                        except:
+                            await event.reply(
+                                f"❌ Cannot find user '{user_str}'")
+                            return
+            else:
+                await event.reply(
+                    "❌ Please specify a user or reply to a message.")
+                return
+
+            if target_user_id is None:
+                await event.reply("❌ Could not determine user ID.")
+                return
+
+            log_lines = []
+            # -------------------------------
+            # Iterate all group files
+            # -------------------------------
+            for filename in os.listdir(GROUP_FOLDER):
+                if not filename.endswith(".txt"):
+                    continue
+                file_path = os.path.join(GROUP_FOLDER, filename)
+                with open(file_path, "r", encoding="utf-8") as f:
+                    lines = f.readlines()
+
+                group_name = lines[0].strip() if lines else "Unknown Group"
+                group_msgs = []
+                skip_next = False
+                for i, line in enumerate(lines[1:], start=1):
+                    if skip_next:
+                        skip_next = False
+                        continue
+                    if f"({target_user_id} -" in line:
+                        collected = [line.strip()]
+                        if i + 1 < len(lines):
+                            next_line = lines[i + 1].strip()
+                            if next_line.startswith(
+                                    "Edited") or next_line.startswith(
+                                        "Deleted"):
+                                collected.append(next_line)
+                                skip_next = True
+                        group_msgs.extend(collected)
+
+                if group_msgs:
+                    log_lines.append(f"{group_name}:\n" +
+                                     "\n".join(group_msgs) + "\n.\n")
+
+            if not log_lines:
+                await event.edit(
+                    f"❌ No messages found for **{target_user_id}**")
+                return
+
+            # -------------------------------
+            # Create temp file
+            # -------------------------------
+            now = datetime.now(tz).strftime("%Y-%m-%d_%H-%M-%S")
+            temp_file = f"{target_user_id}_{now}.txt"
+            with open(temp_file, "w", encoding="utf-8") as f:
+                f.writelines("\n".join(log_lines))
+
+            # -------------------------------
+            # Send file to proper chat
+            # -------------------------------
+            target_chat = event.chat_id if send_here else "me"
+            await event.client.send_file(
+                target_chat,
+                temp_file,
+                caption=f"Sent the Log file of **{target_user_id}**",
+                reply_to=event.id if send_here else None)
+            await event.edit(f"Sent the Log file of **{target_user_id}**")
+            os.remove(temp_file)
+
+        except Exception as e:
+            await event.edit(f"❌ Error: {str(e)}")
+
+
+---
+
+13- ./Com/ginfo.py
+
+# Com/ginfo.py
+from telethon import events, functions, types
+from datetime import datetime
+import pytz
+
+__HELP__ = "!ginfo → Shows group/channel info (name, ID, total members, description) without saving."
+__CATEGORY__ = "Information"
+
+def setup(client, my_id):
+
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!ginfo$"))
+    async def ginfo(event):
+        tz = pytz.timezone("Asia/Tehran")
+        try:
+            chat = await event.get_chat()
+            full = await client(functions.channels.GetFullChannelRequest(channel=chat))
+
+            title = getattr(chat, "title", "N/A")
+            chat_id = chat.id
+            username = f"@{chat.username}" if getattr(chat, "username", None) else "N/A"
+            description = getattr(full.full_chat, "about", "N/A")
+            total_members = getattr(full.full_chat, "participants_count", "N/A")
+
+            now = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
+
+            # Edit original command message
+            await event.edit(f"Gathering {chat_id} (**{title}**) Info . . .")
+
+            # Send main profile picture (if exists)
+            try:
+                photos = await client.get_profile_photos(chat)
+                if photos.total > 0:
+                    await client.send_file(
+                        event.chat_id,
+                        photos[0],
+                        caption=(
+                            f"📌 Name: {title}\n"
+                            f"🆔 ID: {chat_id}\n"
+                            f"💬 Username: {username}\n"
+                            f"👥 Members: {total_members}\n"
+                            f"⏱ Retrieved at: {now}\n"
+                            f"📝 Description: {description}"
+
+                        ),
+                        reply_to=event.id
+                    )
+                else:
+                    # No profile picture
+                    await event.reply(
+                        f"📌 Name: {title}\n"
+                        f"🆔 ID: {chat_id}\n"
+                        f"💬 Username: {username}\n"
+                        f"👥 Members: {total_members}\n"
+                        f"⏱ Retrieved at: {now}\n"
+                        f"📝 Description: {description}"
+
+                    )
+            except Exception:
+                # Fallback if profile fetch fails
+                await event.reply(
+                    f"📌 Name: {title}\n"
+                    f"🆔 ID: {chat_id}\n"
+                    f"💬 Username: {username}\n"
+                    f"👥 Members: {total_members}\n"
+                    f"⏱ Retrieved at: {now}\n"
+                    f"📝 Description: {description}"
+
+                )
+
+        except Exception as e:
+            await event.reply(f"❌ Failed to fetch group info: {str(e)}")
+
+
+---
+
+14- ./Com/help.py
+
+# Com/help.py
+from telethon import events
+import os
+import importlib
+from io import BytesIO
+
+__HELP__ = "!help → Show available command categories or commands in a category"
+__CATEGORY__ = "Setup"
+
+# Category mapping (folders → display name + emoji)
+CATEGORY_MAP = {
+    "Information": "ℹ️ Information Commands",
+    "Setup": "⚙️ Setup Commands",
+    "Utilities": "🛠️ Utilities Commands",
+}
+
+
+def setup(client, my_id):
+
+    def collect_commands():
+        """Collect commands from Com/*.py and organize by category."""
+        commands_by_cat = {cat: [] for cat in CATEGORY_MAP.keys()}
+        com_folder = "Com"
+
+        for filename in os.listdir(com_folder):
+            if filename.endswith(".py") and filename != "__init__.py":
+                modulename = filename[:-3]
+                try:
+                    module = importlib.import_module(
+                        f"{com_folder}.{modulename}")
+                except Exception as e:
+                    print(f"❌ Failed to import {modulename}: {e}")
+                    continue
+
+                if hasattr(module, "__HELP__"):
+                    help_text = module.__HELP__.strip()
+                    parts = [
+                        p.strip() for p in help_text.split("\n") if p.strip()
+                    ]
+
+                    # Try to map by folder name (default Utilities)
+                    folder = "Utilities"
+                    if any(
+                            k in modulename for k in
+                        ["block", "finduser", "ginfo", "whois", "info", "log"
+                         ]):
+                        folder = "Information"
+                    elif any(k in modulename for k in
+                             ["help", "ping", "setreaction", "update"]):
+                        folder = "Setup"
+
+                    for part in parts:
+                        # Format command bold + monospace
+                        if part.startswith("!"):
+                            split = part.split(" ", 1)
+                            cmd = f"**`{split[0]}`**"
+                            part = f"{cmd} {split[1]}" if len(
+                                split) > 1 else cmd
+                        commands_by_cat[folder].append(part)
+        return commands_by_cat
+
+    async def send_text_file(event, content, name="help.txt"):
+        bio = BytesIO()
+        bio.write(content.encode("utf-8"))
+        bio.seek(0)
+        bio.name = name
+        await client.send_file(event.chat_id, bio, caption="📖 Help Commands")
+
+    @client.on(events.NewMessage(from_users=my_id,
+                                 pattern=r"^!help(\s+\w+)?$"))
+    async def help_cmd(event):
+        arg = event.pattern_match.group(1)
+        commands_by_cat = collect_commands()
+
+        if not arg:
+            text = "📖 **Available Command Categories**\n\n"
+            for cat, title in CATEGORY_MAP.items():
+                count = len(commands_by_cat[cat])
+                text += f"{title} ({count}) → **`!help {cat.lower()}`**\n"
+            text += "\n💡 Tip: Use **`!help all`** to see everything."
+            if len(text) > 4000:
+                await send_text_file(event, text)
+            else:
+                await event.edit(text)
+            return
+
+        arg = arg.strip().lower()
+        if arg == "all":
+            text = "📖 **All Commands**\n\n"
+            for cat, title in CATEGORY_MAP.items():
+                cmds = sorted(commands_by_cat[cat])
+                if not cmds:
+                    continue
+                text += f"-----------------------------\n{title} ({len(cmds)})\n\n"
+                last_prefix = None
+                for cmd in cmds:
+                    prefix = cmd.split()[0]
+                    if last_prefix and not cmd.startswith(last_prefix):
+                        text += "\n"
+                    text += f"  • {cmd}\n"
+                    last_prefix = prefix
+                text += "\n"
+            text += "💡 Tip: Use **`!help <Category>`** to view only one category."
+            if len(text) > 4000:
+                await send_text_file(event, text)
+            else:
+                await event.edit(text)
+            return
+
+        # Category-specific
+        for cat, title in CATEGORY_MAP.items():
+            if arg == cat.lower():
+                cmds = sorted(commands_by_cat[cat])
+                text = f"-----------------------------\n{title} ({len(cmds)})\n\n"
+                last_prefix = None
+                for cmd in cmds:
+                    prefix = cmd.split()[0]
+                    if last_prefix and not cmd.startswith(last_prefix):
+                        text += "\n"
+                    text += f"  • {cmd}\n"
+                    last_prefix = prefix
+                text += "\n💡 Tip: Use **`!help all`** to see all categories together."
+                if len(text) > 4000:
+                    await send_text_file(event, text)
+                else:
+                    await event.edit(text)
+                return
+
+        await event.edit(
+            "❌ Unknown category. Use **`!help`** to see available ones.")
+
+
+---
+
+15- ./Com/imgwatermark.py
+
+# Com/imgwatermark.py
+from telethon import events
+from PIL import Image, ImageDraw, ImageFont
+from io import BytesIO
+import os
+
+__HELP__ = "!imgwatermark <text> or reply → Add watermark text to an image"
+
+os.makedirs("temp", exist_ok=True)
+
+
+def setup(client, my_id):
+
+    @client.on(
+        events.NewMessage(from_users=my_id,
+                          pattern=r"^!imgwatermark(?:\s+(.+))?"))
+    async def imgwatermark(event):
+        try:
+            # Get watermark text
+            text = event.pattern_match.group(1)
+            if not text and event.is_reply:
+                reply_msg = await event.get_reply_message()
+                text = reply_msg.text or reply_msg.message
+            if not text:
+                await event.reply(
+                    "❌ Provide watermark text or reply to a message with text."
+                )
+                return
+
+            # Check if the command is a reply to an image
+            if not event.is_reply:
+                await event.reply("❌ Reply to an image to add a watermark.")
+                return
+
+            reply_msg = await event.get_reply_message()
+            if not reply_msg.media:
+                await event.reply("❌ Replied message has no media.")
+                return
+
+            # Download image to memory
+            bio = BytesIO()
+            await reply_msg.download_media(file=bio)
+            bio.seek(0)
+
+            # Open image
+            img = Image.open(bio).convert("RGBA")
+
+            # Create watermark layer
+            txt_layer = Image.new("RGBA", img.size, (255, 255, 255, 0))
+            draw = ImageDraw.Draw(txt_layer)
+            font_size = max(20, img.width // 15)
+            font = ImageFont.truetype(
+                "arial.ttf", font_size) if os.path.exists(
+                    "arial.ttf") else ImageFont.load_default()
+
+            # Calculate text size using textbbox()
+            bbox = draw.textbbox((0, 0), text, font=font)
+            text_width = bbox[2] - bbox[0]
+            text_height = bbox[3] - bbox[1]
+
+            # Position: bottom-right corner
+            x = img.width - text_width - 10
+            y = img.height - text_height - 10
+
+            # Draw text
+            draw.text((x, y), text, font=font,
+                      fill=(255, 255, 255, 128))  # semi-transparent white
+
+            # Combine original image with watermark
+            watermarked = Image.alpha_composite(img, txt_layer)
+
+            # Save to BytesIO
+            out_bio = BytesIO()
+            watermarked.convert("RGB").save(out_bio, "JPEG")
+            out_bio.seek(0)
+
+            # Send watermarked image
+            await client.send_file(
+                event.chat_id,
+                out_bio,
+                caption=f"💧 Watermarked Image with text: {text}",
+                reply_to=event.id)
+
+        except Exception as e:
+            await event.reply(f"❌ Error: {str(e)}")
+
+
+---
+
+16- ./Com/info.py
+
+# Com/info.py
+from telethon import events
+
+__HELP__ = "!info → Show your profile info in the chat\n!info (reply) → Show info of replied user"
+__CATEGORY__ = "Information"
+
+
+def setup(client, my_id):
+
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!info$"))
+    async def info_handler(event):
+        try:
+            chat = await event.get_chat()
+            chat_name = getattr(chat, "title", None) or getattr(chat, "first_name", "This chat")
+
+            # Step 1: Determine target user
+            if event.is_reply:
+                reply_msg = await event.get_reply_message()
+                target_user = await client.get_entity(reply_msg.sender_id)
+            else:
+                target_user = await client.get_me()
+
+            # Step 2: Edit command to show gathering info with target user's NumberID
+            await event.edit(
+                f"Gathering **{target_user.id}'s information** in **'{chat_name}'**..."
+            )
+
+            first_name = target_user.first_name or ""
+            last_name = target_user.last_name or ""
+            username = f"@{target_user.username}" if target_user.username else "N/A"
+            user_id_val = target_user.id
+            is_premium = getattr(target_user, "premium", False)
+
+            # Step 3: Count messages sent by target user in this chat
+            total_messages = 0
+            async for msg in client.iter_messages(event.chat_id, from_user=user_id_val):
+                total_messages += 1
+
+            # Step 4: Send profile picture + info in a new message replying to the command
+            photo = await client.get_profile_photos(target_user)
+            info_text = (
+                f"👤 Name: {first_name} {last_name}\n"
+                f"🆔 ID: {user_id_val}\n"
+                f"💬 Username: {username}\n"
+                f"⭐ Premium: {'Yes' if is_premium else 'No'}\n"
+                f"📨 Total messages sent in this chat: {total_messages}"
+            )
+
+            if photo.total > 0:
+                await client.send_file(event.chat_id, photo[0], caption=info_text, reply_to=event.id)
+            else:
+                await client.send_message(event.chat_id, info_text, reply_to=event.id)
+
+        except Exception as e:
+            await event.reply(f"❌ Failed to fetch info: {str(e)}")
+
+
+---
+
+17- ./Com/log.py
+
+# Com/log.py
+
+from telethon import events
+from datetime import datetime
+import os
+import pytz
+
+__HELP__ = "!log ON/OFF → Enable or disable logging messages to text files"
+__CATEGORY__ = "Information"
+
+LOG_FOLDER = "Logs"
+GROUP_FOLDER = os.path.join(LOG_FOLDER, "Groups")
+CHANNEL_FOLDER = os.path.join(LOG_FOLDER, "Channels")
+MODE_FOLDER = "mode"
+MODE_FILE = os.path.join(MODE_FOLDER, "com.txt")
+
+for folder in [LOG_FOLDER, GROUP_FOLDER, CHANNEL_FOLDER, MODE_FOLDER]:
+    os.makedirs(folder, exist_ok=True)
+
+# Load mode
+if os.path.exists(MODE_FILE):
+    with open(MODE_FILE, "r", encoding="utf-8") as f:
+        line = f.readline().strip()
+        LOG_MODE = line.split(":")[-1].strip() if ":" in line else "OFF"
+else:
+    LOG_MODE = "OFF"
+    with open(MODE_FILE, "w", encoding="utf-8") as f:
+        f.write(f"!log: {LOG_MODE}")
+
+TZ = pytz.timezone("Asia/Tehran")
+
+
+def setup(client, my_id):
+
+    def normalize_text(text):
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        return "\n".join(lines)
+
+    def get_file_path_and_title(event):
+        chat = event.chat
+        if event.is_private:
+            return None, None  # Skip PV logging
+        elif getattr(chat, "broadcast", False):
+            return os.path.join(CHANNEL_FOLDER,
+                                f"{event.chat_id}.txt"), getattr(
+                                    chat, "title", "Channel")
+        else:
+            return os.path.join(GROUP_FOLDER, f"{event.chat_id}.txt"), getattr(
+                chat, "title", "Group")
+
+    # -----------------------
+    # !log ON/OFF command
+    # -----------------------
+    @client.on(
+        events.NewMessage(from_users=my_id, pattern=r"^!log\s+(DISABLED|OFF)$"))
+    async def log_mode(event):
+        global LOG_MODE
+        mode = event.text.split()[1].upper()
+        LOG_MODE = mode
+        with open(MODE_FILE, "w", encoding="utf-8") as f:
+            f.write(f"!log: {LOG_MODE}")
+        await event.edit(f"✅ Logging mode set to: {LOG_MODE}")
+
+    # -----------------------
+    # Log new messages
+    # -----------------------
+    @client.on(events.NewMessage())
+    async def log_message(event):
+        global LOG_MODE
+        if LOG_MODE != "ON" or not event.raw_text:
+            return
+
+        file_path, chat_name = get_file_path_and_title(event)
+        if not file_path:
+            return
+
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+        sender = await event.get_sender()
+        now = datetime.now(TZ).strftime("%Y-%m-%d %H:%M:%S")
+        msg_id = event.message.id
+
+        sender_name = getattr(sender, "first_name", None) or getattr(
+            sender, "title", "Unknown")
+        sender_id = getattr(sender, "id", "Unknown")
+        username = f"@{sender.username}" if getattr(sender, "username",
+                                                    None) else "N/A"
+        text = normalize_text(event.raw_text)
+
+        with open(file_path, "a", encoding="utf-8") as f:
+            f.write(
+                f"{sender_name} ({sender_id} - {username} - {now} - {msg_id}): {text}\n"
+            )
+            f.write(".\n")
+
+    # -----------------------
+    # Log edited messages
+    # -----------------------
+    @client.on(events.MessageEdited())
+    async def log_edit(event):
+        global LOG_MODE
+        if LOG_MODE != "ON" or not event.raw_text:
+            return
+
+        file_path, _ = get_file_path_and_title(event)
+        if not file_path or not os.path.exists(file_path):
+            return
+
+        now = datetime.now(TZ).strftime("%Y-%m-%d %H:%M:%S")
+        edited_text = normalize_text(event.raw_text)
+
+        with open(file_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+
+        for i, line in enumerate(lines):
+            if f"- {event.message.id}):" in line:
+                lines.insert(i + 1, f"Edited ({now}): {edited_text}\n")
+                break
+
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.writelines(lines)
+
+    # -----------------------
+    # Log deleted messages
+    # -----------------------
+    @client.on(events.MessageDeleted())
+    async def log_deleted(event):
+        global LOG_MODE
+        if LOG_MODE != "ON":
+            return
+
+        file_path, _ = get_file_path_and_title(event)
+        if not file_path or not os.path.exists(file_path):
+            return
+
+        now = datetime.now(TZ).strftime("%Y-%m-%d %H:%M:%S")
+
+        with open(file_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+
+        for msg_id in event.deleted_ids:
+            for i, line in enumerate(lines):
+                if f"- {msg_id}):" in line:
+                    lines.insert(i + 1, f"Deleted ({now})\n")
+                    break
+
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.writelines(lines)
+
+
+---
+
+18- ./Com/logdata.py
+
+# Com/logdata.py
+from telethon import events
+import os
+
+__HELP__ = "!logdata → Show total number of log files and storage used"
+__CATEGORY__ = "Information"
+LOG_FOLDER = "Logs"
+SUBFOLDERS = ["Groups", "Channels"]  # ignore PV as per your previous decision
+
+
+def human_readable_size(size_bytes):
+    """Convert bytes to a readable format"""
+    for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+        if size_bytes < 1024:
+            return f"{size_bytes:.2f} {unit}"
+        size_bytes /= 1024
+    return f"{size_bytes:.2f} PB"
+
+
+def setup(client, my_id):
+
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!logdata$"))
+    async def logdata(event):
+        try:
+            # Edit the command to show "Calculating..."
+            await event.edit("📊 Calculating log data...")
+
+            total_files = 0
+            total_size = 0
+
+            for folder in SUBFOLDERS:
+                path = os.path.join(LOG_FOLDER, folder)
+                if os.path.exists(path):
+                    for root, dirs, files in os.walk(path):
+                        total_files += len(files)
+                        for f in files:
+                            total_size += os.path.getsize(os.path.join(
+                                root, f))
+
+            readable_size = human_readable_size(total_size)
+
+            # Edit the command message with the final result
+            await event.edit(
+                f"📁 There are {total_files} log files saved in '{LOG_FOLDER}'.\n💾 Storage used: {readable_size}"
+            )
+
+        except Exception as e:
+            await event.edit(f"❌ Failed to get log data: {str(e)}")
+
+
+---
+
+19- ./Com/logfile.py
+
+from telethon import events
+import os
+
+__HELP__ = "!logfile <Channel|Group> <NumberID> → Sends the log file of the specified chat"
+__CATEGORY__ = "Information"
+LOG_FOLDER = "Logs"
+PV_FOLDER = os.path.join(LOG_FOLDER, "PV")
+GROUP_FOLDER = os.path.join(LOG_FOLDER, "Groups")
+CHANNEL_FOLDER = os.path.join(LOG_FOLDER, "Channels")
+
+
+def setup(client, my_id):
+
+    @client.on(
+        events.NewMessage(
+            from_users=my_id,
+            pattern=r"^!logfile\s+(Channel|Group)\s+(-?\d+)$"))
+    async def send_log_file(event):
+        folder_map = {
+            "PV": PV_FOLDER,
+            "Group": GROUP_FOLDER,
+            "Channel": CHANNEL_FOLDER
+        }
+
+        parts = event.text.split()
+        log_type = parts[1]
+        number_id = parts[2]
+
+        folder = folder_map.get(log_type)
+        if not folder:
+            await event.edit("❌ Invalid type. Use Channel, or Group.")
+            return
+
+        # Ensure the folder exists
+        if not os.path.exists(folder):
+            await event.edit(f"❌ Log folder missing: {folder}")
+            return
+
+        # Search for file in folder (exact match)
+        filename = f"{number_id}.txt"
+        file_path = None
+        for f in os.listdir(folder):
+            if f.strip() == filename:
+                file_path = os.path.join(folder, f)
+                break
+
+        if not file_path or not os.path.isfile(file_path):
+            await event.edit(
+                f"❌ Log file not found: {filename}\nCheck folder and ID.")
+            return
+
+        # Send the file
+        await client.send_file(int(my_id),
+                               file_path,
+                               caption=f"Log file: {filename}")
+        await event.edit(f"✅ Log file sent: {filename}")
+
+    # Fallback for wrong usage
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!logfile\b"))
+    async def logfile_fallback(event):
+        parts = event.text.split()
+        if len(parts) != 3 or parts[1] not in ["Channel", "PV", "Group"]:
+            await event.edit(
+                "❌ Wrong format. Correct usage: !logfile <Channel|Group> <NumberID>"
+            )
+
+
+---
+
+20- ./Com/mediatools.py
+
+# Com/mediatools.py
+from telethon import events
+from telethon.tl.types import MessageMediaDocument, MessageMediaPhoto
+from io import BytesIO
+from PIL import Image
+import os
+import tempfile
+import PyPDF2
+import mutagen
+import moviepy.editor as mp
+
+__HELP__ = (
+    "!audiometa → Extract metadata from a replied audio file.\n"
+    "!videometa → Extract metadata from a replied video.\n"
+    "!convertpdf → Convert a replied document to PDF.\n"
+    "!pdfinfo → Show PDF file info (pages, author, size).\n"
+    "!imgresize <width>x<height> → Resize replied image.\n"
+    "!imgrotate <deg> → Rotate replied image.\n"
+    "!imgcompress → Compress replied image to smaller size.\n"
+    "!imgformat <format> → Convert replied image to another format (PNG/JPG).")
+
+
+def setup(client, my_id):
+
+    async def download_reply(event):
+        if not event.is_reply:
+            await event.reply("❌ Please reply to a file or image.")
+            return None
+        reply = await event.get_reply_message()
+        if not reply.media:
+            await event.reply("❌ Replied message has no media.")
+            return None
+        bio = BytesIO()
+        await reply.download_media(file=bio)
+        bio.seek(0)
+        return bio, reply
+
+    # -----------------------------
+    # Audio metadata
+    # -----------------------------
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!audiometa$"))
+    async def audiometa(event):
+        try:
+            result = await download_reply(event)
+            if not result:
+                return
+            bio, reply = result
+
+            audio = mutagen.File(bio)
+            if not audio:
+                await event.reply("❌ Could not read audio metadata.")
+                return
+
+            info = "\n".join(
+                f"{k}: {v}" for k, v in
+                audio.tags.items()) if audio.tags else "No tags found"
+            await event.reply(f"🎵 Audio Metadata:\n{info}")
+
+        except Exception as e:
+            await event.reply(f"❌ Error: {str(e)}")
+
+    # -----------------------------
+    # Video metadata
+    # -----------------------------
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!videometa$"))
+    async def videometa(event):
+        try:
+            result = await download_reply(event)
+            if not result:
+                return
+            bio, reply = result
+
+            temp_file = tempfile.NamedTemporaryFile(delete=False)
+            temp_file.write(bio.read())
+            temp_file.close()
+
+            clip = mp.VideoFileClip(temp_file.name)
+            info = (f"Duration: {clip.duration:.2f} sec\n"
+                    f"Resolution: {clip.w}x{clip.h}\n"
+                    f"FPS: {clip.fps}")
+            await event.reply(f"🎬 Video Metadata:\n{info}")
+            clip.close()
+            os.remove(temp_file.name)
+
+        except Exception as e:
+            await event.reply(f"❌ Error: {str(e)}")
+
+    # -----------------------------
+    # PDF conversion (dummy, just re-save)
+    # -----------------------------
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!convertpdf$"))
+    async def convertpdf(event):
+        try:
+            result = await download_reply(event)
+            if not result:
+                return
+            bio, reply = result
+
+            temp_in = tempfile.NamedTemporaryFile(delete=False)
+            temp_in.write(bio.read())
+            temp_in.close()
+
+            temp_out = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+            temp_out.close()
+
+            # Simple re-save using PyPDF2 if already PDF
+            try:
+                reader = PyPDF2.PdfReader(temp_in.name)
+                writer = PyPDF2.PdfWriter()
+                for page in reader.pages:
+                    writer.add_page(page)
+                with open(temp_out.name, "wb") as f:
+                    writer.write(f)
+            except:
+                # If not PDF, just wrap in blank PDF page (dummy)
+                writer = PyPDF2.PdfWriter()
+                writer.add_blank_page(width=595, height=842)
+                with open(temp_out.name, "wb") as f:
+                    writer.write(f)
+
+            await client.send_file(event.chat_id,
+                                   temp_out.name,
+                                   caption="📄 Converted to PDF",
+                                   reply_to=reply.id)
+            os.remove(temp_in.name)
+            os.remove(temp_out.name)
+
+        except Exception as e:
+            await event.reply(f"❌ Error: {str(e)}")
+
+    # -----------------------------
+    # PDF info
+    # -----------------------------
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!pdfinfo$"))
+    async def pdfinfo(event):
+        try:
+            result = await download_reply(event)
+            if not result:
+                return
+            bio, reply = result
+
+            temp_file = tempfile.NamedTemporaryFile(delete=False)
+            temp_file.write(bio.read())
+            temp_file.close()
+
+            reader = PyPDF2.PdfReader(temp_file.name)
+            pages = len(reader.pages)
+            metadata = reader.metadata
+            info = f"Pages: {pages}\n"
+            for k, v in metadata.items():
+                info += f"{k[1:]}: {v}\n"  # remove leading /
+
+            await event.reply(f"📄 PDF Info:\n{info}")
+            os.remove(temp_file.name)
+
+        except Exception as e:
+            await event.reply(f"❌ Error: {str(e)}")
+
+    # -----------------------------
+    # Image resize
+    # -----------------------------
+    @client.on(
+        events.NewMessage(from_users=my_id,
+                          pattern=r"^!imgresize\s+(\d+)x(\d+)$"))
+    async def imgresize(event):
+        try:
+            w, h = int(event.pattern_match.group(1)), int(
+                event.pattern_match.group(2))
+            result = await download_reply(event)
+            if not result:
+                return
+            bio, reply = result
+
+            img = Image.open(bio)
+            img = img.resize((w, h))
+            out = BytesIO()
+            img.save(out, format=img.format)
+            out.seek(0)
+            await client.send_file(event.chat_id,
+                                   out,
+                                   caption=f"🖼 Image resized to {w}x{h}",
+                                   reply_to=reply.id)
+
+        except Exception as e:
+            await event.reply(f"❌ Error: {str(e)}")
+
+    # -----------------------------
+    # Image rotate
+    # -----------------------------
+    @client.on(
+        events.NewMessage(from_users=my_id, pattern=r"^!imgrotate\s+(\d+)$"))
+    async def imgrotate(event):
+        try:
+            deg = int(event.pattern_match.group(1))
+            result = await download_reply(event)
+            if not result:
+                return
+            bio, reply = result
+
+            img = Image.open(bio)
+            img = img.rotate(deg, expand=True)
+            out = BytesIO()
+            img.save(out, format=img.format)
+            out.seek(0)
+            await client.send_file(event.chat_id,
+                                   out,
+                                   caption=f"🖼 Image rotated {deg}°",
+                                   reply_to=reply.id)
+
+        except Exception as e:
+            await event.reply(f"❌ Error: {str(e)}")
+
+    # -----------------------------
+    # Image compress
+    # -----------------------------
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!imgcompress$"))
+    async def imgcompress(event):
+        try:
+            result = await download_reply(event)
+            if not result:
+                return
+            bio, reply = result
+
+            img = Image.open(bio)
+            out = BytesIO()
+            img.save(out, format=img.format, optimize=True, quality=70)
+            out.seek(0)
+            await client.send_file(event.chat_id,
+                                   out,
+                                   caption="🖼 Image compressed",
+                                   reply_to=reply.id)
+
+        except Exception as e:
+            await event.reply(f"❌ Error: {str(e)}")
+
+    # -----------------------------
+    # Image format conversion
+    # -----------------------------
+    @client.on(
+        events.NewMessage(from_users=my_id, pattern=r"^!imgformat\s+(\w+)$"))
+    async def imgformat(event):
+        try:
+            fmt = event.pattern_match.group(1).upper()
+            result = await download_reply(event)
+            if not result:
+                return
+            bio, reply = result
+
+            img = Image.open(bio)
+            out = BytesIO()
+            img.save(out, format=fmt)
+            out.seek(0)
+            await client.send_file(event.chat_id,
+                                   out,
+                                   caption=f"🖼 Image converted to {fmt}",
+                                   reply_to=reply.id)
+
+        except Exception as e:
+            await event.reply(f"❌ Error: {str(e)}")
+
+
+---
+
+21- ./Com/menres.py
+
+# Com/menres.py
+from telethon import events
+import os
+import json
+
+__HELP__ = ("!menres on/off → Enable or disable mention auto-response\n"
+            "!menres set <text> → Set the response text for mentions")
+__CATEGORY__ = "Utilities"
+MODE_FILE = "mode/menres.json"
+os.makedirs("mode", exist_ok=True)
+
+if not os.path.exists(MODE_FILE):
+    with open(MODE_FILE, "w", encoding="utf-8") as f:
+        json.dump({"enabled": False, "text": ""}, f, indent=2)
+
+
+def setup(client, my_id):
+
+    def load_config():
+        with open(MODE_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    def save_config(cfg):
+        with open(MODE_FILE, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, indent=2)
+
+    @client.on(
+        events.NewMessage(from_users=my_id, pattern=r"^!menres\s+(on|off)$"))
+    async def toggle_menres(event):
+        cfg = load_config()
+        state = event.pattern_match.group(1).lower()
+        cfg["enabled"] = state == "on"
+        save_config(cfg)
+        await event.edit(
+            f"✅ Mention Response {'enabled' if cfg['enabled'] else 'disabled'}."
+        )
+
+    @client.on(
+        events.NewMessage(from_users=my_id, pattern=r"^!menres\s+set\s+(.+)$"))
+    async def set_text(event):
+        cfg = load_config()
+        text = event.pattern_match.group(1).strip()
+        cfg["text"] = text
+        save_config(cfg)
+        await event.edit(f"✅ Mention response text set to:\n{text}")
+
+    @client.on(events.NewMessage())
+    async def mention_response(event):
+        cfg = load_config()
+        if not cfg["enabled"] or not cfg["text"]:
+            return
+
+        # event.message.mentioned is True if your account was mentioned
+        if getattr(event.message, "mentioned", False):
+            await event.reply(cfg["text"])
+
+
+---
+
+22- ./Com/monitor.py
+
+# Com/monitor.py
+from telethon import events
+import os
+import json
+
+__HELP__ = "!monitor set <keyword> → Watch for keywords and alert you\n!monitor remove <keyword> → Remove a keyword from monitoring\n!monitor list → Show all monitored keywords"
+__CATEGORY__ = "Utilities"
+
+DATA_FILE = "mode/monitor.json"
+os.makedirs("mode", exist_ok=True)
+
+
+def setup(client, my_id):
+
+    # -----------------------
+    # Load saved keywords
+    # -----------------------
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, "r", encoding="utf-8") as f:
+                monitored_keywords = json.load(f)
+        except:
+            monitored_keywords = {}
+    else:
+        monitored_keywords = {}
+
+    def save_data():
+        with open(DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump(monitored_keywords, f, indent=2)
+
+    # -----------------------
+    # Set a keyword
+    # -----------------------
+    @client.on(
+        events.NewMessage(from_users=my_id, pattern=r"^!monitor set (.+)"))
+    async def monitor_set(event):
+        keyword = event.pattern_match.group(1).strip().lower()
+        chat_id = str(event.chat_id)
+        if chat_id not in monitored_keywords:
+            monitored_keywords[chat_id] = []
+        if keyword in monitored_keywords[chat_id]:
+            await event.reply(
+                f"⚠️ Keyword '{keyword}' is already being monitored in this chat."
+            )
+            return
+        monitored_keywords[chat_id].append(keyword)
+        save_data()
+        await event.reply(
+            f"✅ Now monitoring keyword: '{keyword}' in this chat.")
+
+    # -----------------------
+    # Remove a keyword
+    # -----------------------
+    @client.on(
+        events.NewMessage(from_users=my_id, pattern=r"^!monitor remove (.+)"))
+    async def monitor_remove(event):
+        keyword = event.pattern_match.group(1).strip().lower()
+        chat_id = str(event.chat_id)
+        if chat_id not in monitored_keywords or keyword not in monitored_keywords[
+                chat_id]:
+            await event.reply(
+                f"⚠️ Keyword '{keyword}' is not monitored in this chat.")
+            return
+        monitored_keywords[chat_id].remove(keyword)
+        save_data()
+        await event.reply(f"❌ Removed keyword: '{keyword}' from monitoring.")
+
+    # -----------------------
+    # List monitored keywords
+    # -----------------------
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!monitor list$"))
+    async def monitor_list(event):
+        chat_id = str(event.chat_id)
+        keywords = monitored_keywords.get(chat_id, [])
+        if not keywords:
+            await event.reply(
+                "ℹ️ No keywords are currently monitored in this chat.")
+            return
+        await event.reply("📝 Monitored keywords:\n" +
+                          "\n".join(f"• {k}" for k in keywords))
+
+    # -----------------------
+    # Alert on keyword match
+    # -----------------------
+    @client.on(events.NewMessage())
+    async def keyword_alert(event):
+        chat_id = str(event.chat_id)
+        if chat_id not in monitored_keywords:
+            return
+        text = (event.raw_text or "").lower()
+        for kw in monitored_keywords[chat_id]:
+            if kw in text:
+                try:
+                    await client.send_message(
+                        my_id,
+                        f"⚡ Keyword alert!\nChat: {event.chat.title if hasattr(event.chat, 'title') else event.chat_id}\nUser: {getattr(await event.get_sender(), 'first_name', 'Unknown')}\nKeyword: '{kw}'\nMessage: {event.text}",
+                        reply_to=event.id)
+                except Exception as e:
+                    print(f"Failed to alert keyword '{kw}': {e}")
+                break  # only alert once per message
+
+
+---
+
+23- ./Com/ocr.py
+
+# Com/ocr.py
+from telethon import events
+from PIL import Image
+import pytesseract
+from io import BytesIO
+
+__HELP__ = "!ocr → Extract text from a replied image"
+
+
+def setup(client, my_id):
+
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!ocr$"))
+    async def ocr_handler(event):
+        try:
+            if not event.is_reply:
+                await event.reply("❌ Reply to an image to extract text.")
+                return
+
+            reply_msg = await event.get_reply_message()
+            if not reply_msg.media:
+                await event.reply("❌ The replied message has no media.")
+                return
+
+            bio = BytesIO()
+            await reply_msg.download_media(file=bio)
+            bio.seek(0)
+            img = Image.open(bio)
+
+            text = pytesseract.image_to_string(img)
+            if not text.strip():
+                await event.reply("❌ No text detected in the image.")
+            else:
+                await event.reply(f"📝 Extracted Text:\n{text}")
+
+        except Exception as e:
+            await event.reply(f"❌ Error: {str(e)}")
+
+
+---
+
+24- ./Com/ping.py
+
+from telethon import events
+import time
+
+__HELP__ = "!ping → Shows the bot's latency"
+__CATEGORY__ = "Setup"
+
+def setup(client, my_id):
+
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!ping$"))
+    async def ping(event):
+        start = time.time()
+        msg = await event.edit("Pinging...")
+        end = time.time()
+        latency = int((end - start) * 100)
+        await msg.edit(f"Latency: {latency}ms")
+
+
+---
+
+25- ./Com/portsweep.py
+
+# Com/portsweep.py
+from telethon import events
+import asyncio
+import socket
+import os
+import json
+from datetime import datetime
+
+__HELP__ = "!portsweep <host> [start_port-end_port] → Scan ports safely and get open/filtered list.\n!portsweep del <ID> → Delete saved scan result."
+
+SAVE_FOLDER = "mode/portsweep"
+os.makedirs(SAVE_FOLDER, exist_ok=True)
+
+active_scans = {
+}  # id: {"host": host, "ports": list, "task": Task, "file": filename}
+
+
+def setup(client, my_id):
+
+    async def scan_ports(host, ports, scan_id):
+        open_ports = []
+        for port in ports:
+            try:
+                conn = asyncio.open_connection(host, port)
+                reader, writer = await asyncio.wait_for(conn, timeout=1)
+                open_ports.append(port)
+                writer.close()
+                await writer.wait_closed()
+            except:
+                continue
+
+        now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"{SAVE_FOLDER}/portsweep_{scan_id}.txt"
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(
+                f"Host: {host}\nScan ID: {scan_id}\nDate: {now}\nOpen Ports:\n"
+            )
+            for p in open_ports:
+                f.write(f"{p}\n")
+
+        await client.send_file(
+            client.me if scan_id.startswith("dm") else scan_id,
+            filename,
+            caption=f"✅ Portsweep completed for {host}. Scan ID: {scan_id}")
+        active_scans.pop(scan_id, None)
+
+    @client.on(
+        events.NewMessage(from_users=my_id, pattern=r"^!portsweep\s+(.+)"))
+    async def portsweep_cmd(event):
+        args = event.pattern_match.group(1).strip()
+        try:
+            # Delete command
+            await event.delete()
+
+            # Delete existing scan
+            if args.startswith("del"):
+                del_id = args.split()[1]
+                info = active_scans.get(del_id)
+                if info:
+                    file = info.get("file")
+                    task = info.get("task")
+                    if task:
+                        task.cancel()
+                    if file and os.path.exists(file):
+                        os.remove(file)
+                    active_scans.pop(del_id)
+                    await event.reply(f"✅ Deleted portsweep result {del_id}")
+                    return
+                else:
+                    await event.reply(f"❌ Scan ID {del_id} not found")
+                    return
+
+            # Parse host and ports
+            parts = args.split()
+            host = parts[0]
+            if len(parts) > 1 and "-" in parts[1]:
+                start_port, end_port = map(int, parts[1].split("-"))
+            else:
+                start_port, end_port = 1, 1024
+
+            ports = list(range(start_port, end_port + 1))
+            scan_id = str(int(datetime.now().timestamp() * 1000))
+            task = asyncio.create_task(scan_ports(host, ports, scan_id))
+            active_scans[scan_id] = {
+                "host": host,
+                "ports": ports,
+                "task": task,
+                "file": f"{SAVE_FOLDER}/portsweep_{scan_id}.txt"
+            }
+            await event.reply(
+                f"⏳ Portsweep started for {host}. Scan ID: {scan_id}")
+
+        except Exception as e:
+            await event.reply(f"❌ Error: {str(e)}")
+
+
+---
+
+26- ./Com/qr.py
+
+# Com/qr.py
+from telethon import events
+import qrcode
+from io import BytesIO
+
+__HELP__ = "!qr <text> → Generate a QR code from the given text"
+__CATEGORY__ = "Utilities"
+
+def setup(client, my_id):
+
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!qr\s+(.+)"))
+    async def qr(event):
+        try:
+            text = event.pattern_match.group(1)
+            qr_img = qrcode.make(text)
+
+            bio = BytesIO()
+            bio.name = "qr.png"
+            qr_img.save(bio, "PNG")
+            bio.seek(0)
+
+            await event.reply(file=bio)
+        except Exception as e:
+            await event.reply(f"❌ Error: {str(e)}")
+
+
+---
+
+27- ./Com/reverseimg.py
+
+# Com/reverseimg.py
+from telethon import events
+import aiohttp
+import os
+
+__HELP__ = "!reverseimg [google|yandex|tineye] (reply to image) → Reverse image search"
+__CATEGORY__ = "Utilities"
+
+TELEGRAPH_API = "https://telegra.ph/upload"
+
+
+async def upload_to_telegraph(file_path):
+    try:
+        async with aiohttp.ClientSession() as session:
+            with open(file_path, "rb") as f:
+                form = aiohttp.FormData()
+                form.add_field("file", f, filename=os.path.basename(file_path))
+                async with session.post(TELEGRAPH_API, data=form) as resp:
+                    if resp.status != 200:
+                        return None
+                    data = await resp.json()
+                    if isinstance(data, list) and "src" in data[0]:
+                        return "https://telegra.ph" + data[0]["src"]
+    except Exception:
+        return None
+    return None
+
+
+def setup(client, my_id):
+
+    @client.on(
+        events.NewMessage(from_users=my_id,
+                          pattern=r"^!reverseimg(?:\s+(\w+))?$"))
+    async def reverseimg(event):
+        try:
+            service = (event.pattern_match.group(1) or "google").lower()
+
+            if not event.is_reply:
+                await event.reply(
+                    "❌ Reply to an image or sticker to use reverse search.")
+                return
+
+            reply_msg = await event.get_reply_message()
+            if not reply_msg.media:
+                await event.reply("❌ That’s not an image or file.")
+                return
+
+            # Download file temporarily
+            file_path = await client.download_media(reply_msg,
+                                                    file="temp_reverseimg")
+            if not file_path:
+                await event.reply("❌ Failed to download media.")
+                return
+
+            # Upload to Telegraph
+            url = await upload_to_telegraph(file_path)
+            os.remove(file_path)
+
+            if not url:
+                await event.reply("❌ Failed to upload image to Telegraph.")
+                return
+
+            # Generate search link
+            if service == "google":
+                link = f"https://lens.google.com/uploadbyurl?url={url}"
+                service_name = "Google Lens"
+            elif service == "yandex":
+                link = f"https://yandex.com/images/search?rpt=imageview&url={url}"
+                service_name = "Yandex Images"
+            elif service == "tineye":
+                link = f"https://tineye.com/search?url={url}"
+                service_name = "TinEye"
+            else:
+                await event.reply(
+                    "❌ Invalid service. Use google / yandex / tineye.")
+                return
+
+            await event.reply(
+                f"🔍 Reverse Image Search ({service_name}):\n{link}")
+
+        except Exception as e:
+            await event.reply(f"❌ Error: {str(e)}")
+
+
+---
+
+28- ./Com/setreaction.py
+
+# Com/setreaction.py
+from telethon import events
+import os
+import json
+import asyncio
+from datetime import datetime
+
+__HELP__ = (
+    "!setreaction <@Username/ID> <Emoji> → React with emoji to all future messages from the user\n"
+    "!setreaction (reply) <Emoji> → React to messages of replied user\n"
+    "!setreaction stop <ID> → Stop the reaction task")
+__CATEGORY__ = "Setup"
+
+os.makedirs("mode", exist_ok=True)
+REACTION_FILE = "mode/reactions.json"
+
+# Load or create reactions file
+if not os.path.exists(REACTION_FILE):
+    with open(REACTION_FILE, "w", encoding="utf-8") as f:
+        json.dump({}, f, indent=2)
+
+# Active tasks dict
+active_reactions = {}  # task_id: {"user_id": int, "emoji": str, "task": Task}
+
+
+def setup(client, my_id):
+
+    def save_reactions():
+        data = {
+            tid: {
+                "user_id": info["user_id"],
+                "emoji": info["emoji"]
+            }
+            for tid, info in active_reactions.items()
+        }
+        with open(REACTION_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+
+    async def load_existing_reactions():
+        try:
+            with open(REACTION_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            for task_id_str, info in data.items():
+                user_id = info["user_id"]
+                emoji = info["emoji"]
+                task_id = int(task_id_str)
+                task = asyncio.create_task(reaction_task(user_id, emoji))
+                active_reactions[task_id] = {
+                    "user_id": user_id,
+                    "emoji": emoji,
+                    "task": task
+                }
+        except Exception:
+            pass
+
+    async def reaction_task(user_id, emoji):
+
+        async def handler(event):
+            if event.sender_id == user_id and event.raw_text:
+                try:
+                    await event.reply(emoji)
+                except Exception:
+                    pass
+
+        return client.add_event_handler(handler, events.NewMessage)
+
+    @client.on(
+        events.NewMessage(from_users=my_id,
+                          pattern=r"^!setreaction stop (\d+)$"))
+    async def stop_reaction(event):
+        task_id = int(event.pattern_match.group(1))
+        info = active_reactions.get(task_id)
+        if info:
+            task = info["task"]
+            client.remove_event_handler(task)
+            del active_reactions[task_id]
+            save_reactions()
+            await event.edit(f"✅ Stopped reaction task {task_id}")
+        else:
+            await event.edit(f"❌ No active reaction task with ID {task_id}")
+
+    @client.on(
+        events.NewMessage(
+            from_users=my_id,
+            pattern=r"^!setreaction\s+(?:@?(\w+)|reply)\s+(.+)$"))
+    async def set_reaction(event):
+        try:
+            target = event.pattern_match.group(1)
+            emoji = event.pattern_match.group(2).strip()
+
+            # Determine user_id
+            if target is None or target.lower() == "reply":
+                if not event.is_reply:
+                    await event.edit(
+                        "❌ Must reply to a message if not providing username/ID"
+                    )
+                    return
+                reply_msg = await event.get_reply_message()
+                user_id = reply_msg.sender_id
+            else:
+                if target.isdigit():
+                    user_id = int(target)
+                else:
+                    user_entity = await client.get_entity(target)
+                    user_id = user_entity.id
+
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            task_id = int(datetime.now().timestamp() * 1000)
+
+            # Start task
+            task = await reaction_task(user_id, emoji)
+
+            active_reactions[task_id] = {
+                "user_id": user_id,
+                "emoji": emoji,
+                "task": task
+            }
+            save_reactions()
+
+            await event.edit(
+                f"✅ Reaction task started for {user_id} with emoji '{emoji}'. Task ID: {task_id}"
+            )
+
+        except Exception as e:
+            await event.edit(f"❌ Failed to set reaction: {str(e)}")
+
+    # Load existing reactions on startup
+    asyncio.create_task(load_existing_reactions())
+
+
+---
+
+29- ./Com/shorturl.py
+
+# Com/shorturl.py
+from telethon import events
+import aiohttp
+import os
+import json
+
+__HELP__ = "!shorturl [tinyurl/bitly] <link> or reply → Shorten a URL using TinyURL or Bitly"
+__CATEGORY__ = "Utilities"
+BITLY_TOKEN = os.getenv("BITLY_TOKEN")  # set your Bitly token in env
+LOG_FILE = "mode/shorturl/shorturl_log.json"
+os.makedirs("mode", exist_ok=True)
+
+
+def setup(client, my_id):
+
+    def log_url(original, short, service):
+        data = []
+        if os.path.exists(LOG_FILE):
+            with open(LOG_FILE, "r", encoding="utf-8") as f:
+                try:
+                    data = json.load(f)
+                except:
+                    data = []
+        data.append({"original": original, "short": short, "service": service})
+        with open(LOG_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+
+    async def tinyurl_shorten(url):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                    f"http://tinyurl.com/api-create.php?url={url}") as resp:
+                if resp.status != 200:
+                    return None
+                return await resp.text()
+
+    async def bitly_shorten(url):
+        if not BITLY_TOKEN:
+            return None
+        headers = {
+            "Authorization": f"Bearer {BITLY_TOKEN}",
+            "Content-Type": "application/json"
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.post("https://api-ssl.bitly.com/v4/shorten",
+                                    headers=headers,
+                                    json={"long_url": url}) as resp:
+                if resp.status != 200:
+                    return None
+                data = await resp.json()
+                return data.get("link")
+
+    @client.on(
+        events.NewMessage(from_users=my_id,
+                          pattern=r"^!shorturl(?:\s+(\w+))?(?:\s+(.+))?"))
+    async def shorturl(event):
+        try:
+            service = "tinyurl"
+            url = event.pattern_match.group(2)
+            arg1 = event.pattern_match.group(1)
+
+            # Check if first argument is a service name
+            if arg1 and arg1.lower() in ["tinyurl", "bitly"]:
+                service = arg1.lower()
+            elif arg1 and not url:
+                url = arg1
+
+            # If no URL in command, check reply
+            if not url and event.is_reply:
+                reply_msg = await event.get_reply_message()
+                url = reply_msg.text or reply_msg.message or ""
+
+            if not url:
+                await event.reply(
+                    "❌ Provide a URL or reply to a message containing one.")
+                return
+
+            if not url.startswith("http"):
+                url = "http://" + url
+
+            # Shorten
+            if service == "bitly":
+                short_link = await bitly_shorten(url)
+                if not short_link:
+                    await event.reply(
+                        "❌ Failed to shorten using Bitly. Check token or URL.")
+                    return
+            else:
+                short_link = await tinyurl_shorten(url)
+                if not short_link:
+                    await event.reply("❌ Failed to shorten using TinyURL.")
+                    return
+
+            # Reply with shortened URL
+            await event.reply(
+                f"🔗 Shortened URL ({service.title()}):\n{short_link}")
+
+            # Log it
+            log_url(url, short_link, service)
+
+        except Exception as e:
+            await event.reply(f"❌ Error: {str(e)}")
+
+
+---
+
+30- ./Com/speedtest.py
+
+# Com/speedtest.py
+from telethon import events
+import speedtest
+import asyncio
+
+__HELP__ = "!speedtest → Run an internet speed test and show ping, download, and upload speeds."
+__CATEGORY__ = "Utilities"
+
+def setup(client, my_id):
+
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!speedtest$"))
+    async def speedtest_cmd(event):
+        msg = await event.reply(
+            "⏳ Running speed test... this may take a few seconds.")
+
+        def run_test():
+            st = speedtest.Speedtest()
+            st.get_best_server()
+            download = st.download()
+            upload = st.upload()
+            ping = st.results.ping
+            return download, upload, ping
+
+        try:
+            loop = asyncio.get_event_loop()
+            download, upload, ping = await loop.run_in_executor(None, run_test)
+
+            download_mbps = round(download / 1_000_000, 2)
+            upload_mbps = round(upload / 1_000_000, 2)
+
+            await msg.edit(f"📶 **Speed Test Results:**\n"
+                           f"• Ping: {ping} ms\n"
+                           f"• Download: {download_mbps} Mbps\n"
+                           f"• Upload: {upload_mbps} Mbps")
+        except Exception as e:
+            await msg.edit(f"❌ Speed test failed: {str(e)}")
+
+
+---
+
+31- ./Com/subenum.py
+
+# Com/subenum.py
+from telethon import events
+import aiohttp
+import asyncio
+import os
+import json
+from datetime import datetime
+import socket
+
+__HELP__ = (
+    "!subenum <domain> → Enumerate active subdomains and send as TXT file\n"
+    "!subenum del <ID> → Delete a previously saved subdomain TXT file")
+__CATEGORY__ = "Recon & Discovery"
+
+LOG_DIR = "mode/subenum_logs"
+ACTIVE_FILE = "mode/subenum_active.json"
+os.makedirs(LOG_DIR, exist_ok=True)
+os.makedirs("mode", exist_ok=True)
+
+
+def setup(client, my_id):
+
+    async def fetch_ct_subdomains(domain):
+        url = f"https://crt.sh/?q=%25.{domain}&output=json"
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=20) as resp:
+                    if resp.status != 200:
+                        return []
+                    data = await resp.json()
+                    subdomains = set()
+                    for entry in data:
+                        name = entry.get("name_value", "")
+                        for sub in name.split("\n"):
+                            if sub.endswith(domain):
+                                subdomains.add(sub.strip())
+                    return list(subdomains)
+        except:
+            return []
+
+    def check_dns(subdomain):
+        try:
+            ip = socket.gethostbyname(subdomain)
+            return ip
+        except:
+            return None
+
+    def load_active():
+        if os.path.exists(ACTIVE_FILE):
+            with open(ACTIVE_FILE, "r", encoding="utf-8") as f:
+                try:
+                    return json.load(f)
+                except:
+                    return {}
+        return {}
+
+    def save_active(active_data):
+        with open(ACTIVE_FILE, "w", encoding="utf-8") as f:
+            json.dump(active_data, f, indent=2)
+
+    @client.on(
+        events.NewMessage(from_users=my_id, pattern=r"^!subenum(?:\s+(.+))?"))
+    async def subenum_handler(event):
+        try:
+            arg = event.pattern_match.group(1)
+            if not arg and event.is_reply:
+                reply_msg = await event.get_reply_message()
+                arg = (reply_msg.text or "").strip()
+
+            if not arg:
+                await event.reply(
+                    "❌ Provide a domain or reply to a message containing one.")
+                return
+
+            # Delete command
+            await event.delete()
+
+            # Handle delete command
+            if arg.startswith("del"):
+                parts = arg.split()
+                if len(parts) != 2 or not parts[1].isdigit():
+                    await event.reply("❌ Usage: !subenum del <ID>")
+                    return
+                del_id = parts[1]
+                active_data = load_active()
+                entry = active_data.get(del_id)
+                if entry and os.path.exists(entry["file"]):
+                    os.remove(entry["file"])
+                    del active_data[del_id]
+                    save_active(active_data)
+                    await event.reply(
+                        f"✅ Deleted subdomain file with ID {del_id}")
+                else:
+                    await event.reply(f"❌ File with ID {del_id} not found")
+                return
+
+            domain = arg
+            active_data = load_active()
+
+            # Check if already scanned
+            for task_id, info in active_data.items():
+                if info.get("domain") == domain and os.path.exists(
+                        info.get("file", "")):
+                    await event.reply(
+                        f"📄 Already scanned **{domain}**, sending saved file..."
+                    )
+                    await client.send_file(
+                        event.chat_id,
+                        info["file"],
+                        caption=f"Subdomains for **{domain}** (ID: {task_id})")
+                    return
+
+            await event.reply(f"🔍 Scanning subdomains for **{domain}**...")
+
+            subdomains = await fetch_ct_subdomains(domain)
+            active_subs = []
+            for sub in subdomains:
+                ip = await asyncio.get_event_loop().run_in_executor(
+                    None, check_dns, sub)
+                if ip:
+                    active_subs.append(f"{sub} → {ip}")
+
+            if not active_subs:
+                await event.reply(
+                    f"❌ No active subdomains found for **{domain}**")
+                return
+
+            # Save to TXT file
+            now = datetime.now().strftime("%Y%m%d%H%M%S")
+            task_id = int(now)
+            file_path = os.path.join(LOG_DIR, f"{domain}_{task_id}.txt")
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write("\n".join(active_subs))
+
+            # Save active data
+            active_data[task_id] = {
+                "domain": domain,
+                "file": file_path,
+                "timestamp": now
+            }
+            save_active(active_data)
+
+            await client.send_file(
+                event.chat_id,
+                file_path,
+                caption=f"✅ Active subdomains for **{domain}** (ID: {task_id})"
+            )
+
+        except Exception as e:
+            await event.reply(f"❌ Error: {str(e)}")
+
+
+---
+
+32- ./Com/summarize.py
+
+# Com/summarize.py
+import os
+import aiohttp
+from telethon import events
+
+__HELP__ = "!summarize <text> → Summarize the given text using Google Gemini AI"
+__CATEGORY__ = "Utilities"
+
+def setup(client, my_id):
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta2/models/text-bison-001:generate"
+
+    @client.on(
+        events.NewMessage(from_users=my_id, pattern=r"^!summarize\s+(.+)"))
+    async def summarize(event):
+        text_to_summarize = event.pattern_match.group(1).strip()
+
+        if not text_to_summarize:
+            await event.reply("❌ Please provide text to summarize!")
+            return
+
+        msg = await event.reply("⏳ Summarizing...")
+
+        try:
+            headers = {
+                "Authorization": f"Bearer {GEMINI_API_KEY}",
+                "Content-Type": "application/json"
+            }
+
+            payload = {
+                "prompt": f"Summarize this text:\n{text_to_summarize}",
+                "temperature": 0.3,
+                "maxOutputTokens": 500
+            }
+
+            async with aiohttp.ClientSession() as session:
+                async with session.post(GEMINI_URL,
+                                        headers=headers,
+                                        json=payload) as response:
+                    if response.status != 200:
+                        text = await response.text()
+                        await msg.edit(f"❌ Error: {response.status} - {text}")
+                        return
+
+                    data = await response.json()
+
+            summary = data.get("candidates",
+                               [{}])[0].get("content", "No summary returned.")
+            await msg.edit(f"📝 Summary:\n{summary}")
+
+        except Exception as e:
+            await msg.edit(f"❌ Error: {str(e)}")
+
+
+---
+
+33- ./Com/sysinfo.py
+
+# Com/sysinfo.py
+import psutil
+import platform
+import asyncio
+import os
+import json
+from datetime import datetime
+import pytz
+from telethon import events
+
+try:
+    import GPUtil
+except:
+    GPUtil = None
+
+__HELP__ = "!sysinfo → Show detailed system information including CPU, memory, disks, network, GPU, and uptime."
+
+os.makedirs("mode/sys", exist_ok=True)
+SYS_LOG_FILE = "mode/sys/sysmon.json"
+TZ = pytz.timezone("Asia/Tehran")
+
+
+def setup(client, my_id):
+
+    async def collect_sysinfo():
+        try:
+            now = datetime.now(TZ)
+            # CPU
+            cpu_freq = psutil.cpu_freq()
+            cpu_percent_per_core = psutil.cpu_percent(percpu=True)
+            cpu_count = psutil.cpu_count(logical=True)
+            cpu_cores = psutil.cpu_count(logical=False)
+
+            # Memory
+            mem = psutil.virtual_memory()
+            swap = psutil.swap_memory()
+
+            # Disks
+            disks = []
+            for part in psutil.disk_partitions(all=False):
+                try:
+                    usage = psutil.disk_usage(part.mountpoint)
+                    disks.append({
+                        "device": part.device,
+                        "mount": part.mountpoint,
+                        "used": usage.used,
+                        "total": usage.total,
+                        "percent": usage.percent
+                    })
+                except:
+                    continue
+
+            # Network
+            net_io = psutil.net_io_counters()
+            conns = len(psutil.net_connections())
+
+            # Uptime
+            boot_time = datetime.fromtimestamp(psutil.boot_time(), tz=TZ)
+            uptime_sec = (now - boot_time).total_seconds()
+            days, rem = divmod(uptime_sec, 86400)
+            hours, rem = divmod(rem, 3600)
+            minutes, _ = divmod(rem, 60)
+
+            # GPU
+            gpus = []
+            if GPUtil:
+                try:
+                    for gpu in GPUtil.getGPUs():
+                        gpus.append({
+                            "name": gpu.name,
+                            "load": gpu.load * 100,
+                            "mem_used": gpu.memoryUsed,
+                            "mem_total": gpu.memoryTotal,
+                            "temp": gpu.temperature
+                        })
+                except:
+                    pass
+
+            sysinfo = {
+                "timestamp": now.strftime("%Y-%m-%d %H:%M:%S"),
+                "cpu": {
+                    "cores": cpu_cores,
+                    "threads": cpu_count,
+                    "freq": cpu_freq.current if cpu_freq else None,
+                    "per_core_usage": cpu_percent_per_core
+                },
+                "memory": {
+                    "total": mem.total,
+                    "used": mem.used,
+                    "percent": mem.percent,
+                    "swap_total": swap.total,
+                    "swap_used": swap.used,
+                    "swap_percent": swap.percent
+                },
+                "disks": disks,
+                "network": {
+                    "sent": net_io.bytes_sent,
+                    "recv": net_io.bytes_recv,
+                    "connections": conns
+                },
+                "uptime":
+                f"{int(days)}d {int(hours)}h {int(minutes)}m (since {boot_time.strftime('%Y-%m-%d %H:%M:%S')} IRST)",
+                "platform":
+                f"{platform.system()} {platform.release()} ({platform.machine()})",
+                "python": platform.python_version(),
+                "gpus": gpus
+            }
+
+            # Save log
+            with open(SYS_LOG_FILE, "w", encoding="utf-8") as f:
+                json.dump(sysinfo, f, indent=2)
+
+            return sysinfo
+
+        except Exception as e:
+            return {"error": str(e)}
+
+    async def format_sysinfo(info):
+        lines = ["🖥️ **System Info Report**", "-----------------------------"]
+
+        # CPU
+        cpu = info.get("cpu", {})
+        lines.append(
+            f"⚡ **CPU:** ({cpu.get('cores')} cores / {cpu.get('threads')} threads)"
+        )
+        lines.append(
+            f"Usage per core: {', '.join(f'{p}%' for p in cpu.get('per_core_usage', []))}"
+        )
+        lines.append(
+            f"Frequency: {cpu.get('freq', 'N/A')} MHz\n-----------------------------"
+        )
+
+        # Memory
+        mem = info.get("memory", {})
+        lines.append(
+            f"💾 **Memory:** {mem.get('used') / 1e9:.2f}GB/{mem.get('total') / 1e9:.2f}GB ({mem.get('percent', 0)}%)"
+        )
+        lines.append(
+            f"🔄 Swap: {mem.get('swap_used', 0):.2f}B/{mem.get('swap_total',0):.2f}B ({mem.get('swap_percent',0)}%)\n-----------------------------"
+        )
+
+        # Disks
+        lines.append("📀 **Disks:**")
+        for d in info.get("disks", []):
+            lines.append(
+                f" - {d['device']} ({d['mount']}) {d['used']/1e6:.2f}MB/{d['total']/1e9:.2f}GB ({d['percent']}%)"
+            )
+        lines.append("-----------------------------")
+
+        # Network
+        net = info.get("network", {})
+        lines.append(
+            f"📡 **Network:** Sent {net.get('sent')/1e6:.2f}MB | Recv {net.get('recv')/1e6:.2f}MB | Conns: {net.get('connections')}"
+        )
+        lines.append("-----------------------------")
+
+        # GPU
+        gpus = info.get("gpus", [])
+        if gpus:
+            lines.append("🎮 **GPU(s):**")
+            for gpu in gpus:
+                lines.append(
+                    f" - {gpu['name']}: Load {gpu['load']}% | Mem {gpu['mem_used']}/{gpu['mem_total']}MB | Temp {gpu['temp']}°C"
+                )
+            lines.append("-----------------------------")
+
+        # Uptime / Platform
+        lines.append(f"⏱️ **Uptime:** {info.get('uptime')}")
+        lines.append(f"💻 **Platform:** {info.get('platform')}")
+        lines.append(f"🐍 **Python:** {info.get('python')}")
+        lines.append("-----------------------------")
+
+        return "\n".join(lines)
+
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!sysinfo$"))
+    async def sysinfo_cmd(event):
+        info = await collect_sysinfo()
+        msg = await format_sysinfo(info)
+        await event.reply(msg)
+        await event.delete()
+
+    # -----------------------------
+    # Auto log every 5 seconds in background
+    # -----------------------------
+    async def auto_log():
+        while True:
+            await collect_sysinfo()
+            await asyncio.sleep(5)
+
+    asyncio.create_task(auto_log())
+
+
+---
+
+34- ./Com/sysmon.py
+
+# Com/sysmon.py
+import time
+import psutil
+import platform
+import os
+import asyncio
+import json
+from telethon import events
+
+__HELP__ = "!sysmon start/stop/export → Live system monitor that updates every 5s, logs stats, and can export logs."
+__CATEGORY__ = "Utilities"
+
+START_TIME = time.time()
+active_monitors = {}  # chat_id -> task
+
+LOG_DIR = "mode/sys"
+LOG_FILE = os.path.join(LOG_DIR, "sysmon.json")
+os.makedirs(LOG_DIR, exist_ok=True)
+
+
+def format_stats():
+    uptime_seconds = int(time.time() - START_TIME)
+    days, remainder = divmod(uptime_seconds, 86400)
+    hours, remainder = divmod(remainder, 3600)
+    minutes, seconds = divmod(remainder, 60)
+    uptime_str = f"{days}d {hours}h {minutes}m {seconds}s"
+
+    cpu_usage = psutil.cpu_percent(interval=0.5)
+    cpu_count = psutil.cpu_count(logical=True)
+
+    memory = psutil.virtual_memory()
+    mem_usage = (f"{memory.used // (1024**2)}MB / "
+                 f"{memory.total // (1024**2)}MB ({memory.percent}%)")
+
+    swap = psutil.swap_memory()
+    swap_usage = (f"{swap.used // (1024**2)}MB / "
+                  f"{swap.total // (1024**2)}MB ({swap.percent}%)"
+                  if swap.total > 0 else "N/A")
+
+    load_avg = "N/A"
+    if hasattr(os, "getloadavg"):
+        la1, la5, la15 = os.getloadavg()
+        load_avg = f"{la1:.2f}, {la5:.2f}, {la15:.2f}"
+
+    disk = psutil.disk_usage("/")
+    disk_usage = (f"{disk.used // (1024**3)}GB / "
+                  f"{disk.total // (1024**3)}GB ({disk.percent}%)")
+
+    processes = len(psutil.pids())
+    sys_info = f"{platform.system()} {platform.release()} ({platform.machine()})"
+
+    stats = {
+        "uptime": uptime_str,
+        "cpu_usage": f"{cpu_usage}%",
+        "cpu_cores": cpu_count,
+        "memory": mem_usage,
+        "swap": swap_usage,
+        "load_avg": load_avg,
+        "disk": disk_usage,
+        "processes": processes,
+        "system": sys_info,
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+    }
+
+    return stats
+
+
+def save_stats(stats):
+    """Save stats to JSON, ensure it's a list."""
+    data = []
+    if os.path.exists(LOG_FILE):
+        try:
+            with open(LOG_FILE, "r", encoding="utf-8") as f:
+                loaded = json.load(f)
+                if isinstance(loaded, list):
+                    data = loaded
+                else:
+                    # If file contains dict or something else, reset to list
+                    data = []
+        except Exception:
+            data = []
+
+    data.append(stats)
+
+    with open(LOG_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
+
+def pretty_stats(stats):
+    return (
+        f"⏱ **Uptime:** `{stats['uptime']}`\n\n"
+        f"💻 **System:** `{stats['system']}`\n"
+        f"🧮 **CPU:** `{stats['cpu_usage']}` of {stats['cpu_cores']} cores\n"
+        f"📦 **Memory:** `{stats['memory']}`\n"
+        f"💾 **Swap:** `{stats['swap']}`\n"
+        f"📊 **Load Avg (1/5/15m):** `{stats['load_avg']}`\n"
+        f"💽 **Disk:** `{stats['disk']}`\n"
+        f"⚙️ **Processes:** `{stats['processes']}`\n"
+        f"🕒 **Logged at:** `{stats['timestamp']}`")
+
+
+def setup(client, my_id):
+
+    async def monitor_task(chat_id, msg):
+        try:
+            while chat_id in active_monitors:
+                stats = format_stats()
+                save_stats(stats)  # log into file
+                await msg.edit(pretty_stats(stats))
+                await asyncio.sleep(5)
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            await msg.edit(f"❌ Monitor error: {str(e)}")
+        finally:
+            active_monitors.pop(chat_id, None)
+
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!sysmon start$"))
+    async def start_sysmon(event):
+        chat_id = event.chat_id
+        if chat_id in active_monitors:
+            await event.reply("⚠️ SysMon is already running in this chat.")
+            return
+
+        msg = await event.reply("🖥 Starting system monitor...")
+        task = asyncio.create_task(monitor_task(chat_id, msg))
+        active_monitors[chat_id] = task
+        await event.delete()
+
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!sysmon stop$"))
+    async def stop_sysmon(event):
+        chat_id = event.chat_id
+        if chat_id not in active_monitors:
+            await event.reply("⚠️ SysMon is not running here.")
+            return
+
+        task = active_monitors.pop(chat_id)
+        task.cancel()
+        await event.reply("🛑 SysMon stopped.")
+        await event.delete()
+
+    @client.on(events.NewMessage(from_users=my_id,
+                                 pattern=r"^!sysmon export$"))
+    async def export_sysmon(event):
+        if not os.path.exists(LOG_FILE):
+            await event.reply("❌ No logs found yet.")
+            return
+        await event.reply("📤 Exporting system monitor logs...")
+        await client.send_file(event.chat_id,
+                               LOG_FILE,
+                               caption="📊 SysMon Logs")
+
+
+---
+
+35- ./Com/textfile.py
+
+# Com/textfile.py
+from telethon import events
+import os
+from datetime import datetime
+
+__HELP__ = "!textfile <text> or reply → Create a .txt file from text"
+
+os.makedirs("temp", exist_ok=True)
+
+
+def setup(client, my_id):
+
+    @client.on(
+        events.NewMessage(from_users=my_id, pattern=r"^!textfile(?:\s+(.+))?"))
+    async def textfile(event):
+        try:
+            # Check if text is given directly or from reply
+            text = event.pattern_match.group(1)
+            if not text and event.is_reply:
+                reply_msg = await event.get_reply_message()
+                text = reply_msg.text or reply_msg.message
+            if not text:
+                await event.reply(
+                    "❌ Please provide text or reply to a message.")
+                return
+
+            # Create a unique filename
+            now = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"temp/textfile_{now}.txt"
+
+            # Write the text to the file
+            with open(filename, "w", encoding="utf-8") as f:
+                f.write(text)
+
+            # Send the file
+            await client.send_file(event.chat_id,
+                                   filename,
+                                   caption="📄 Here is your text file.",
+                                   reply_to=event.id)
+
+            # Optional: delete local file after sending
+            os.remove(filename)
+
+        except Exception as e:
+            await event.reply(f"❌ Error: {str(e)}")
+
+
+---
+
+36- ./Com/translate.py
+
+# Com/translate.py
+from telethon import events
+from googletrans import Translator
+
+__HELP__ = "!translate <lang_code> <text> → Translate text to the specified language (e.g., !translate en سلام)"
+__CATEGORY__ = "Utilities"
+
+def setup(client, my_id):
+    translator = Translator()
+
+    @client.on(
+        events.NewMessage(from_users=my_id,
+                          pattern=r"^!translate\s+(\S+)\s+(.+)"))
+    async def translate(event):
+        try:
+            lang = event.pattern_match.group(1)
+            text = event.pattern_match.group(2)
+
+            translated = translator.translate(text, dest=lang)
+            await event.reply(
+                f"🌐 Translated ({translated.src} → {lang}):\n{translated.text}"
+            )
+        except Exception as e:
+            await event.reply(f"❌ Error: {str(e)}")
+
+
+---
+
+37- ./Com/tts.py
+
+# Com/tts.py
+from telethon import events
+from gtts import gTTS
+import os
+
+__HELP__ = "!tts <lang> <text> or reply → Convert text to speech"
+__CATEGORY__ = "Utilities"
+
+TTS_FOLDER = "mode/tts"
+os.makedirs(TTS_FOLDER, exist_ok=True)
+
+
+def setup(client, my_id):
+
+    @client.on(
+        events.NewMessage(from_users=my_id, pattern=r"^!tts\s+(\w+)\s+(.+)"))
+    async def tts_handler(event):
+        try:
+            lang = event.pattern_match.group(1)
+            text = event.pattern_match.group(2).strip()
+
+            # If no text, check reply
+            if not text and event.is_reply:
+                reply_msg = await event.get_reply_message()
+                text = reply_msg.text or reply_msg.message or ""
+
+            if not text:
+                await event.reply(
+                    "❌ Provide text to convert or reply to a message.")
+                return
+
+            # Create TTS
+            tts = gTTS(text=text, lang=lang)
+            filename = os.path.join(TTS_FOLDER, f"tts_{event.id}.mp3")
+            tts.save(filename)
+
+            # Send the audio
+            await event.reply(file=filename)
+
+            # Cleanup
+            os.remove(filename)
+
+        except Exception as e:
+            await event.reply(f"❌ Error: {str(e)}")
+
+
+---
+
+38- ./Com/update.py
+
+# Com/update.py
+from telethon import events
+import os
+import hashlib
+import json
+import asyncio
+import sys
+
+__HELP__ = "!update → Restart the session\n!update log → Show changes in commands/files"
+__CATEGORY__ = "Setup"
+HASH_FILE = "mode/file_hashes.json"  # stores last file hashes
+
+
+def setup(client, my_id):
+
+    def compute_hash(file_path):
+        """Compute SHA256 hash of a file"""
+        h = hashlib.sha256()
+        with open(file_path, "rb") as f:
+            h.update(f.read())
+        return h.hexdigest()
+
+    def get_commands_in_file(file_path):
+        """Return True if file defines __HELP__, else False"""
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                code = f.read()
+            return "__HELP__" in code
+        except:
+            return False
+
+    @client.on(
+        events.NewMessage(from_users=my_id, pattern=r"^!update(?:\s+log)?$"))
+    async def update(event):
+        try:
+            command = event.text.strip().lower()
+
+            # ---------------------------
+            # !update log
+            # ---------------------------
+            if "log" in command:
+                msg = await event.edit("📊 Gathering command changes...")
+                await asyncio.sleep(0.5)
+
+                current_hashes = {}
+                file_changes = []
+
+                # Scan all Com/*.py files that define __HELP__
+                for filename in os.listdir("Com"):
+                    if filename.endswith(".py"):
+                        path = os.path.join("Com", filename)
+                        if get_commands_in_file(path):
+                            current_hashes[filename] = compute_hash(path)
+
+                # Load previous hashes
+                if os.path.exists(HASH_FILE):
+                    with open(HASH_FILE, "r", encoding="utf-8") as f:
+                        old_hashes = json.load(f)
+                else:
+                    old_hashes = {}
+
+                # Detect changes
+                for fname, hval in current_hashes.items():
+                    if fname not in old_hashes:
+                        file_changes.append(f"🟢 Added !{fname[:-3]}")
+                    elif old_hashes[fname] != hval:
+                        file_changes.append(f"✏️ Changed !{fname[:-3]}")
+
+                for fname in old_hashes:
+                    if fname not in current_hashes:
+                        file_changes.append(f"❌ Deleted !{fname[:-3]}")
+
+                if not file_changes:
+                    file_changes.append("✅ No changes detected.")
+
+                result_text = "📋 Command changes:\n" + "\n".join(file_changes)
+                result_text += f"\n\n🔹 Total commands: {len(current_hashes)}"
+
+                await msg.edit(result_text)
+
+                # Update stored hashes
+                os.makedirs(os.path.dirname(HASH_FILE), exist_ok=True)
+                with open(HASH_FILE, "w", encoding="utf-8") as f:
+                    json.dump(current_hashes, f, indent=2)
+
+            # ---------------------------
+            # !update (restart)
+            # ---------------------------
+            else:
+                msg = await event.edit(
+                    "🔄 Restarting the session to apply changes...")
+                await asyncio.sleep(1)  # ensure message is edited
+                os.execv(sys.executable, [sys.executable] + sys.argv)
+
+        except Exception as e:
+            await event.edit(f"❌ Error: {str(e)}")
+
+
+---
+
+39- ./Com/uptime.py
+
+# Com/uptime.py
+import time
+import psutil
+from telethon import events
+import platform
+import os
+
+__HELP__ = "!uptime → Report bot runtime uptime and system resource snapshot."
+__CATEGORY__ = "Utilities"
+
+# Track bot start time
+START_TIME = time.time()
+
+
+def setup(client, my_id):
+
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!uptime$"))
+    async def uptime_handler(event):
+        try:
+            # Calculate uptime
+            uptime_seconds = int(time.time() - START_TIME)
+            days, remainder = divmod(uptime_seconds, 86400)
+            hours, remainder = divmod(remainder, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            uptime_str = f"{days}d {hours}h {minutes}m {seconds}s"
+
+            # CPU
+            cpu_usage = psutil.cpu_percent(interval=0.5)
+            cpu_count = psutil.cpu_count(logical=True)
+
+            # RAM
+            memory = psutil.virtual_memory()
+            mem_usage = (f"{memory.used // (1024**2)}MB / "
+                         f"{memory.total // (1024**2)}MB ({memory.percent}%)")
+
+            # Swap
+            swap = psutil.swap_memory()
+            swap_usage = (f"{swap.used // (1024**2)}MB / "
+                          f"{swap.total // (1024**2)}MB ({swap.percent}%)"
+                          if swap.total > 0 else "N/A")
+
+            # Load average (if supported)
+            load_avg = "N/A"
+            if hasattr(os, "getloadavg"):
+                la1, la5, la15 = os.getloadavg()
+                load_avg = f"{la1:.2f}, {la5:.2f}, {la15:.2f}"
+
+            # Disk
+            disk = psutil.disk_usage("/")
+            disk_usage = (f"{disk.used // (1024**3)}GB / "
+                          f"{disk.total // (1024**3)}GB ({disk.percent}%)")
+
+            # Processes count
+            processes = len(psutil.pids())
+
+            # System info
+            sys_info = f"{platform.system()} {platform.release()} ({platform.machine()})"
+
+            # Reply
+            msg = (f"⏱ **Bot Uptime:** `{uptime_str}`\n\n"
+                   f"💻 **System:** `{sys_info}`\n"
+                   f"🧮 **CPU:** `{cpu_usage}%` of {cpu_count} cores\n"
+                   f"📦 **Memory:** `{mem_usage}`\n"
+                   f"💾 **Swap:** `{swap_usage}`\n"
+                   f"📊 **Load Avg (1/5/15m):** `{load_avg}`\n"
+                   f"💽 **Disk:** `{disk_usage}`\n"
+                   f"⚙️ **Processes:** `{processes}`")
+
+            await event.reply(msg)
+
+        except Exception as e:
+            await event.reply(f"❌ Error: {str(e)}")
+
+
+---
+
+40- ./Com/whois.py
+
+# Com/whois.py
+from telethon import events
+import os
+import json
+import asyncio
+from datetime import datetime
+import pytz
+
+__HELP__ = ("!whois set @BotUsername → Set the bot to fetch info from\n"
+            "!whois @Username/NumberID → Fetch info from the set bot\n"
+            "!whois here → Fetch info from replied message")
+__CATEGORY__ = "Information"
+
+WHOIS_FILE = "mode/whois.txt"
+tz = pytz.timezone("Asia/Tehran")
+
+# Mapping of fancy/bullshit characters to normal ones
+FONT_MAP = str.maketrans({
+    "γ": "y",
+    "τ": "t",
+    "η": "n",
+    "ρ": "p",
+    "α": "a",
+    "σ": "s",
+    "ß": "b",
+    "Ｃ": "c",
+    "қ": "k",
+    "ƒ": "f",
+    "ł": "l",
+    "℮": "e",
+    "Ƒ": "f",
+    "ց": "g",
+    "ᴜ": "u",
+    "Ғ": "f",
+    
+    # add more mappings if needed
+})
+
+
+def setup(client, my_id):
+
+    # ---------------------------
+    # Set the bot
+    # ---------------------------
+    @client.on(
+        events.NewMessage(from_users=my_id, pattern=r"^!whois set\s+@(\w+)$"))
+    async def set_bot(event):
+        bot_username = event.pattern_match.group(1)
+        os.makedirs(os.path.dirname(WHOIS_FILE), exist_ok=True)
+        with open(WHOIS_FILE, "w", encoding="utf-8") as f:
+            f.write(bot_username)
+        await event.edit(f"✅ Whois bot set to @{bot_username}")
+
+    # ---------------------------
+    # Fetch info
+    # ---------------------------
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!whois\s*(.*)$"))
+    async def whois(event):
+        target = event.pattern_match.group(1).strip()
+        await event.delete()  # Delete command
+
+        # Load bot username
+        if not os.path.exists(WHOIS_FILE):
+            await event.respond(
+                "❌ Please set the bot first with !whois set @BotUsername")
+            return
+        with open(WHOIS_FILE, "r", encoding="utf-8") as f:
+            bot_username = f.read().strip()
+
+        bot_entity = await client.get_entity(bot_username)
+
+        # Determine user to query
+        reply = await event.get_reply_message()
+        if target.lower() == "here" and reply:
+            user_to_query = reply.sender_id
+        elif target:
+            try:
+                user_entity = await client.get_entity(target)
+                user_to_query = user_entity.id
+            except Exception:
+                await event.respond("❌ Could not find the user.")
+                return
+        else:
+            await event.respond("❌ Usage: !whois here OR !whois @Username/ID")
+            return
+
+        # Send to bot and wait 5s before reading
+        await client.send_message(bot_entity, str(user_to_query))
+        await asyncio.sleep(5)
+        bot_reply = await client.get_messages(bot_entity, limit=1)
+        if not bot_reply:
+            await event.respond("❌ Bot did not respond.")
+            return
+
+        raw_text = bot_reply[0].message
+
+        # Remove Stickersets line
+        lines = raw_text.splitlines()
+        lines = [
+            line for line in lines
+            if not line.strip().startswith("Stickersets")
+        ]
+
+        # Replace fancy fonts
+        clean_lines = [line.translate(FONT_MAP) for line in lines]
+
+        # Parse and create default form
+        final_lines = []
+        final_lines.append("📊 Whois Information:\n")
+        for line in clean_lines:
+            # fix spacing and bullets
+            if line.strip():
+                final_lines.append(line)
+
+        # Append Tehran timestamp at bottom
+        now = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
+        final_lines.append(f"\nFetched at Tehran time: {now}")
+
+        final_msg = "\n".join(final_lines)
+        await event.respond(final_msg)
+
+
+---
+
+41- ./main.py
+
+import os
+import asyncio
+import importlib
+from telethon import TelegramClient
+from telethon.sessions import StringSession
+
+# ------------------------------
+# Load Replit secrets
+# ------------------------------
+SESSION_STRING = os.environ.get("SESSION_STRING")
+if not SESSION_STRING:
+    raise ValueError("SESSION_STRING environment variable is required")
+
+API_ID_STR = os.environ.get("API_ID")
+if not API_ID_STR:
+    raise ValueError("API_ID environment variable is required")
+API_ID = int(API_ID_STR)
+
+API_HASH = os.environ.get("API_HASH")
+if not API_HASH:
+    raise ValueError("API_HASH environment variable is required")
+
+# ------------------------------
+# Telegram client
+# ------------------------------
+client = TelegramClient(StringSession(SESSION_STRING), API_ID, API_HASH)
+my_id = None
+
+
+# ------------------------------
+# Load commands
+# ------------------------------
+def load_commands():
+    total_loaded = 0
+    for filename in os.listdir("Com"):
+        if filename.endswith(".py") and filename != "__init__.py":
+            modulename = filename[:-3]
+            fullname = f"Com.{modulename}"
+            try:
+                module = importlib.import_module(fullname)
+                if hasattr(module, "setup"):
+                    module.setup(client, my_id)
+                if hasattr(module, "__HELP__"):
+                    print(f"Loaded command: {module.__HELP__}")
+                    total_loaded += 1
+            except Exception as e:
+                print(f"Failed to import {fullname}: {e}")
+    print(f"📂 Total commands loaded: {total_loaded}")
+
+
+# ------------------------------
+# Async main
+# ------------------------------
+async def main():
+    global my_id
+    await client.start()
+    me = await client.get_me()
+    my_id = me.id
+    print(
+        f"✅ Connected as {me.first_name} (id={my_id}) username=@{me.username if me.username else 'N/A'}"
+    )
+
+    # Now that client is started, load commands
+    load_commands()
+    print(
+        "📌 Bot is ready."
+    )
+
+    # Keep running
+    await client.run_until_disconnected()
+
+# ------------------------------
+# Run
+# ------------------------------
+loop = asyncio.get_event_loop()
+loop.run_until_complete(main())
+
+
+---
+
+42- ./mode/cd.txt
+
+
+
+---
+
+43- ./mode/checkexp/312887691519.txt
+
+Protocol: https:// Status: 403
+
+Server headers: {'Date': 'Fri, 12 Sep 2025 23:31:42 GMT', 'Content-Type': 'text/html; charset=UTF-8', 'Transfer-Encoding': 'chunked', 'Connection': 'close', 'accept-ch': 'Sec-CH-UA-Bitness, Sec-CH-UA-Arch, Sec-CH-UA-Full-Version, Sec-CH-UA-Mobile, Sec-CH-UA-Model, Sec-CH-UA-Platform-Version, Sec-CH-UA-Full-Version-List, Sec-CH-UA-Platform, Sec-CH-UA, UA-Bitness, UA-Arch, UA-Full-Version, UA-Mobile, UA-Model, UA-Platform-Version, UA-Platform, UA', 'cf-mitigated': 'challenge', 'critical-ch': 'Sec-CH-UA-Bitness, Sec-CH-UA-Arch, Sec-CH-UA-Full-Version, Sec-CH-UA-Mobile, Sec-CH-UA-Model, Sec-CH-UA-Platform-Version, Sec-CH-UA-Full-Version-List, Sec-CH-UA-Platform, Sec-CH-UA, UA-Bitness, UA-Arch, UA-Full-Version, UA-Mobile, UA-Model, UA-Platform-Version, UA-Platform, UA', 'cross-origin-embedder-policy': 'require-corp', 'cross-origin-opener-policy': 'same-origin', 'cross-origin-resource-policy': 'same-origin', 'origin-agent-cluster': '?1', 'permissions-policy': 'accelerometer=(),autoplay=(),browsing-topics=(),camera=(),clipboard-read=(),clipboard-write=(),geolocation=(),gyroscope=(),hid=(),interest-cohort=(),magnetometer=(),microphone=(),payment=(),publickey-credentials-get=(),screen-wake-lock=(),serial=(),sync-xhr=(),usb=()', 'referrer-policy': 'same-origin', 'server-timing': 'chlray;desc="97e3332fdc6675a6"', 'x-content-type-options': 'nosniff', 'x-frame-options': 'SAMEORIGIN', 'Cache-Control': 'private, max-age=0, no-store, no-cache, must-revalidate, post-check=0, pre-check=0', 'Expires': 'Thu, 01 Jan 1970 00:00:01 GMT', 'Report-To': '{"endpoints":[{"url":"https:\\/\\/a.nel.cloudflare.com\\/report\\/v4?s=8MHpm6kfaezU0nxV6ePm6CiHySWnmK%2B8sPmXhqo5OHdk5zuljOYDQmqO2lqvU46wfpR6ml%2BVl9BZ%2Bwf7Zve92G9HTFrZ8vG6ZMlvln6gUMynJuxI6l903mdE8L6To1gt"}],"group":"cf-nel","max_age":604800}', 'NEL': '{"success_fraction":0,"report_to":"cf-nel","max_age":604800}', 'Vary': 'Accept-Encoding', 'Strict-Transport-Security': 'max-age=15552000; includeSubDomains; preload', 'Server': 'cloudflare', 'CF-RAY': '97e3332fdc6675a6-SEA', 'Content-Encoding': 'gzip', 'alt-svc': 'h3=":443"; ma=86400'}
+
+Missing security headers: ['X-Frame-Options', 'Content-Security-Policy', 'X-Content-Type-Options']
+
+⚠️ Forms detected, potential XSS targets (safe payload not executed)
+
+✅ HTTPS enabled
+
+ℹ️ CVE lookup: passive only, check official CVE sources manually
+
+---
+
+44- ./mode/com.txt
+
+!log: DISABLED
+
+---
+
+45- ./mode/dns/1_dnsprobe_2025-09-12_23-21-17.txt
+
+Domain: fakepixel.fun
+  A: 104.21.64.1, 104.21.96.1, 104.21.16.1, 104.21.80.1, 104.21.112.1, 104.21.48.1, 104.21.32.1
+  AAAA: 2606:4700:3030::6815:2001, 2606:4700:3030::6815:4001, 2606:4700:3030::6815:3001, 2606:4700:3030::6815:6001, 2606:4700:3030::6815:1001, 2606:4700:3030::6815:5001, 2606:4700:3030::6815:7001
+  MX: 68 route3.mx.cloudflare.net., 91 route2.mx.cloudflare.net., 53 route1.mx.cloudflare.net.
+  TXT: "v=spf1 include:_spf.mx.cloudflare.net ~all", "polar=27acb2a2-f6b6-4888-b5de-04642c3f55da", "tcpshield-network-verification=2IOH37VSIHNEACYI63OPWSOJI6ARSHX5Q36WZBY33APE4RHDR7YUPPLJNZL2DR3XEBTDSAYRLSL3OKJITGYBQYR2JFTHYIFYUZ6H5XA=", "tcpshield-network-verification=425P7IQTULR7F4YW7FFH42ZJYE7IGTSZB26DFBVEQ37N3UI2MTUB3JY5CXQZCI27OOUFRY6OUHOPDZ4ONIFJXNVREW7VR26E6YONWGA="
+  CNAME: None
+
+
+
+---
+
+46- ./mode/dns/dns_id.txt
+
+1
+
+---
+
+47- ./mode/f.json
+
+[]
+
+---
+
+48- ./mode/f_id.txt
+
+0
+
+---
+
+49- ./mode/file_hashes.json
+
+{
+  "calc.py": "1a67e6822041d74d1419af90d76b4df168282068948b64997b1f776629088f47",
+  "countdown.py": "71a2b2fc75fbf933298ad8061ae4db7ddadf3be5316870fe54345bcecc9cc26e",
+  "crypto.py": "606de721f494f7806b445ba7df7474767a68e80029f7359fa0e37ef4652e5a81",
+  "f.py": "a6ad8764b1499d45a516588388aacdc7c38eb62b2a53a2d399fa7b0fff51070a",
+  "finduser.py": "05cead5bdac468c8d3f854319be7f297082514d22c24b8659b07ab363989c7d5",
+  "ginfo.py": "5e978ad34319368510dbab7d5658375c7c6623b75b45290c9dd4c7041602ef90",
+  "info.py": "8e02c78099853e8d7a22a8559969d4ebdb49a176211e215e525adcdfbc377996",
+  "logdata.py": "45095623482201b0124e92f0b4f3d310e3ef8ccb3102ca1d051aa5b816765320",
+  "menres.py": "fffd1bb86441a0417ac30ff18159d94c0e4836be99d22d793e3c56f657eaa827",
+  "ping.py": "96d9f59304f169a4cb280edee63efd54b3fa182153baf3ac86ce1d34604e87ef",
+  "qr.py": "b39bf9aa742462d7aed4e25240238a4eb2c01193c460ee5622add20076d0bce4",
+  "setreaction.py": "89bce806e08a3c941bce319f5623fafa3338c0fb09432d20b418f5f5de90cc6e",
+  "summarize.py": "80ba3ed9890e5d14ff1a45802aa1d780d4a8f17fcd09a00c8e967627fe4115b4",
+  "translate.py": "a84224fbf0b0437a356790379bcf95536473245079e1cd2ca8d47a7be2b0c77a",
+  "update.py": "79f48ea93cef67e6e8966dde2cb0e33ecb4c909274d77dd02aefdc97bb82a89c",
+  "whois.py": "97f02125d2cab0bb8cb6579243da9e1ca4900bf22739966b6a9f5c92d254d221",
+  "blockuser.py": "660407fd239906a3d76ac2d612e7d27bcdc584197bb14e83a61cac79a2f2c2b2",
+  "cauto.py": "b7d2cc0c1fb0466c80ea0f1c1178430e1c9cb472d5d2123d387e88e091cbf2e1",
+  "fileinfo.py": "9fb9aa0cd866693aa6f39192c0a017b5ed817ebb669c69e76d5cbf66fc5e7f88",
+  "reverseimg.py": "10081ae89296bc84f39abc30893e8211e63dc7ade65d9c68f84bd3ddc680d2bb",
+  "tts.py": "a0e4fa7948ffb5f146814a59663d8a5fca887cfe3ff1966e2d926f303018ad7e",
+  "ocr.py": "fbe02cc82705d4042abcd8f9bbad9318f8c802bf74458ecc006944280157b280",
+  "speedtest.py": "f5cb858f34e990eeed91b1325043b86c9438ac8ec160dcb3b4c9c05f9ad380df",
+  "mediatools.py": "e9faa219456dd81522080f0afe2eebc61eda75cc5639901ed2dfc44b69c111e4",
+  "textfile.py": "cbd106a62e3174cf84e15570d7e4bedbee9d53d63f49e37ef0768d215a7c7dc1",
+  "imgwatermark.py": "73ae204eb3d1eb2efa5638de27052fe312bb98bdf757ed4f279e777ffd9b5720",
+  "monitor.py": "657577a39bf6567e2bf04fac47e67ed2b6ff3ea74bbdae1149edf4bdf9d9f63f",
+  "subenum.py": "92433e5963f0e8a60646885713af4463c983c2b8cd0c94ca755b73a4f152f1d9",
+  "dnsprobe.py": "6b122a86aacac44ccb4f0a8d8b77f5ac0d38e564b3cb14c4612456e75df3c18e",
+  "portsweep.py": "d5b2eccdf1199b757c4f3aac41dfb1b1d964f955114cbb4d8bec036dc5a681c2",
+  "shorturl.py": "11f402667d86a464fcb327033e133bb15513ec53e829c1787f7e88f5b7c43c40",
+  "checkexp.py": "2731a7730b8f167fd317d9899af44db80a60ce2464b74720ccf35cfb22eda2a9",
+  "uptime.py": "3149480bb2711a7c1e5426e49cbee8bc8ca0e8931b0c0b6df5dbd85f1efe9072",
+  "sysmon.py": "230d8d6c5c7e6941da88301b461eb45ab5a565156a12b86cbbaaf3cace72db4f",
+  "help.py": "2be881f7039fb05a9f85144195024a9250ce7e3ec2a15f6f17e789ee9cf49c69",
+  "sysinfo.py": "026d7100787c451366b70a360be15fe00b88c7e3da2f0fb81700d57d6afeb561",
+  "decodeqr.py": "55cb874e1e9dd23631258bcfd1723be5df2152cf9555c49f42ed632b04fc7c6a",
+  "logfile.py": "5a7e324c3ccd0c24a11ddc13df9bb9ba0449cca8ac3ed70024d90f64d21682bf",
+  "log.py": "e9c3d932ee1a90bef4cc7c93314ca4779e06b6a4ae88d486e6949051ff214fa2"
+}
+
+---
+
+50- ./mode/menres.json
+
+{
+  "enabled": false,
+  "text": "?"
+}
+
+---
+
+51- ./mode/portsweep/portsweep_1758550098065.txt
+
+Host: Telegram.org
+Scan ID: 1758550098065
+Date: 2025-09-22_14-16-53
+Open Ports:
+80
+443
+
+
+---
+
+52- ./mode/reactions.json
+
+
+
+---
+
+53- ./mode/reactions.txt
+
+(1) (..Ѧʟɪ Ѧмʙяøsᴇ.. - @Aliwwea - 178825816 - 2025-09-11 22:02:16) : ❤
+
+
+---
+
+54- ./mode/subenum_logs/fakepixel.fun_20250912231650.txt
+
+bug.fakepixel.fun → 104.21.64.1
+fakepixel.fun → 104.21.32.1
+rustore.fakepixel.fun → 45.88.12.12
+magaz.fakepixel.fun → 45.88.12.12
+rushop.fakepixel.fun → 45.88.12.12
+feedback.fakepixel.fun → 45.88.12.12
+store.fakepixel.fun → 104.21.64.1
+status.fakepixel.fun → 172.67.177.33
+
+---
+
+55- ./mode/sys/sysinfo.json
+
+{
+  "CPU": {
+    "cores": 4,
+    "threads": 8,
+    "usage_percent": 61.6,
+    "frequency": "3050.00 MHz",
+    "model": ""
+  },
+  "Memory": {
+    "total": "62.81GB",
+    "used": "26.97GB",
+    "available": "35.06GB",
+    "percent": 44.2
+  },
+  "Disks": [
+    {
+      "device": "/dev/disk/by-label/nixos",
+      "mountpoint": "/nix",
+      "fstype": "ext4",
+      "total": "32.00GB",
+      "used": "3.97MB",
+      "free": "31.48GB",
+      "percent": 0.0
+    },
+    {
+      "device": "/dev/nbd95",
+      "mountpoint": "/repl",
+      "fstype": "btrfs",
+      "total": "32.00GB",
+      "used": "3.97MB",
+      "free": "31.48GB",
+      "percent": 0.0
+    },
+    {
+      "device": "/dev/disk/by-label/nixos",
+      "mountpoint": "/pid2",
+      "fstype": "ext4",
+      "total": "49.12GB",
+      "used": "37.38GB",
+      "free": "9.67GB",
+      "percent": 79.5
+    },
+    {
+      "device": "/dev/disk/by-label/nixos",
+      "mountpoint": "/etc/nix",
+      "fstype": "ext4",
+      "total": "49.12GB",
+      "used": "37.38GB",
+      "free": "9.67GB",
+      "percent": 79.5
+    },
+    {
+      "device": "/dev/nbd95",
+      "mountpoint": "/mnt/scratch",
+      "fstype": "btrfs",
+      "total": "32.00GB",
+      "used": "3.97MB",
+      "free": "31.48GB",
+      "percent": 0.0
+    },
+    {
+      "device": "/dev/disk/by-id/google-nixmodules-b023e33-us-west1-b",
+      "mountpoint": "/mnt/nixmodules",
+      "fstype": "squashfs",
+      "total": "14.40GB",
+      "used": "14.40GB",
+      "free": "0.00B",
+      "percent": 100.0
+    },
+    {
+      "device": "/dev/disk/by-label/nixos",
+      "mountpoint": "/etc/zoneinfo",
+      "fstype": "ext4",
+      "total": "49.12GB",
+      "used": "37.38GB",
+      "free": "9.67GB",
+      "percent": 79.5
+    },
+    {
+      "device": "/dev/disk/by-id/google-nixmodules-b023e33-us-west1-b",
+      "mountpoint": "/etc/nixmodules",
+      "fstype": "squashfs",
+      "total": "14.40GB",
+      "used": "14.40GB",
+      "free": "0.00B",
+      "percent": 100.0
+    },
+    {
+      "device": "/dev/disk/by-label/nixos",
+      "mountpoint": "/etc/replit",
+      "fstype": "ext4",
+      "total": "49.12GB",
+      "used": "37.38GB",
+      "free": "9.67GB",
+      "percent": 79.5
+    },
+    {
+      "device": "/dev/disk/by-label/nixos",
+      "mountpoint": "/etc/localtime",
+      "fstype": "ext4",
+      "total": "49.12GB",
+      "used": "37.38GB",
+      "free": "9.67GB",
+      "percent": 79.5
+    },
+    {
+      "device": "/dev/disk/by-label/nixos",
+      "mountpoint": "/etc/.gitignore",
+      "fstype": "ext4",
+      "total": "49.12GB",
+      "used": "37.38GB",
+      "free": "9.67GB",
+      "percent": 79.5
+    },
+    {
+      "device": "/dev/disk/by-label/nixos",
+      "mountpoint": "/etc/resolv.conf",
+      "fstype": "ext4",
+      "total": "49.12GB",
+      "used": "37.38GB",
+      "free": "9.67GB",
+      "percent": 79.5
+    },
+    {
+      "device": "/dev/disk/by-label/nixos",
+      "mountpoint": "/etc/hostname",
+      "fstype": "ext4",
+      "total": "49.12GB",
+      "used": "37.38GB",
+      "free": "9.67GB",
+      "percent": 79.5
+    },
+    {
+      "device": "/dev/disk/by-label/nixos",
+      "mountpoint": "/etc/hosts",
+      "fstype": "ext4",
+      "total": "49.12GB",
+      "used": "37.38GB",
+      "free": "9.67GB",
+      "percent": 79.5
+    },
+    {
+      "device": "/dev/nbd95",
+      "mountpoint": "/tmp",
+      "fstype": "btrfs",
+      "total": "32.00GB",
+      "used": "3.97MB",
+      "free": "31.48GB",
+      "percent": 0.0
+    },
+    {
+      "device": "/dev/nbd95",
+      "mountpoint": "/run",
+      "fstype": "btrfs",
+      "total": "32.00GB",
+      "used": "3.97MB",
+      "free": "31.48GB",
+      "percent": 0.0
+    },
+    {
+      "device": "/dev/nbd95",
+      "mountpoint": "/run/replit/socks",
+      "fstype": "btrfs",
+      "total": "32.00GB",
+      "used": "3.97MB",
+      "free": "31.48GB",
+      "percent": 0.0
+    },
+    {
+      "device": "/dev/nbd36",
+      "mountpoint": "/home/runner/workspace",
+      "fstype": "btrfs",
+      "total": "256.00GB",
+      "used": "891.71MB",
+      "free": "255.13GB",
+      "percent": 0.3
+    },
+    {
+      "device": "/dev/nbd36",
+      "mountpoint": "/mnt/nix",
+      "fstype": "btrfs",
+      "total": "256.00GB",
+      "used": "891.71MB",
+      "free": "255.13GB",
+      "percent": 0.3
+    },
+    {
+      "device": "/dev/nbd36",
+      "mountpoint": "/nix/var",
+      "fstype": "btrfs",
+      "total": "256.00GB",
+      "used": "891.71MB",
+      "free": "255.13GB",
+      "percent": 0.3
+    }
+  ],
+  "Disk IO": {
+    "read": "142.93GB",
+    "write": "233.10GB"
+  },
+  "Network": {
+    "sent": "22.81MB",
+    "recv": "24.00MB",
+    "connections": 12
+  },
+  "GPU": [],
+  "Temperatures": {},
+  "Battery": {},
+  "Uptime": {
+    "boot_time": "2025-09-12 12:21:59",
+    "uptime": "22:27:14",
+    "kernel": "6.2.16"
+  }
+}
+
+---
+
+56- ./mode/sys/sysmon.json
+
+{
+  "timestamp": "2026-07-14 18:26:16",
+  "cpu": {
+    "cores": 2,
+    "threads": 2,
+    "freq": 2300.0,
+    "per_core_usage": [
+      8.2,
+      21.1
+    ]
+  },
+  "memory": {
+    "total": 8353161216,
+    "used": 1210355712,
+    "percent": 30.8,
+    "swap_total": 0,
+    "swap_used": 0,
+    "swap_percent": 0.0
+  },
+  "disks": [
+    {
+      "device": "/dev/vdc",
+      "mount": "/mnt/4d5157a2-0e4f-4e24-bdd3-e33a7a4d01d9",
+      "used": 6131712,
+      "total": 34359738368,
+      "percent": 0.0
+    },
+    {
+      "device": "/dev/vdc",
+      "mount": "/mnt/scratch",
+      "used": 6131712,
+      "total": 34359738368,
+      "percent": 0.0
+    },
+    {
+      "device": "/dev/pmem7",
+      "mount": "/mnt/pid2",
+      "used": 256983040,
+      "total": 256983040,
+      "percent": 100.0
+    },
+    {
+      "device": "/dev/pmem6",
+      "mount": "/mnt/1475dc8d-4f7d-4b7b-9236-d516ba92b1fc",
+      "used": 244879360,
+      "total": 244879360,
+      "percent": 100.0
+    },
+    {
+      "device": "/dev/pmem5",
+      "mount": "/mnt/a324c431-f17a-4873-9f52-4f0a812da386",
+      "used": 4555882496,
+      "total": 4555882496,
+      "percent": 100.0
+    },
+    {
+      "device": "/dev/vdb",
+      "mount": "/mnt/nixmodules",
+      "used": 22270705664,
+      "total": 22270705664,
+      "percent": 100.0
+    },
+    {
+      "device": "/dev/vda",
+      "mount": "/mnt/snix",
+      "used": 1763779883008,
+      "total": 1901254856704,
+      "percent": 92.8
+    },
+    {
+      "device": "/dev/vda",
+      "mount": "/mnt/cacache/nix",
+      "used": 1763779883008,
+      "total": 1901254856704,
+      "percent": 92.8
+    },
+    {
+      "device": "/dev/vdc",
+      "mount": "/tmp",
+      "used": 6131712,
+      "total": 34359738368,
+      "percent": 0.0
+    },
+    {
+      "device": "/dev/vdc",
+      "mount": "/repl",
+      "used": 6131712,
+      "total": 34359738368,
+      "percent": 0.0
+    },
+    {
+      "device": "/dev/vdd",
+      "mount": "/mnt/c388215c-2ef2-4067-9909-a1cd61a3a23d",
+      "used": 917131264,
+      "total": 274877906944,
+      "percent": 0.3
+    },
+    {
+      "device": "/dev/vdd",
+      "mount": "/home/runner/workspace",
+      "used": 917131264,
+      "total": 274877906944,
+      "percent": 0.3
+    },
+    {
+      "device": "/dev/vdd",
+      "mount": "/mnt/nix",
+      "used": 917131264,
+      "total": 274877906944,
+      "percent": 0.3
+    },
+    {
+      "device": "/dev/vdd",
+      "mount": "/var/lib/docker",
+      "used": 917131264,
+      "total": 274877906944,
+      "percent": 0.3
+    },
+    {
+      "device": "/dev/vdd",
+      "mount": "/nix/var",
+      "used": 917131264,
+      "total": 274877906944,
+      "percent": 0.3
+    }
+  ],
+  "network": {
+    "sent": 5723247,
+    "recv": 1269689,
+    "connections": 46
+  },
+  "uptime": "0d 0h 8m (since 2026-07-14 18:17:51 IRST)",
+  "platform": "Linux 6.18.34 (x86_64)",
+  "python": "3.8.18",
+  "gpus": []
+}
+
+---
+
+57- ./mode/whois.txt
+
+fun_statsm_bot
+
+---
+
+58- ./mods/cauto_log.json
+
+[]
+
+---
+
+59- ./mods/cd.json
+
+{}
+
+---
+
+60- ./pyproject.toml
+
+[tool.poetry]
+name = "python-template"
+version = "0.1.0"
+description = ""
+authors = ["Sunpr"]
+
+[tool.poetry.dependencies]
+python = ">=3.8.0,<3.9"
+numpy = "^1.22.2"
+telegram = "^0.0.1"
+telethon = "^1.41.2"
+openai = "^1.107.1"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+---
+
+61- ./requirements.txt
+
+aiohttp==3.8.4
+python-telegram-bot==20.7
+
+---

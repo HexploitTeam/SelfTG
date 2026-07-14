@@ -1,18 +1,18 @@
 {
-  "timestamp": "2026-07-14 18:26:01",
+  "timestamp": "2026-07-14 18:26:21",
   "cpu": {
     "cores": 2,
     "threads": 2,
     "freq": 2300.0,
     "per_core_usage": [
-      12.7,
-      13.8
+      6.4,
+      7.4
     ]
   },
   "memory": {
     "total": 8353161216,
-    "used": 1063489536,
-    "percent": 28.7,
+    "used": 1222893568,
+    "percent": 31.1,
     "swap_total": 0,
     "swap_used": 0,
     "swap_percent": 0.0
@@ -91,43 +91,43 @@
     {
       "device": "/dev/vdd",
       "mount": "/mnt/c388215c-2ef2-4067-9909-a1cd61a3a23d",
-      "used": 909615104,
+      "used": 917131264,
       "total": 274877906944,
       "percent": 0.3
     },
     {
       "device": "/dev/vdd",
       "mount": "/home/runner/workspace",
-      "used": 909615104,
+      "used": 917131264,
       "total": 274877906944,
       "percent": 0.3
     },
     {
       "device": "/dev/vdd",
       "mount": "/mnt/nix",
-      "used": 909615104,
+      "used": 917131264,
       "total": 274877906944,
       "percent": 0.3
     },
     {
       "device": "/dev/vdd",
       "mount": "/var/lib/docker",
-      "used": 909615104,
+      "used": 917131264,
       "total": 274877906944,
       "percent": 0.3
     },
     {
       "device": "/dev/vdd",
       "mount": "/nix/var",
-      "used": 909615104,
+      "used": 917131264,
       "total": 274877906944,
       "percent": 0.3
     }
   ],
   "network": {
-    "sent": 1562874,
-    "recv": 1187069,
-    "connections": 46
+    "sent": 5808770,
+    "recv": 1288075,
+    "connections": 48
   },
   "uptime": "0d 0h 8m (since 2026-07-14 18:17:51 IRST)",
   "platform": "Linux 6.18.34 (x86_64)",
