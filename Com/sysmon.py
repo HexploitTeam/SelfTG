@@ -42,9 +42,18 @@ def format_stats():
         la1, la5, la15 = os.getloadavg()
         load_avg = f"{la1:.2f}, {la5:.2f}, {la15:.2f}"
 
-    disk = psutil.disk_usage("/")
-    disk_usage = (f"{disk.used // (1024**3)}GB / "
-                  f"{disk.total // (1024**3)}GB ({disk.percent}%)")
+    disk = psutil.disk_usage(os.getcwd())
+    used_gb = disk.used / (1024**3)
+    total_gb = disk.total / (1024**3)
+    if used_gb < 1:
+        used_str = f"{disk.used // (1024**2)}MB"
+    else:
+        used_str = f"{used_gb:.1f}GB"
+    if total_gb < 1:
+        total_str = f"{disk.total // (1024**2)}MB"
+    else:
+        total_str = f"{total_gb:.1f}GB"
+    disk_usage = f"{used_str} / {total_str} ({disk.percent}%)"
 
     processes = len(psutil.pids())
     sys_info = f"{platform.system()} {platform.release()} ({platform.machine()})"

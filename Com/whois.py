@@ -8,7 +8,8 @@ import pytz
 
 __HELP__ = ("!whois set @BotUsername → Set the bot to fetch info from\n"
             "!whois @Username/NumberID → Fetch info from the set bot\n"
-            "!whois here → Fetch info from replied message")
+            "!whois (reply to a message) → Fetch info of the message sender\n"
+            "!whois here (reply) → Legacy: same as replying without argument")
 __CATEGORY__ = "Information"
 
 WHOIS_FILE = "mode/whois.txt"
@@ -80,19 +81,31 @@ def setup(client, my_id):
             except Exception:
                 await event.respond("❌ Could not find the user.")
                 return
+        elif reply:
+            # No target argument but replying to a message -> use that message's sender
+            user_to_query = reply.sender_id
         else:
-            await event.respond("❌ Usage: !whois here OR !whois @Username/ID")
+            await event.respond("❌ Usage: !whois (reply to a message) OR !whois @Username/ID OR !whois here (reply)")
             return
 
-        # Send to bot and wait 5s before reading
+        # Send the user ID to the bot
         await client.send_message(bot_entity, str(user_to_query))
-        await asyncio.sleep(5)
-        bot_reply = await client.get_messages(bot_entity, limit=1)
-        if not bot_reply:
+
+        # Get the ID of the latest message from the bot BEFORE the reply arrives
+        old_msgs = await client.get_messages(bot_entity, limit=1)
+        old_id = old_msgs[0].id if old_msgs else 0
+
+        # Wait 7 seconds for the bot to process
+        await asyncio.sleep(7)
+
+        # Fetch messages from the bot that are newer than old_id
+        new_msgs = await client.get_messages(bot_entity, min_id=old_id, limit=1)
+        if not new_msgs:
             await event.respond("❌ Bot did not respond.")
             return
 
-        raw_text = bot_reply[0].message
+        raw_text = new_msgs[0].message
+
 
         # Remove Stickersets line
         lines = raw_text.splitlines()

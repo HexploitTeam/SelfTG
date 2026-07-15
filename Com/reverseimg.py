@@ -6,28 +6,25 @@ import os
 __HELP__ = "!reverseimg [google|yandex|tineye] (reply to image) → Reverse image search"
 __CATEGORY__ = "Utilities"
 
-TELEGRAPH_API = "https://telegra.ph/upload"
 
-
-async def upload_to_telegraph(file_path):
+async def upload_to_catbox(file_path):
+    """Upload a file to catbox.moe and return the public URL."""
     try:
         async with aiohttp.ClientSession() as session:
             with open(file_path, "rb") as f:
-                form = aiohttp.FormData()
-                form.add_field("file", f, filename=os.path.basename(file_path))
-                async with session.post(TELEGRAPH_API, data=form) as resp:
-                    if resp.status != 200:
-                        return None
-                    data = await resp.json()
-                    if isinstance(data, list) and "src" in data[0]:
-                        return "https://telegra.ph" + data[0]["src"]
+                data = aiohttp.FormData()
+                data.add_field("reqtype", "fileupload")
+                data.add_field("fileToUpload", f, filename=os.path.basename(file_path))
+                async with session.post("https://catbox.moe/user/api.php", data=data) as resp:
+                    if resp.status == 200:
+                        url = await resp.text()
+                        return url.strip()
+                    return None
     except Exception:
         return None
-    return None
 
 
 def setup(client, my_id):
-
     @client.on(
         events.NewMessage(from_users=my_id,
                           pattern=r"^!reverseimg(?:\s+(\w+))?$"))
@@ -52,12 +49,14 @@ def setup(client, my_id):
                 await event.reply("❌ Failed to download media.")
                 return
 
-            # Upload to Telegraph
-            url = await upload_to_telegraph(file_path)
+            # Upload to catbox
+            url = await upload_to_catbox(file_path)
             os.remove(file_path)
 
             if not url:
-                await event.reply("❌ Failed to upload image to Telegraph.")
+                await event.reply(
+                    "❌ Failed to upload image to hosting service.\n"
+                    "Try a smaller image or use a different service.")
                 return
 
             # Generate search link
@@ -77,6 +76,7 @@ def setup(client, my_id):
 
             await event.reply(
                 f"🔍 Reverse Image Search ({service_name}):\n{link}")
+            await event.delete()  # remove command message
 
         except Exception as e:
             await event.reply(f"❌ Error: {str(e)}")

@@ -1,0 +1,12 @@
+{
+  "__global": {
+    "keywords": [],
+    "reply_text": null,
+    "case_sensitive": false,
+    "regex": false,
+    "silent": false
+  },
+  "__settings": {
+    "global_enabled": false
+  }
+}
