@@ -1,20 +1,20 @@
 {
-  "timestamp": "2026-11-17 17:12:08",
+  "timestamp": "2026-11-17 17:12:28",
   "cpu": {
     "cores": 4,
     "threads": 4,
     "freq": 2300.0,
     "per_core_usage": [
+      2.0,
+      2.2,
       1.8,
-      1.4,
-      1.8,
-      1.0
+      0.8
     ]
   },
   "memory": {
     "total": 8352014336,
-    "used": 2656002048,
-    "percent": 31.8,
+    "used": 2661007360,
+    "percent": 31.9,
     "swap_total": 0,
     "swap_used": 0,
     "swap_percent": 0.0
@@ -86,57 +86,57 @@
     {
       "device": "/dev/vdd",
       "mount": "/mnt/03a91beb-075c-4543-9efc-eec1eb9c0ded",
-      "used": 4008828928,
+      "used": 4008845312,
       "total": 274877906944,
       "percent": 1.5
     },
     {
       "device": "/dev/vdd",
       "mount": "/mnt/9d0f9c70-da88-4f82-a884-781e32a1c50f",
-      "used": 4008828928,
+      "used": 4008845312,
       "total": 274877906944,
       "percent": 1.5
     },
     {
       "device": "/dev/vdd",
       "mount": "/home/runner/workspace",
-      "used": 4008828928,
+      "used": 4008845312,
       "total": 274877906944,
       "percent": 1.5
     },
     {
       "device": "/dev/vdd",
       "mount": "/mnt/nix",
-      "used": 4008828928,
+      "used": 4008845312,
       "total": 274877906944,
       "percent": 1.5
     },
     {
       "device": "/dev/vdd",
       "mount": "/var/lib/docker",
-      "used": 4008828928,
+      "used": 4008845312,
       "total": 274877906944,
       "percent": 1.5
     },
     {
       "device": "/dev/vdd",
       "mount": "/nix/var",
-      "used": 4008828928,
+      "used": 4008845312,
       "total": 274877906944,
       "percent": 1.5
     },
     {
       "device": "/dev/vdd",
       "mount": "/home/runner/.local/state/nix",
-      "used": 4008828928,
+      "used": 4008845312,
       "total": 274877906944,
       "percent": 1.5
     }
   ],
   "network": {
-    "sent": 6386117,
-    "recv": 1187841,
-    "connections": 48
+    "sent": 6531239,
+    "recv": 1258094,
+    "connections": 47
   },
   "uptime": "0d 0h 28m (since 2026-11-17 16:43:45 IRST)",
   "platform": "Linux 6.18.63 (x86_64)",
