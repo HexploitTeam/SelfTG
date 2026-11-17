@@ -12,6 +12,16 @@ hidden = ["venv", ".config", "**/__pycache__", "**/.mypy_cache", "**/*.pyc"]
 # 3.10, so declare 3.10 explicitly instead of relying on the upgrade map.
 modules = ["python-3.10"]
 
+[packager]
+language = "python3"
+
+  [packager.features]
+  # Replit installs whatever distribution an `import` name maps to before Run.
+  # This project imports `telethon` but needs the Telethon-repl distribution:
+  # a guessed plain `telethon` would silently overwrite the fork's files and
+  # break the 5222 transport. Install from requirements.txt instead (upm install).
+  guessImports = false
+
 [nix]
 # stable-21_11 no longer exists in Replit's module set.
 channel = "stable-23_05"
