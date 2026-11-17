@@ -10,6 +10,8 @@ __CATEGORY__ = "Utilities"
 
 # Track bot start time
 START_TIME = time.time()
+# Prime psutil so the first interval=None reading is meaningful.
+psutil.cpu_percent(interval=None)
 
 
 def setup(client, my_id):
@@ -24,8 +26,9 @@ def setup(client, my_id):
             minutes, seconds = divmod(remainder, 60)
             uptime_str = f"{days}d {hours}h {minutes}m {seconds}s"
 
-            # CPU
-            cpu_usage = psutil.cpu_percent(interval=0.5)
+            # CPU. interval=0.5 would block the shared event loop for half a
+            # second on every !uptime; None reports usage since the last call.
+            cpu_usage = psutil.cpu_percent(interval=None)
             cpu_count = psutil.cpu_count(logical=True)
 
             # RAM

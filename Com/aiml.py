@@ -24,11 +24,20 @@ def get_model_path(chat_id):
     return os.path.join(MODEL_DIR, f"markov_{chat_id}.json")
 
 async def fetch_messages(client, chat_id, limit=500):
+    """Collect only the text of recent messages.
+
+    iter_messages streams one message at a time. get_messages(limit=N) built the
+    whole list of Message objects (text, entities, media) in memory first, which
+    is a lot of RAM for a 10k-message train on a shared Repl where the training
+    data is the same size either way.
+    """
+    texts = []
     try:
-        messages = await client.get_messages(chat_id, limit=limit)
+        async for message in client.iter_messages(chat_id, limit=limit):
+            if message.text and not message.text.startswith("!"):
+                texts.append(message.text)
     except Exception as e:
         return None, str(e)
-    texts = [m.text for m in messages if m.text and not m.text.startswith("!")]
     return texts, None
 
 def setup(client, my_id):

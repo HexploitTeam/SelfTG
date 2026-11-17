@@ -3,9 +3,11 @@ import os
 import json
 import asyncio
 from telethon import TelegramClient, events
+from telethon.sessions import StringSession
 from telethon.tl.types import ReplyInlineMarkup, KeyboardButtonCallback, KeyboardButtonRow
 
 from Com.storage import load_json as _load_json, save_json as _save_json
+from Com.net import ReplitConnection
 
 # ---------- Global config ----------
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -86,8 +88,24 @@ async def start_bot(owner_id):
     API_ID = int(os.getenv("API_ID"))
     API_HASH = os.getenv("API_HASH")
     migrate_legacy_state()
-    bot_client = TelegramClient("bot_session", API_ID, API_HASH)
-    await bot_client.start(bot_token=BOT_TOKEN)
+    # In-memory session instead of the "bot_session" SQLite file: free Repls are
+    # public by default, so an auth-key file on disk is readable by anyone who
+    # can open the Repl. A bot account can always sign in again from BOT_TOKEN in
+    # Replit Secrets, so nothing is lost by not persisting it.
+    bot_client = TelegramClient(
+        StringSession(), API_ID, API_HASH, connection=ReplitConnection
+    )
+    # connect() + sign_in() instead of start(): start() falls back to an
+    # interactive phone/code prompt when the token is rejected, which just hangs
+    # a Repl with no stdin. This fails with a logged error instead.
+    try:
+        await bot_client.connect()
+        if not await bot_client.is_user_authorized():
+            await bot_client.sign_in(bot_token=BOT_TOKEN)
+    except Exception as exc:
+        print(f"[BOT] Login failed: {exc}")
+        await bot_client.disconnect()
+        return
     print(f"[BOT] Bot is running. Owner ID: {OWNER_ID}")
 
     # ---------- Command handlers ----------

@@ -38,17 +38,31 @@ def extract_mentions(text):
     return re.findall(r'@\w+', text)
 
 # ---------- Stats storage ----------
-def load_stats():
+# The document used to be parsed twice and rewritten (atomically, with fsync)
+# once per counted message, and !stats scan did that for up to 5000 messages in
+# a row. On Replit's shared CPU that write amplification is the most expensive
+# thing the bot does, so the document is cached in memory and flushed once per
+# event. Only this process writes stats.json (dashboard.py is a separate app).
+_stats_cache = None
+
+def load_stats(force_reload=False):
+    global _stats_cache
+    if _stats_cache is None or force_reload:
+        _stats_cache = _read_stats_file()
+    return _stats_cache
+
+def _read_stats_file():
     if not os.path.exists(STATS_FILE):
         return {}
     try:
         with open(STATS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
     except Exception:
         return {}
 
-def save_stats(data):
-    save_json(STATS_FILE, data)
+def save_stats(data=None):
+    save_json(STATS_FILE, _stats_cache if data is None else data)
 
 def get_chat_stats(chat_id):
     data = load_stats()
@@ -74,12 +88,13 @@ def get_chat_stats(chat_id):
         }
     return data[chat_id_str]
 
-def save_chat_stats(chat_id, stats):
+def save_chat_stats(chat_id, stats, flush=True):
     data = load_stats()
     data[str(chat_id)] = stats
-    save_stats(data)
+    if flush:
+        save_stats()
 
-def update_stats(chat_id, msg):
+def update_stats(chat_id, msg, flush=True):
     stats = get_chat_stats(chat_id)
 
     # Basic counts
@@ -125,7 +140,7 @@ def update_stats(chat_id, msg):
         # Optionally track who you replied to (we can fetch the replied message)
         # We'll not fetch to keep speed, but we can do a quick check if we have the message in memory? Not possible.
 
-    save_chat_stats(chat_id, stats)
+    save_chat_stats(chat_id, stats, flush=flush)
 
 def combine_stats_all(data):
     """Combine stats from all chats into one large dict with counters."""
@@ -301,8 +316,11 @@ def setup(client, my_id):
             await event.edit("📭 You have no messages in the scanned range.")
             return
 
+        # Mutate the cached document and write it once, instead of one fsynced
+        # rewrite per message.
         for msg in own_msgs:
-            update_stats(chat_id, msg)
+            update_stats(chat_id, msg, flush=False)
+        save_stats()
 
         await event.edit(f"✅ Added {len(own_msgs)} messages from history to stats.")
         await event.delete()

@@ -1,24 +1,26 @@
-# The command that runs the program. Commented out because it is not run when the interpreter command is set
-# run = ["python3", "main.py"]
-# The primary language of the repl. There can be others, though!
+# SelfTG - Replit run configuration
+#
+# Dependency manager: pip. This file intentionally ships no poetry.lock and no
+# [tool.poetry] section, which is what makes Replit read requirements.txt
+# instead of trying to resolve a Poetry project. Do not re-add poetry.lock.
 language = "python3"
-# The main file, which will be shown by default in the editor.
 entrypoint = "main.py"
-# A list of globs that specify which files and directories should
-# be hidden in the workspace.
-hidden = ["venv", ".config", "**/__pycache__", "**/.mypy_cache", "**/*.pyc"]
-modules = ["python-3.8"]
 
-# Specifies which nix channel to use when building the environment.
+hidden = ["venv", ".config", "**/__pycache__", "**/.mypy_cache", "**/*.pyc"]
+
+# Replit retired the python-3.8/python-3.9 module IDs and silently maps them to
+# 3.10, so declare 3.10 explicitly instead of relying on the upgrade map.
+modules = ["python-3.10"]
+
 [nix]
-channel = "stable-21_11"
+# stable-21_11 no longer exists in Replit's module set.
+channel = "stable-23_05"
 packages = ["openssl"]
 
-# The environment variables needed to correctly start Python and use the
-# package proxy.
 [env]
+# Without this, Replit's log pane shows nothing until the buffer fills.
+PYTHONUNBUFFERED = "1"
 
-# Enable unit tests. This is only supported for a few languages.
 [unitTest]
 language = "python3"
 
@@ -35,9 +37,13 @@ author = 14474854
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "PYTHONPATH=\"$PWD/.pythonlibs:$PWD/.pythonlibs/lib/python3.10/site-packages\" .pythonlibs/bin/python main.py"
+# The old command pointed at .pythonlibs/bin/python, which only exists in
+# Poetry mode. With pip, the Repl interpreter already has the packages.
+args = "python3 main.py"
 
-[[ports]]
-localPort = 5000
-externalPort = 80
-
+# dashboard.py is a separate Flask app that main.py never starts. Leaving the
+# port mapped made Replit wait for a listener that never opens, so it is
+# commented out until the dashboard is actually wired into the run command.
+# [[ports]]
+# localPort = 5000
+# externalPort = 80

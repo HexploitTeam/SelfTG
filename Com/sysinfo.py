@@ -8,6 +8,8 @@ from datetime import datetime
 import pytz
 from telethon import events
 
+from Com.storage import save_json as _save_json
+
 try:
     import GPUtil
 except:
@@ -16,7 +18,10 @@ except:
 __HELP__ = "!sysinfo → Show detailed system information including CPU, memory, disks, network, GPU, and uptime."
 
 os.makedirs("mode/sys", exist_ok=True)
-SYS_LOG_FILE = "mode/sys/sysmon.json"
+# This used to be mode/sys/sysmon.json, which Com/sysmon.py keeps as a *list*
+# of samples: this module overwrote it with a single dict every few seconds, so
+# !sysmon export handed back one snapshot instead of history.
+SYS_LOG_FILE = "mode/sys/sysinfo.json"
 TZ = pytz.timezone("Asia/Tehran")
 
 
@@ -111,9 +116,8 @@ def setup(client, my_id):
                 "gpus": gpus
             }
 
-            # Save log
-            with open(SYS_LOG_FILE, "w", encoding="utf-8") as f:
-                json.dump(sysinfo, f, indent=2)
+            # Save log (atomic: this file is rewritten on every sample).
+            _save_json(SYS_LOG_FILE, sysinfo)
 
             return sysinfo
 
@@ -190,14 +194,19 @@ def setup(client, my_id):
         await event.delete()
 
     # -----------------------------
-    # Auto log every 5 seconds in background
+    # Optional background snapshot log
     # -----------------------------
-    async def auto_log():
-        while True:
-            try:
-                await collect_sysinfo()
-            except Exception as e:
-                print(f"[sysinfo] auto log failed: {e}")
-            await asyncio.sleep(5)
+    # Opt-in (SYSINFO_AUTOLOG=1), was unconditional every 5s. Nothing reads the
+    # snapshot except this module, and on Replit's small CPU quota a permanent
+    # 5s wakeup that rewrites a file is pure overhead. !sysinfo collects on
+    # demand anyway, so when enabled the interval is a minute.
+    if os.environ.get("SYSINFO_AUTOLOG") == "1":
+        async def auto_log():
+            while True:
+                try:
+                    await collect_sysinfo()
+                except Exception as e:
+                    print(f"[sysinfo] auto log failed: {e}")
+                await asyncio.sleep(60)
 
-    asyncio.create_task(auto_log())
+        asyncio.create_task(auto_log())

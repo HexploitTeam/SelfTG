@@ -1,2 +1,43 @@
-aiohttp==3.8.4
-python-telegram-bot==20.7
+# SelfTG runtime dependencies.
+#
+# Replit installs this file with pip/upm once poetry.lock is absent (see
+# .replit). Everything below is pinned exactly so a Rebuild pulls the same
+# versions instead of whatever is newest that day.
+#
+# --- Telegram transport -----------------------------------------------------
+# Telethon-repl is Lonami Exo's Telethon 1.33.1 rebuilt for Replit: it replaces
+# the hardcoded MTProto port 443 with 5222, which is what Replit allows for
+# non-HTTP outbound connections. The distribution is named Telethon-repl but it
+# still provides the `telethon` module, so plain `telethon` must NOT be
+# installed alongside it or imports become non-deterministic.
+# If 5222 ever stops working, swap this line for `telethon==1.41.2` and set
+# TELEGRAM_DC_PORT=443 - see REUpgrade notes in the report.
+Telethon-repl==1.33.1
+
+# --- HTTP (used by ~15 command modules) -------------------------------------
+# 3.8.4 (the old pin) has open CVE-2023-47627 and CVE-2024-23334.
+aiohttp==3.10.11
+
+# --- Command modules --------------------------------------------------------
+psutil==5.9.8            # !sysinfo, !sysmon, !uptime
+pytz==2024.1             # timezone-aware timestamps in log/stats commands
+Pygments==2.18.0         # !syntax, !prettify
+Pillow==10.4.0           # image commands; also required by qrcode/moviepy
+qrcode==7.4.2            # !qr
+PyPDF2==3.0.1            # !pdfinfo, !convertpdf
+mutagen==1.47.0          # !audiometa
+moviepy==2.2.1           # !videometa. 1.x was removed from PyPI; 2.x has no `moviepy.editor`
+                         # (Com/mediatools.py imports `moviepy` and loads it lazily)
+gTTS==2.5.1              # !tts
+Faker==24.14.0           # !mock
+dnspython==2.6.1         # !dnsprobe, reverse DNS in !ip
+Flask==3.0.3             # dashboard.py
+googletrans==4.0.2       # !translate. The 4.0.0rc1 pin no longer exists on PyPI
+requests==2.32.3         # gTTS transport
+httpx==0.28.1            # required by googletrans 4.0.2 (>=0.27.2)
+
+# --- Optional acceleration --------------------------------------------------
+# C implementation of the AES/IGE path Telethon uses. Pure-Python fallback is
+# correct but slow, and Replit's CPU budget is small. Safe to remove: Telethon
+# falls back automatically if it is missing or fails to load.
+cryptg==0.4.0

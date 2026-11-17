@@ -7,6 +7,8 @@ import asyncio
 import json
 from telethon import events
 
+from Com.storage import save_json as _save_json
+
 __HELP__ = "!sysmon start/stop/export → Live system monitor that updates every 5s, logs stats, and can export logs."
 __CATEGORY__ = "Utilities"
 
@@ -17,6 +19,12 @@ LOG_DIR = "mode/sys"
 LOG_FILE = os.path.join(LOG_DIR, "sysmon.json")
 os.makedirs(LOG_DIR, exist_ok=True)
 
+# A running monitor appends a sample every 2s. Unbounded, that is ~43k entries
+# and several MB per day on a Repl with very little disk.
+MAX_LOG_ENTRIES = 500
+# Prime psutil so interval=None has a baseline to compare against.
+psutil.cpu_percent(interval=None)
+
 
 def format_stats():
     uptime_seconds = int(time.time() - START_TIME)
@@ -25,7 +33,9 @@ def format_stats():
     minutes, seconds = divmod(remainder, 60)
     uptime_str = f"{days}d {hours}h {minutes}m {seconds}s"
 
-    cpu_usage = psutil.cpu_percent(interval=0.5)
+    # interval=None instead of 0.5: this runs inside the monitor coroutine and
+    # a blocking sample froze every other handler twice per second.
+    cpu_usage = psutil.cpu_percent(interval=None)
     cpu_count = psutil.cpu_count(logical=True)
 
     memory = psutil.virtual_memory()
@@ -90,9 +100,11 @@ def save_stats(stats):
             data = []
 
     data.append(stats)
+    if len(data) > MAX_LOG_ENTRIES:
+        del data[:-MAX_LOG_ENTRIES]
 
-    with open(LOG_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+    # Atomic write: the dashboard and repeated samples read this file.
+    _save_json(LOG_FILE, data)
 
 
 def pretty_stats(stats):

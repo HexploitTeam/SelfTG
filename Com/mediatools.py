@@ -3,11 +3,11 @@ from telethon import events
 from telethon.tl.types import MessageMediaDocument, MessageMediaPhoto
 from io import BytesIO
 from PIL import Image
+import asyncio
 import os
 import tempfile
 import PyPDF2
 import mutagen
-import moviepy.editor as mp
 
 __HELP__ = (
     "!audiometa → Extract metadata from a replied audio file.\n"
@@ -18,6 +18,24 @@ __HELP__ = (
     "!imgrotate <deg> → Rotate replied image.\n"
     "!imgcompress → Compress replied image to smaller size.\n"
     "!imgformat <format> → Convert replied image to another format (PNG/JPG).")
+
+
+def probe_video(path):
+    """Return (duration, width, height, fps) for a local video file.
+
+    moviepy is imported here rather than at module load: it drags in numpy and
+    ffmpeg bindings (~40 MB RSS) that only !videometa ever needs. 2.x dropped
+    the `moviepy.editor` module, so import the top-level name first.
+    """
+    try:
+        from moviepy import VideoFileClip
+    except ImportError:
+        from moviepy.editor import VideoFileClip
+    clip = VideoFileClip(path)
+    try:
+        return clip.duration, clip.w, clip.h, clip.fps
+    finally:
+        clip.close()
 
 
 def setup(client, my_id):
@@ -74,12 +92,15 @@ def setup(client, my_id):
             temp_file.write(bio.read())
             temp_file.close()
 
-            clip = mp.VideoFileClip(temp_file.name)
-            info = (f"Duration: {clip.duration:.2f} sec\n"
-                    f"Resolution: {clip.w}x{clip.h}\n"
-                    f"FPS: {clip.fps}")
+            # Decoding runs off the event loop; on 0.5 vCPU it is slow enough
+            # to look like the bot died.
+            duration, width, height, fps = await asyncio.to_thread(
+                probe_video, temp_file.name
+            )
+            info = (f"Duration: {duration:.2f} sec\n"
+                    f"Resolution: {width}x{height}\n"
+                    f"FPS: {fps}")
             await event.reply(f"🎬 Video Metadata:\n{info}")
-            clip.close()
             os.remove(temp_file.name)
 
         except Exception as e:
