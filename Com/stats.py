@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from telethon import events
 
 from Com.storage import save_json
+import Com.tgsend as tgsend
 
 __HELP__ = (
     "!stats → Show detailed stats for this chat\n"
@@ -306,7 +307,7 @@ def setup(client, my_id):
         await event.edit(f"⏳ Scanning up to {limit} messages in history...")
 
         try:
-            msgs = await client.get_messages(chat_id, limit=limit)
+            msgs = await client.get_messages(await tgsend.peer(event), limit=limit)
         except Exception as e:
             await event.edit(f"❌ Failed to fetch messages: {e}")
             return

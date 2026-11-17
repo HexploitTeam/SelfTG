@@ -8,6 +8,7 @@ import asyncio
 from datetime import datetime
 
 from Com.storage import save_json
+import Com.tgsend as tgsend
 
 __HELP__ = (
     "!reaction <@Username/ID> <Emoji/alias> → React with emoji to all future messages from the user\n"
@@ -163,7 +164,7 @@ def setup(client, my_id):
             if event.sender_id == user_id and event.raw_text:
                 try:
                     await client(SendReactionRequest(
-                        peer=event.chat_id,
+                        peer=await tgsend.peer(event),
                         msg_id=event.message.id,
                         reaction=[ReactionEmoji(emoticon=emoji)]
                     ))

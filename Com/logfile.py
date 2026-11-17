@@ -1,7 +1,7 @@
 from telethon import events
 import os
 
-__HELP__ = "!logfile <Channel|Group> <NumberID> → Sends the log file of the specified chat"
+__HELP__ = "!logfile <Channel|Group|PV> <NumberID> → Sends the log file of the specified chat"
 __CATEGORY__ = "Information"
 LOG_FOLDER = "Logs"
 PV_FOLDER = os.path.join(LOG_FOLDER, "PV")
@@ -49,8 +49,9 @@ def setup(client, my_id):
                 f"❌ Log file not found: {filename}\nCheck folder and ID.")
             return
 
-        # Send the file
-        await client.send_file(int(my_id),
+        # Send the file to Saved Messages. `get_me(input_peer=True)` gives an
+        # InputPeerSelf that needs no entity cache, unlike a bare id.
+        await client.send_file(await client.get_me(input_peer=True),
                                file_path,
                                caption=f"Log file: {filename}")
         await event.edit(f"✅ Log file sent: {filename}")

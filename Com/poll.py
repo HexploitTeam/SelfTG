@@ -39,6 +39,8 @@ from telethon.tl.functions.messages import (
 )
 from telethon.tl.types import InputMediaPoll, MessageMediaPoll, Poll, PollAnswer
 
+import Com.tgsend as tgsend
+
 import Com.registry as registry
 from Com.storage import load_store, save_json
 
@@ -294,7 +296,7 @@ def setup(client, my_id):
             await _say(event, f"❌ {exc}")
             return
 
-        peer = await client.get_input_entity(event.chat_id)
+        peer = await tgsend.peer(event)
         try:
             result = await client(
                 SendMediaRequest(
@@ -364,7 +366,7 @@ def setup(client, my_id):
             await _say(event, "❌ No poll to inspect. Reply to a poll or create one here first.")
             return
 
-        peer = await client.get_input_entity(event.chat_id)
+        peer = await tgsend.peer(event)
         try:
             result = await client(GetPollResultsRequest(peer=peer, msg_id=msg_id))
         except errors.RPCError as exc:
@@ -382,7 +384,7 @@ def setup(client, my_id):
         poll_question = (meta or {}).get("question", "Poll")
         options = (meta or {}).get("options", [])
         try:
-            fetched = await client.get_messages(event.chat_id, ids=msg_id)
+            fetched = await client.get_messages(peer, ids=msg_id)
             if fetched and isinstance(fetched.media, MessageMediaPoll):
                 poll_question = fetched.media.poll.question
                 options = [answer.text for answer in fetched.media.poll.answers]
@@ -404,7 +406,7 @@ def setup(client, my_id):
             await _say(event, "❌ No poll to close. Reply to a poll or create one here first.")
             return
 
-        message = await client.get_messages(event.chat_id, ids=msg_id)
+        message = await client.get_messages(await tgsend.peer(event), ids=msg_id)
         if not message or not isinstance(message.media, MessageMediaPoll):
             await _say(event, f"❌ Message `{msg_id}` is not a poll.")
             return
@@ -431,7 +433,7 @@ def setup(client, my_id):
             solution=(meta or {}).get("solution"),
         )
 
-        peer = await client.get_input_entity(event.chat_id)
+        peer = await tgsend.peer(event)
         try:
             await client(EditMessageRequest(peer=peer, id=msg_id, media=media))
         except errors.MessageNotModifiedError:

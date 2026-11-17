@@ -6,6 +6,7 @@ import random
 from telethon import events
 
 from Com.storage import save_json
+import Com.tgsend as tgsend
 
 __HELP__ = (
     "!setkill start <interval_seconds> [text] (reply optional) → Send a message every X seconds.\n"
@@ -66,7 +67,10 @@ async def run_timer(client, timer_id, chat_id, interval, text, reply_to):
             else:
                 msg_text = "(no texts available)"
         try:
-            await client.send_message(chat_id, msg_text, reply_to=reply_to)
+            # Stored id: no event here, so resolve it once per send (see
+            # Com/tgsend.py). A raw id fails after a restart on StringSession.
+            await client.send_message(await tgsend.resolve(client, chat_id),
+                                      msg_text, reply_to=reply_to)
         except Exception as e:
             print(f"[setkill] Error sending: {e}")
             # If the message fails (e.g., chat not found), stop the timer

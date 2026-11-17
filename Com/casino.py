@@ -11,8 +11,9 @@ __HELP__ = (
     "!basketball        → Basketball that always scores (value 5).\n"
     "!dart              → Dart that always hits the bullseye (value 6).\n"
     "!slot              → Random slot machine.\n"
-    "!slot <symbol>     → Slot with a specific combination.\n"
-    "  Symbols: bar, lemon, grape, seven.\n"
+    "!slot <symbol>     → Slot with a specific combination (bar, lemon, grape, seven).\n"
+    "!slot <1-64>       → Slot with a raw Telegram value.\n"
+    "  Symbols: bar, lemon, grape(s), seven.\n"
     "  Example: !slot seven → gives three sevens.\n"
     "All commands support reply – the result will be a reply to that message."
 )
@@ -21,17 +22,23 @@ __CATEGORY__ = "Utilities"
 # Correct slot mapping based on Telegram values
 SLOT_MAP = {
     "bar": 1,
+    "grape": 22,
     "grapes": 22,
     "lemon": 43,
     "seven": 64,
 }
 REVERSE_SLOT = {v: k for k, v in SLOT_MAP.items()}
 
-async def force_dice(client, chat_id, emoji, target_value, reply_to):
-    """Reroll until we get the target value (fast deletion)."""
+async def force_dice(client, peer, emoji, target_value, reply_to):
+    """Reroll until we get the target value (fast deletion).
+
+    `peer` must be an input peer (see Com/tgsend.py): the game message, the
+    lookup of its rolled value and the cleanup all address the same chat, and a
+    bare id is not resolvable on a fresh StringSession.
+    """
     for _ in range(100):  # increased to 100
         msg = await client.send_message(
-            chat_id,
+            peer,
             file=InputMediaDice(emoticon=emoji),
             reply_to=reply_to
         )
@@ -41,17 +48,17 @@ async def force_dice(client, chat_id, emoji, target_value, reply_to):
             value = getattr(msg.media, 'value', None)
         if value is None:
             await asyncio.sleep(0.01)
-            msg = await client.get_messages(chat_id, ids=msg.id)
+            msg = await client.get_messages(peer, ids=msg.id)
             if msg.media:
                 value = getattr(msg.media, 'value', None)
         if value == target_value:
             return
         try:
-            await client.delete_messages(chat_id, [msg.id])
-        except:
+            await client.delete_messages(peer, [msg.id])
+        except Exception:
             pass
     # Fallback (should never happen)
-    await client.send_message(chat_id, f"{emoji} **{target_value}**", reply_to=reply_to)
+    await client.send_message(peer, f"{emoji} **{target_value}**", reply_to=reply_to)
 
 def setup(client, my_id):
     # ---------- !dice ----------
@@ -77,12 +84,12 @@ def setup(client, my_id):
                 await event.edit("❌ Dice value must be 1–6.")
                 return
             await event.delete()
-            await force_dice(client, event.chat_id, "🎲", target, reply_to)
+            await force_dice(client, await tgsend.peer(event), "🎲", target, reply_to)
 
         except Exception as e:
             try:
                 await client.send_message(await tgsend.peer(event), f"❌ Error: {str(e)}")
-            except:
+            except Exception:
                 pass
 
     # ---------- !football ----------
@@ -93,7 +100,7 @@ def setup(client, my_id):
             reply_msg = await event.get_reply_message()
             reply_to = reply_msg.id
         await event.delete()
-        await force_dice(client, event.chat_id, "⚽", 5, reply_to)
+        await force_dice(client, await tgsend.peer(event), "⚽", 5, reply_to)
 
     # ---------- !basketball ----------
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!basketball$"))
@@ -103,7 +110,7 @@ def setup(client, my_id):
             reply_msg = await event.get_reply_message()
             reply_to = reply_msg.id
         await event.delete()
-        await force_dice(client, event.chat_id, "🏀", 5, reply_to)
+        await force_dice(client, await tgsend.peer(event), "🏀", 5, reply_to)
 
     # ---------- !dart ----------
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!dart$"))
@@ -113,7 +120,7 @@ def setup(client, my_id):
             reply_msg = await event.get_reply_message()
             reply_to = reply_msg.id
         await event.delete()
-        await force_dice(client, event.chat_id, "🎯", 6, reply_to)
+        await force_dice(client, await tgsend.peer(event), "🎯", 6, reply_to)
 
     # ---------- !slot ----------
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!slot(?:\s+(\d+|[a-zA-Z]+))?$"))
@@ -135,8 +142,8 @@ def setup(client, my_id):
 
             if arg.isdigit():
                 target = int(arg)
-                if target < 1 or target > 6:
-                    await event.edit("❌ Slot value must be 1–6.")
+                if target < 1 or target > 64:
+                    await event.edit("❌ Slot value must be 1–64 (see `!help slot`).")
                     return
             else:
                 sym = arg.lower()
@@ -146,10 +153,10 @@ def setup(client, my_id):
                 target = SLOT_MAP[sym]
 
             await event.delete()
-            await force_dice(client, event.chat_id, "🎰", target, reply_to)
+            await force_dice(client, await tgsend.peer(event), "🎰", target, reply_to)
 
         except Exception as e:
             try:
                 await client.send_message(await tgsend.peer(event), f"❌ Error: {str(e)}")
-            except:
+            except Exception:
                 pass

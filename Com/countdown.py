@@ -4,6 +4,7 @@ import os
 import json
 
 from Com.storage import save_json
+import Com.tgsend as tgsend
 
 __HELP__ = (
     "!countdown <number><s/m/h> <reason> → Start a countdown in this chat\n"
@@ -82,7 +83,8 @@ def setup(client, my_id):
             remaining = info.get("remaining", 0)
             reason = info.get("reason", "")
             msg = await client.send_message(
-                chat_id, f"⏳ Countdown resumed: {format_hms(remaining)}")
+                await tgsend.resolve(client, chat_id),
+                f"⏳ Countdown resumed: {format_hms(remaining)}")
             asyncio.create_task(run_countdown(chat_id, remaining, reason, msg))
 
     asyncio.create_task(resume_cds())

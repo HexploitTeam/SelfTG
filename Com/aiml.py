@@ -24,7 +24,7 @@ os.makedirs(MODEL_DIR, exist_ok=True)
 def get_model_path(chat_id):
     return os.path.join(MODEL_DIR, f"markov_{chat_id}.json")
 
-async def fetch_messages(client, chat_id, limit=500):
+async def fetch_messages(client, peer, limit=500):
     """Collect only the text of recent messages.
 
     iter_messages streams one message at a time. get_messages(limit=N) built the
@@ -34,7 +34,7 @@ async def fetch_messages(client, chat_id, limit=500):
     """
     texts = []
     try:
-        async for message in client.iter_messages(chat_id, limit=limit):
+        async for message in client.iter_messages(peer, limit=limit):
             if message.text and not message.text.startswith("!"):
                 texts.append(message.text)
     except Exception as e:
@@ -55,7 +55,7 @@ def setup(client, my_id):
                 pass
         await event.edit(f"🧠 Training on last {limit} messages... (instant)")
 
-        texts, err = await fetch_messages(client, event.chat_id, limit)
+        texts, err = await fetch_messages(client, await tgsend.peer(event), limit)
         if err:
             await event.edit(f"❌ Failed to fetch messages: {err}")
             return

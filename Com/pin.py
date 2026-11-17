@@ -18,6 +18,7 @@ from telethon import errors, events
 from telethon.tl.types import InputMessagesFilterPinned, User
 
 import Com.registry as registry
+import Com.tgsend as tgsend
 
 log = logging.getLogger("selftg.pin")
 
@@ -96,7 +97,7 @@ def setup(client, my_id):
             target = reply.id if reply else None
             preview = _preview(reply)
         else:
-            latest = await client.get_messages(event.chat_id, limit=1)
+            latest = await client.get_messages(await tgsend.peer(event), limit=1)
             if not latest:
                 await _say(event, "❌ This chat has no messages to pin.")
                 return
@@ -121,13 +122,14 @@ def setup(client, my_id):
         await _say(event, "\n".join(bits))
 
     async def _unpin(event):
+        peer = await tgsend.peer(event)
         pinned = await client.get_messages(
-            event.chat_id, limit=1, filter=InputMessagesFilterPinned
+            peer, limit=1, filter=InputMessagesFilterPinned
         )
         if not pinned:
             await _say(event, "📭 Nothing is pinned in this chat.")
             return
-        await client.unpin_message(event.chat_id, pinned[0].id)
+        await client.unpin_message(peer, pinned[0].id)
         await _say(event, f"📌 Unpinned message `{pinned[0].id}`.")
 
     async def _list(event):

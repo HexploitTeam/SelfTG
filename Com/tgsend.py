@@ -41,3 +41,26 @@ async def peer(event):
         log.info("tgsend: get_input_chat() failed, using chat_id")
         chat = None
     return chat if chat is not None else event.chat_id
+
+
+async def resolve(client, chat_id):
+    """Resolve a *stored* chat id (no event available) to an input peer.
+
+    Background work -- reminders, timers, countdown resume, the post-restart
+    report -- only has the id it saved earlier, so `event.get_input_chat()` is
+    not available. `get_input_entity()` alone hits the empty StringSession cache
+    after a restart, so fall back to a dialog scan before giving up.
+    """
+    try:
+        return await client.get_input_entity(chat_id)
+    except Exception:  # noqa: BLE001 - not cached yet, look through dialogs
+        log.info("tgsend: %s not cached, scanning dialogs", chat_id)
+    try:
+        async for dialog in client.iter_dialogs():
+            entity = getattr(dialog, "entity", None)
+            if getattr(dialog, "id", None) == chat_id or \
+                    getattr(entity, "id", None) == chat_id:
+                return await client.get_input_entity(entity or chat_id)
+    except Exception:  # noqa: BLE001
+        log.warning("tgsend: dialog scan failed for %s", chat_id)
+    return chat_id

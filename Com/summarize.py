@@ -237,7 +237,7 @@ def setup(client, my_id):
 
                 await event.edit(f"⏳ Fetching last {limit} messages...")
                 try:
-                    messages = await client.get_messages(event.chat_id, limit=limit)
+                    messages = await client.get_messages(await tgsend.peer(event), limit=limit)
                 except Exception as e:
                     await event.edit(f"❌ Failed to fetch messages: {e}")
                     return

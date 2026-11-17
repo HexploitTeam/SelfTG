@@ -5,6 +5,7 @@ import json
 import hashlib
 import asyncio
 from telethon import events
+import Com.tgsend as tgsend
 
 __HELP__ = "!update → Restart the session and show command changes after restart"
 __CATEGORY__ = "Setup"
@@ -78,9 +79,10 @@ def setup(client, my_id):
         old_hashes = data.get("old_hashes", {})
 
         # Delete the restart message if possible
-        if chat_id and msg_id:
+        peer = await tgsend.resolve(client, chat_id) if chat_id else None
+        if peer and msg_id:
             try:
-                await client.delete_messages(chat_id, msg_id)
+                await client.delete_messages(peer, msg_id)
             except Exception:
                 pass
 
@@ -98,7 +100,7 @@ def setup(client, my_id):
 
         # Send report to the same chat (or fallback to saved messages)
         try:
-            await client.send_message(chat_id, report)
+            await client.send_message(peer or "me", report)
         except Exception:
             try:
                 await client.send_message("me", report)

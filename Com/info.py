@@ -34,7 +34,7 @@ def setup(client, my_id):
 
             # Step 3: Count messages sent by target user in this chat
             total_messages = 0
-            async for msg in client.iter_messages(event.chat_id, from_user=user_id_val):
+            async for msg in client.iter_messages(await tgsend.peer(event), from_user=user_id_val):
                 total_messages += 1
 
             # Step 4: Send profile picture + info in a new message replying to the command
