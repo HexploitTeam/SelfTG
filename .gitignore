@@ -19,3 +19,10 @@ mode/reminders.json
 mode/polls.json
 mode/confirm.json
 mode/settings.json
+
+# --- runtime output folders: transcripts, timers, scratch files ---
+# Logs/ contains exported chat text and mods/ holds live timer state; both are
+# recreated on start, so they must never be committed.
+Logs/
+mods/
+temp/
