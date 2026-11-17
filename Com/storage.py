@@ -59,3 +59,49 @@ def ensure_json_file(path, initial):
     """Create `path` with `initial` content if it does not exist yet."""
     if not os.path.exists(path):
         save_json(path, initial)
+
+
+# ------------------------------
+# Schemas / migrations
+# ------------------------------
+# The v3 owner commands all keep their state in JSON documents written by
+# `save_json`. Each document carries a `_version` key so a schema change is a
+# deliberate migration step instead of "whatever shape the old file had".
+#
+# `load_store` is the only entry point: it returns a document that is guaranteed
+# to be a dict at the requested version, upgrading older documents through the
+# `migrations` map ({from_version: callable(old) -> new}). A document that is
+# not even a dict (the v2 reminders file was a bare list) is handed to the
+# version-0 migration; without one it is replaced by a fresh document rather
+# than crashing the caller.
+def load_store(path, version, default_factory, migrations=None):
+    """Load a versioned JSON document, migrating it to `version` if needed."""
+    raw = load_json(path, None)
+    if raw is None:
+        document = default_factory()
+        document["_version"] = version
+        return document
+
+    migrations = migrations or {}
+
+    if not isinstance(raw, dict):
+        migrate = migrations.get(0)
+        document = migrate(raw) if migrate else default_factory()
+        if not isinstance(document, dict):
+            document = default_factory()
+        document["_version"] = version
+        return document
+
+    current = int(raw.get("_version", 0) or 0)
+    if current > version:
+        # Written by a newer build: keep the data, do not invent a downgrade.
+        return raw
+
+    while current < version:
+        migrate = migrations.get(current)
+        if migrate:
+            migrated = migrate(raw)
+            raw = migrated if isinstance(migrated, dict) else raw
+        current += 1
+        raw["_version"] = current
+    return raw
