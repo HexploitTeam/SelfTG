@@ -1,13 +1,16 @@
 # Com/subenum.py
 from telethon import events
-import aiohttp
 import asyncio
-import os
 import json
+import logging
+import os
 from datetime import datetime
 import socket
 
+import Com.api as api
 from Com.storage import save_json
+
+log = logging.getLogger("selftg.subenum")
 
 __HELP__ = (
     "!subenum <domain> → Enumerate active subdomains and send as TXT file\n"
@@ -23,22 +26,33 @@ os.makedirs("mode", exist_ok=True)
 def setup(client, my_id):
 
     async def fetch_ct_subdomains(domain):
-        url = f"https://crt.sh/?q=%25.{domain}&output=json"
+        # crt.sh is free and keyless but routinely answers 502/504 under load,
+        # so the call goes through Com.api (bounded timeout + one retry) and a
+        # failure is reported instead of looking like "no subdomains found".
+        url = "https://crt.sh/"
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url, timeout=20) as resp:
-                    if resp.status != 200:
-                        return []
-                    data = await resp.json()
-                    subdomains = set()
-                    for entry in data:
-                        name = entry.get("name_value", "")
-                        for sub in name.split("\n"):
-                            if sub.endswith(domain):
-                                subdomains.add(sub.strip())
-                    return list(subdomains)
-        except:
-            return []
+            data = await api.fetch_json(
+                url,
+                params={"q": f"%.{domain}", "output": "json"},
+                provider="crt.sh",
+                timeout=25,
+                retries=1,
+            )
+        except api.APIError as exc:
+            log.info("subenum: crt.sh failed (%s)", exc.describe())
+            return None
+        except Exception as exc:  # noqa: BLE001
+            log.info("subenum: crt.sh crashed (%s)", type(exc).__name__)
+            return None
+
+        subdomains = set()
+        for entry in data if isinstance(data, list) else []:
+            name = entry.get("name_value", "")
+            for sub in str(name).split("\n"):
+                sub = sub.strip().lower()
+                if sub.endswith(domain) and len(subdomains) < 5000:
+                    subdomains.add(sub)
+        return sorted(subdomains)
 
     def check_dns(subdomain):
         try:
@@ -114,6 +128,12 @@ def setup(client, my_id):
             await event.reply(f"🔍 Scanning subdomains for **{domain}**...")
 
             subdomains = await fetch_ct_subdomains(domain)
+            if subdomains is None:
+                await event.reply(
+                    "❌ crt.sh (free certificate-transparency API) is unavailable or "
+                    "rate limiting right now. Try again in a minute."
+                )
+                return
             active_subs = []
             for sub in subdomains:
                 ip = await asyncio.get_event_loop().run_in_executor(

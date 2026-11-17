@@ -1,4 +1,5 @@
 # Com/tts.py
+import asyncio
 import os
 import shlex
 import tempfile
@@ -21,6 +22,15 @@ __CATEGORY__ = "Utilities"
 
 TTS_FOLDER = "mode/tts"
 os.makedirs(TTS_FOLDER, exist_ok=True)
+
+def _render_tts(text, lang, tld):
+    """Blocking: build the MP3 with gTTS and return the temp path."""
+    tts = gTTS(text=text, lang=lang, tld=tld, slow=False)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp:
+        path = tmp.name
+        tts.save(path)
+    return path
+
 
 def parse_args(args):
     options = {'lang': 'en', 'tld': 'com', 'voice_note': False}
@@ -82,15 +92,19 @@ def setup(client, my_id):
 
             await event.edit(f"🔊 Generating TTS (lang: {lang}, tld: {tld})...")
 
-            # Generate TTS in memory
+            # gTTS.save() is synchronous and does a network round trip, so it
+            # runs in a worker thread with a timeout: previously it blocked the
+            # whole event loop (every other handler) for the length of the call
+            # and had no timeout at all if Google stalled.
             try:
-                tts = gTTS(text=text, lang=lang, tld=tld, slow=False)
-                # Save to temp file
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as tmp:
-                    tmp_path = tmp.name
-                    tts.save(tmp_path)
+                tmp_path = await asyncio.wait_for(
+                    asyncio.to_thread(_render_tts, text, lang, tld), timeout=45
+                )
+            except asyncio.TimeoutError:
+                await event.edit("❌ TTS timed out (free Google endpoint is slow right now).")
+                return
             except gTTSError as e:
-                await event.edit(f"❌ TTS error: {e}")
+                await event.edit(f"❌ TTS error: {e} (the free endpoint may be rate limiting)")
                 return
             except Exception as e:
                 await event.edit(f"❌ Error: {e}")

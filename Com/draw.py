@@ -1,76 +1,104 @@
 # Com/draw.py
-import asyncio
-import os
-import aiohttp
-from telethon import events
+"""`!draw` -- text-to-image through Pollinations' keyless Classic API.
+
+Why this replaced Hugging Face
+------------------------------
+The old implementation required ``HF_API_TOKEN`` and called
+``api-inference.huggingface.co`` with ``runwayml/stable-diffusion-v1-5``. Both
+halves are gone: that model was removed from the free Inference API, and the
+service now meters inference through paid credits, so a free Replit bot could
+not rely on it.
+
+Pollinations' Classic API (``image.pollinations.ai/prompt/<text>``) still serves
+one image model with **no key, no signup and no payment**. It is best effort:
+rate limited per IP, capped at 768x768, returns JPEG with a small logo, and can
+refuse prompts. Every one of those cases is reported as a normal message; none
+of them can raise into the Telethon client.
+"""
+import logging
+import time
 from io import BytesIO
+from urllib.parse import quote
+
+from telethon import events
+
+import Com.api as api
 
 __HELP__ = (
-    "!draw <prompt> → Generate an image from a text prompt using Stable Diffusion.\n"
-    "Example: !draw a cat wearing a hat\n"
-    "Requires HF_API_TOKEN set in Secrets (get one at huggingface.co/settings/tokens)."
+    "!draw <prompt> → Generate an image from a text prompt (Pollinations, no key)\n"
+    "Example: !draw a cat wearing a hat"
 )
 __CATEGORY__ = "Utilities"
 
-API_TOKEN = os.getenv("HF_API_TOKEN")
-if not API_TOKEN:
-    print("[DRAW] HF_API_TOKEN not set. The command will show an error.")
+log = logging.getLogger("selftg.draw")
 
-# Model to use (can be changed)
-MODEL = "runwayml/stable-diffusion-v1-5"
+IMAGE_URL = "https://image.pollinations.ai/prompt/{prompt}"
+MAX_PROMPT = 500
+
 
 async def generate_image(prompt):
-    """Send a prompt to Hugging Face and return image bytes."""
-    if not API_TOKEN:
-        return None, "HF_API_TOKEN not set. Please add it to Secrets."
+    """Return (image_bytes, error_text). Never raises."""
+    url = IMAGE_URL.format(prompt=quote(prompt[:MAX_PROMPT], safe=""))
+    try:
+        body = await api.fetch_bytes(
+            url,
+            params={"width": 768, "height": 768, "seed": int(time.time()) % 100000},
+            provider="pollinations",
+            timeout=90,   # diffusion on a shared queue can take 20-60s
+            retries=0,
+        )
+    except api.RateLimited as exc:
+        wait = exc.retry_after or 30
+        return None, f"Image service is rate limiting this IP — try again in ~{wait}s."
+    except api.APIError as exc:
+        return None, f"Image service unavailable ({exc.describe()})."
+    except Exception as exc:  # noqa: BLE001
+        log.exception("draw: unexpected failure")
+        return None, f"{type(exc).__name__}: {exc}"
 
-    headers = {"Authorization": f"Bearer {API_TOKEN}"}
-    payload = {"inputs": prompt}
-    url = f"https://api-inference.huggingface.co/models/{MODEL}"
-    timeout = aiohttp.ClientTimeout(total=120)
-    async with aiohttp.ClientSession(timeout=timeout) as session:
-        async with session.post(url, headers=headers, json=payload) as resp:
-            if resp.status == 200:
-                return await resp.read(), None
-            elif resp.status == 503:
-                # Model is loading – wait and retry (up to 3 times)
-                for _ in range(3):
-                    await asyncio.sleep(2)
-                    async with session.post(url, headers=headers, json=payload) as retry_resp:
-                        if retry_resp.status == 200:
-                            return await retry_resp.read(), None
-                return None, "Model loading took too long. Try again in a moment."
-            else:
-                error_text = await resp.text()
-                return None, f"API error ({resp.status}): {error_text[:200]}"
+    if not body:
+        return None, "Image service returned an empty response."
+    if not body[:3] == b"\xff\xd8\xff" and not body[:8] == b"\x89PNG\r\n\x1a\n":
+        # Pollinations returns a text error page when a prompt is refused.
+        snippet = body[:200].decode("utf-8", errors="replace").strip()
+        return None, f"Image service refused the request: {snippet}"
+    return body, None
+
 
 def setup(client, my_id):
-    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!draw\s+(.+)$"))
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!draw\s+([\s\S]+)$"))
     async def draw_cmd(event):
+        prompt = (event.pattern_match.group(1) or "").strip()
+        if not prompt:
+            await _safe_edit(event, "❌ Please provide a prompt. Example: `!draw a cat in space`")
+            return
+
+        await _safe_edit(event, f"🎨 Generating: `{prompt}` … (10-60s)")
+
+        image_bytes, error = await generate_image(prompt)
+        if error:
+            await _safe_edit(event, f"❌ {error}")
+            return
+
+        bio = BytesIO(image_bytes)
+        bio.name = "generated.jpg"
         try:
-            prompt = event.pattern_match.group(1).strip()
-            if not prompt:
-                await event.edit("❌ Please provide a prompt.\nExample: `!draw a cat wearing a hat`")
-                return
-
-            await event.edit(f"🎨 Generating image for: `{prompt}` ... (may take 15‑30s)")
-
-            # Generate
-            img_bytes, error = await generate_image(prompt)
-            if error:
-                await event.edit(f"❌ {error}")
-                return
-
-            # Send as photo
-            bio = BytesIO(img_bytes)
-            bio.name = "generated.png"
             await client.send_file(
                 event.chat_id,
                 bio,
-                caption=f"🖼️ Generated from: {prompt}",
-                reply_to=event.id
+                caption=f"🖼️ {prompt}",
+                reply_to=event.id,
             )
             await event.delete()
+        except Exception as exc:  # noqa: BLE001
+            log.exception("draw: could not send image")
+            await _safe_edit(event, f"❌ Generated the image but could not send it: {exc}")
 
-        except Exception as e:
-            await event.edit(f"❌ Error: {str(e)}")
+    async def _safe_edit(event, text):
+        try:
+            await event.edit(text)
+        except Exception:
+            try:
+                await event.reply(text)
+            except Exception:
+                log.info("draw: response could not be delivered")

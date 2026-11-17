@@ -7,13 +7,9 @@ import subprocess
 import ipaddress
 from telethon import events
 
-# Optional imports – handle missing gracefully
-try:
-    import aiohttp
-    HAS_AIOHTTP = True
-except ImportError:
-    HAS_AIOHTTP = False
+import Com.api as api
 
+# Optional imports – handle missing gracefully
 try:
     import dns.resolver
     HAS_DNS = True
@@ -52,31 +48,76 @@ def is_valid_domain(domain):
     return pattern.match(domain) is not None
 
 # ---------- Subcommands ----------
+IP_API_URL = "http://ip-api.com/json/{ip}"          # keyless, HTTP-only free tier
+IPWHO_URL = "https://ipwho.is/{ip}"                 # keyless HTTPS fallback
+GEO_CACHE_TTL = 24 * 3600                           # geo data barely changes
+
+
+def _render_geo(ip, data, source):
+    lines = [
+        f"📍 **Geolocation for {ip}**",
+        f"Country: {data.get('country') or 'N/A'}",
+        f"City: {data.get('city') or 'N/A'}",
+        f"ISP: {data.get('isp') or 'N/A'}",
+        f"Organization: {data.get('org') or 'N/A'}",
+        f"AS: {data.get('as') or 'N/A'}",
+        f"Timezone: {data.get('timezone') or 'N/A'}",
+        f"Lat/Lon: {data.get('lat', 'N/A')}, {data.get('lon', 'N/A')}",
+        f"_source: {source}, cached {GEO_CACHE_TTL // 3600}h_",
+    ]
+    return "\n".join(lines)
+
+
+async def _geo_ipapi(ip):
+    data = await api.fetch_json(
+        IP_API_URL.format(ip=ip),
+        params={"fields": "status,message,country,city,isp,org,as,lat,lon,timezone"},
+        provider="ip-api.com",
+        cache_ttl=GEO_CACHE_TTL,
+        timeout=8,
+    )
+    if data.get("status") == "fail":
+        raise api.APIError(data.get("message") or "lookup failed", provider="ip-api.com")
+    return _render_geo(ip, data, "ip-api.com")
+
+
+async def _geo_ipwho(ip):
+    data = await api.fetch_json(
+        IPWHO_URL.format(ip=ip),
+        provider="ipwho.is",
+        cache_ttl=GEO_CACHE_TTL,
+        timeout=10,
+    )
+    if not data.get("success", False):
+        raise api.APIError(data.get("message") or "lookup failed", provider="ipwho.is")
+    connection = data.get("connection") or {}
+    return _render_geo(
+        ip,
+        {
+            "country": data.get("country"),
+            "city": data.get("city"),
+            "isp": connection.get("isp"),
+            "org": connection.get("org"),
+            "as": connection.get("asn"),
+            "timezone": (data.get("timezone") or {}).get("id"),
+            "lat": data.get("latitude"),
+            "lon": data.get("longitude"),
+        },
+        "ipwho.is",
+    )
+
+
 async def geo_lookup(ip):
-    if not HAS_AIOHTTP:
-        return "❌ aiohttp not installed. Install with: pip install aiohttp"
+    """ip-api.com first (keyless), ipwho.is second (keyless HTTPS)."""
     try:
-        async with aiohttp.ClientSession() as session:
-            url = f"http://ip-api.com/json/{ip}?fields=status,message,country,city,isp,org,as,lat,lon,timezone"
-            async with session.get(url) as resp:
-                if resp.status != 200:
-                    return f"❌ API request failed (HTTP {resp.status})"
-                data = await resp.json()
-                if data.get('status') == 'fail':
-                    return f"❌ {data.get('message', 'Unknown error')}"
-                lines = [
-                    f"📍 **Geolocation for {ip}**",
-                    f"Country: {data.get('country', 'N/A')}",
-                    f"City: {data.get('city', 'N/A')}",
-                    f"ISP: {data.get('isp', 'N/A')}",
-                    f"Organization: {data.get('org', 'N/A')}",
-                    f"AS: {data.get('as', 'N/A')}",
-                    f"Timezone: {data.get('timezone', 'N/A')}",
-                    f"Lat/Lon: {data.get('lat', 'N/A')}, {data.get('lon', 'N/A')}"
-                ]
-                return "\n".join(lines)
-    except Exception as e:
-        return f"❌ Error: {str(e)}"
+        return await api.first_success([
+            ("ip-api.com", lambda: _geo_ipapi(ip)),
+            ("ipwho.is", lambda: _geo_ipwho(ip)),
+        ])
+    except api.APIError as exc:
+        return f"❌ Geolocation failed ({exc}). Both free providers are down or rate limited."
+    except Exception as exc:  # noqa: BLE001
+        return f"❌ Error: {type(exc).__name__}: {exc}"
 
 async def dns_lookup(domain, record_type='A'):
     if not HAS_DNS:
@@ -118,6 +159,7 @@ async def info_lookup(ip):
     reverse_result = await reverse_lookup(ip)
     lines = ["📊 **Combined Info for " + ip + "**"]
     if geo_result.startswith("📍"):
+        # (renderer output already carries the source line)
         geo_lines = geo_result.splitlines()[1:]
         lines.extend(geo_lines)
     else:

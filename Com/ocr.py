@@ -1,11 +1,12 @@
 # Com/ocr.py
-import aiohttp
 import asyncio
 import base64
-import subprocess
+import os
 import shutil
 from io import BytesIO
 from telethon import events
+
+import Com.api as api
 
 __HELP__ = "!ocr (reply to image) → Extract text from an image using local Tesseract (if installed) or OCR.space API."
 __CATEGORY__ = "Utilities"
@@ -23,6 +24,9 @@ except ImportError:
     HAS_PYTESSERACT = False
 
 OCR_API_URL = "https://api.ocr.space/parse/image"
+# OCR.space's documented free key for light use is "helloworld" (25k calls/month,
+# no card). Set OCR_SPACE_API_KEY in Secrets to use your own free key instead.
+OCR_API_KEY = (os.getenv("OCR_SPACE_API_KEY") or "helloworld").strip()
 
 async def ocr_local(image_data):
     """Extract text using local Tesseract."""
@@ -37,51 +41,51 @@ async def ocr_local(image_data):
     except Exception as e:
         return None, f"Local OCR error: {e}"
 
-async def ocr_api(image_data, language="eng", retries=3):
-    """Use OCR.space API with retries."""
-    image_base64 = base64.b64encode(image_data).decode('utf-8')
+async def ocr_api(image_data, language="eng"):
+    """OCR.space free tier, via the shared HTTP layer.
+
+    The old version opened a fresh session per attempt, retried 502s blindly and
+    never distinguished a quota error from a bad image: OCR.space answers 200
+    with ``IsErroredOnProcessing``/``ErrorMessage`` when the key is throttled, so
+    the message now says so instead of "No text found".
+    """
     payload = {
-        "base64Image": f"data:image/png;base64,{image_base64}",
+        "base64Image": "data:image/png;base64," + base64.b64encode(image_data).decode("utf-8"),
         "language": language,
         "isOverlayRequired": False,
         "detectOrientation": True,
         "scale": True,
         "OCREngine": 2,
     }
-    headers = {
-        "Content-Type": "application/json",
-        "apikey": "helloworld"
-    }
-    for attempt in range(retries):
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(OCR_API_URL, json=payload, headers=headers, timeout=30) as resp:
-                    if resp.status != 200:
-                        # If it's 502, retry after delay
-                        if resp.status == 502 and attempt < retries-1:
-                            await asyncio.sleep(2)
-                            continue
-                        return None, f"API returned HTTP {resp.status}"
-                    data = await resp.json()
-                    if data.get("IsErroredOnProcessing"):
-                        error = data.get("ErrorMessage", "Unknown error")
-                        return None, f"OCR error: {error}"
-                    parsed = data.get("ParsedResults", [])
-                    if not parsed:
-                        return None, "No text found in the image."
-                    text = parsed[0].get("ParsedText", "").strip()
-                    return text, None
-        except asyncio.TimeoutError:
-            if attempt < retries-1:
-                await asyncio.sleep(2)
-                continue
-            return None, "API request timed out"
-        except Exception as e:
-            if attempt < retries-1:
-                await asyncio.sleep(2)
-                continue
-            return None, f"API error: {e}"
-    return None, "All API retries failed"
+    try:
+        data = await api.post_json(
+            OCR_API_URL,
+            payload,
+            provider="ocr.space",
+            headers={"apikey": OCR_API_KEY},
+            timeout=35,
+            retries=1,
+        )
+    except api.RateLimited as exc:
+        wait = exc.retry_after or 60
+        return None, f"OCR.space rate limit reached — retry in ~{wait}s"
+    except api.APIError as exc:
+        return None, f"OCR.space unavailable ({exc.describe()})"
+
+    if data.get("IsErroredOnProcessing"):
+        message = data.get("ErrorMessage") or "Unknown error"
+        if isinstance(message, list):
+            message = "; ".join(str(part) for part in message)
+        lowered = str(message).lower()
+        if "rate limit" in lowered or "quota" in lowered or "exceeded" in lowered:
+            return None, f"OCR.space quota/rate limit: {message}"
+        return None, f"OCR error: {message}"
+
+    parsed = data.get("ParsedResults") or []
+    if not parsed:
+        return None, "No text found in the image."
+    text = (parsed[0].get("ParsedText") or "").strip()
+    return text, None
 
 def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!ocr$"))

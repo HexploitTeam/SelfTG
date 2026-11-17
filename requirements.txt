@@ -32,9 +32,12 @@ gTTS==2.5.1              # !tts
 Faker==24.14.0           # !mock
 dnspython==2.6.1         # !dnsprobe, reverse DNS in !ip
 Flask==3.0.3             # dashboard.py
-googletrans==4.0.2       # !translate. The 4.0.0rc1 pin no longer exists on PyPI
 requests==2.32.3         # gTTS transport
-httpx==0.28.1            # required by googletrans 4.0.2 (>=0.27.2)
+# Removed in v2: googletrans==4.0.2 and httpx==0.28.1.
+# !translate now calls the same free Google endpoint directly over aiohttp
+# (Com/translate.py) with MyMemory as fallback. googletrans' `translate` is a
+# coroutine in 4.x, so the old `to_thread()` wrapper could never have returned a
+# result, and it was the only reason httpx was installed.
 
 # --- Optional acceleration --------------------------------------------------
 # C implementation of the AES/IGE path Telethon uses. Pure-Python fallback is

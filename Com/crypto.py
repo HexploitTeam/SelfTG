@@ -1,90 +1,174 @@
 # Com/crypto.py
-import aiohttp
+"""`!crypto` -- prices from free, keyless providers with a fallback chain.
+
+Old behaviour: one CoinPaprika call per invocation, a fresh TCP session each
+time, no cache, and a raw exception string on failure.
+
+New behaviour:
+  * CoinGecko public API first (no key, ~5-15 req/min per IP),
+  * CoinPaprika second (no key, ~10 req/min) if CoinGecko throttles or is down,
+  * 60s cache, so asking for the same coin five times in a minute costs one
+    upstream request,
+  * 429 / timeout / server errors surface as a readable message, never as a
+    traceback in the chat.
+"""
+import logging
+
 from telethon import events
 
-__HELP__ = "!crypto <coin> → Show crypto price and 24h changes"
+import Com.api as api
+
+__HELP__ = "!crypto <coin> → Show crypto price and 24h changes (CoinGecko → CoinPaprika)"
 __CATEGORY__ = "Utilities"
 
+log = logging.getLogger("selftg.crypto")
+
+COINGECKO_URL = "https://api.coingecko.com/api/v3/simple/price"
+COINPAPRIKA_URL = "https://api.coinpaprika.com/v1/tickers/{id}"
+
+CACHE_TTL = 60  # seconds; prices do not need to be fresher than that
+
+# ticker -> (coingecko id, coinpaprika id)
+COINS = {
+    "btc": ("bitcoin", "btc-bitcoin"),
+    "eth": ("ethereum", "eth-ethereum"),
+    "sol": ("solana", "sol-solana"),
+    "xrp": ("ripple", "xrp-xrp"),
+    "ada": ("cardano", "ada-cardano"),
+    "doge": ("dogecoin", "doge-dogecoin"),
+    "dot": ("polkadot", "dot-polkadot"),
+    "link": ("chainlink", "link-chainlink"),
+    "ltc": ("litecoin", "ltc-litecoin"),
+    "bch": ("bitcoin-cash", "bch-bitcoin-cash"),
+    "atom": ("cosmos", "atom-cosmos"),
+    "uni": ("uniswap", "uni-uniswap"),
+    "avax": ("avalanche-2", "avax-avalanche"),
+    "matic": ("matic-network", "matic-polygon"),
+    "trx": ("tron", "trx-tron"),
+    "ton": ("the-open-network", "ton-toncoin"),
+    "near": ("near", "near-near-protocol"),
+    "shib": ("shiba-inu", "shib-shiba-inu"),
+}
+
+
+def _fmt_price(value):
+    if not isinstance(value, (int, float)):
+        return "N/A"
+    return f"{value:,.2f}" if value >= 1000 else f"{value:.8f}"
+
+
+def _fmt_change(value):
+    if not isinstance(value, (int, float)):
+        return "N/A"
+    return f"{value:+.2f}%"
+
+
+def _fmt_big(value):
+    if not isinstance(value, (int, float)):
+        return "N/A"
+    return f"{value:,.0f}"
+
+
+def render(name, symbol, price, change_1h, change_24h, change_7d,
+           market_cap, volume_24h, source):
+    lines = [
+        f"💰 **{name} ({symbol})**",
+        f"💵 Price: `${_fmt_price(price)}`",
+        f"📈 1h: `{_fmt_change(change_1h)}` • 24h: `{_fmt_change(change_24h)}`"
+        f" • 7d: `{_fmt_change(change_7d)}`",
+        f"🏦 Market Cap: `${_fmt_big(market_cap)}`",
+        f"📊 24h Volume: `${_fmt_big(volume_24h)}`",
+        f"_source: {source}, cached {CACHE_TTL}s_",
+    ]
+    return "\n".join(lines)
+
+
+async def _coingecko(coin_id, ticker):
+    data = await api.fetch_json(
+        COINGECKO_URL,
+        params={
+            "ids": coin_id,
+            "vs_currencies": "usd",
+            "include_24hr_change": "true",
+            "include_market_cap": "true",
+            "include_24hr_vol": "true",
+        },
+        provider="coingecko",
+        cache_ttl=CACHE_TTL,
+        timeout=10,
+    )
+    quotes = data.get(coin_id) or {}
+    if not quotes:
+        raise api.APIError(f"unknown coin id {coin_id!r}", provider="coingecko")
+    return render(
+        coin_id.replace("-", " ").title(),
+        ticker.upper(),
+        quotes.get("usd"),
+        None,  # CoinGecko's simple/price has no 1h/7d delta
+        quotes.get("usd_24h_change"),
+        None,
+        quotes.get("usd_market_cap"),
+        quotes.get("usd_24h_vol"),
+        "CoinGecko",
+    )
+
+
+async def _coinpaprika(paprika_id, ticker):
+    data = await api.fetch_json(
+        COINPAPRIKA_URL.format(id=paprika_id),
+        provider="coinpaprika",
+        cache_ttl=CACHE_TTL,
+        timeout=10,
+    )
+    quotes = (data.get("quotes") or {}).get("USD") or {}
+    return render(
+        data.get("name") or paprika_id,
+        (data.get("symbol") or ticker).upper(),
+        quotes.get("price"),
+        quotes.get("percent_change_1h"),
+        quotes.get("percent_change_24h"),
+        quotes.get("percent_change_7d"),
+        quotes.get("market_cap"),
+        quotes.get("volume_24h"),
+        "CoinPaprika",
+    )
+
+
+async def get_quote(ticker):
+    """CoinGecko first, CoinPaprika second. Raises APIError if both fail."""
+    ticker = ticker.lower()
+    coingecko_id, paprika_id = COINS.get(ticker, (ticker, ticker))
+    return await api.first_success([
+        ("coingecko", lambda: _coingecko(coingecko_id, ticker)),
+        ("coinpaprika", lambda: _coinpaprika(paprika_id, ticker)),
+    ])
+
+
 def setup(client, my_id):
-    @client.on(events.NewMessage(from_users=my_id,
-                                 pattern=r"^!crypto\s+(\w+)"))
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!crypto\s+(\w+)"))
     async def crypto(event):
+        ticker = event.pattern_match.group(1).lower()
         try:
-            coin = event.pattern_match.group(1).lower()
-
-            # Map common tickers to CoinPaprika IDs
-            ticker_map = {
-                "btc": "btc-bitcoin",
-                "eth": "eth-ethereum",
-                "sol": "sol-solana",
-                "xrp": "xrp-xrp",
-                "ada": "ada-cardano",
-                "doge": "doge-dogecoin",
-                "dot": "dot-polkadot",
-                "link": "link-chainlink",
-                "ltc": "ltc-litecoin",
-                "bch": "bch-bitcoin-cash",
-                "atom": "atom-cosmos",
-                "uni": "uni-uniswap",
-                "avax": "avax-avalanche",
-                "matic": "matic-polygon",
-            }
-
-            paprika_id = ticker_map.get(coin, coin)
-
-            async with aiohttp.ClientSession() as session:
-                url = f"https://api.coinpaprika.com/v1/tickers/{paprika_id}"
-                async with session.get(url) as resp:
-                    if resp.status == 404:
-                        await event.reply(
-                            f"❌ Coin '{coin}' not found.\n"
-                            "💡 Try the full name (e.g., 'bitcoin', 'ethereum') or one of:\n"
-                            f"   {', '.join(ticker_map.keys())}"
-                        )
-                        return
-                    if resp.status != 200:
-                        await event.reply(
-                            f"❌ API error (status {resp.status}). Try again later."
-                        )
-                        return
-                    data = await resp.json()
-
-            name = data.get("name", "Unknown")
-            symbol = data.get("symbol", "").upper()
-            quotes = data.get("quotes", {}).get("USD", {})
-            price = quotes.get("price", "N/A")
-            change_1h = quotes.get("percent_change_1h", "N/A")
-            change_24h = quotes.get("percent_change_24h", "N/A")
-            change_7d = quotes.get("percent_change_7d", "N/A")
-            market_cap = quotes.get("market_cap", "N/A")
-            volume_24h = quotes.get("volume_24h", "N/A")
-
-            def fmt_price(n):
-                if n == "N/A" or not isinstance(n, (int, float)):
-                    return "N/A"
-                if n >= 1000:
-                    return f"{n:,.2f}"
-                return f"{n:.8f}"
-
-            def fmt_change(n):
-                if n == "N/A" or not isinstance(n, (int, float)):
-                    return "N/A"
-                return f"{n:+.2f}%"
-
-            def fmt_big(n):
-                if n == "N/A" or not isinstance(n, (int, float)):
-                    return "N/A"
-                return f"{n:,.0f}"
-
-            message = (
-                f"💰 **{name} ({symbol})**\n"
-                f"💵 Price: `${fmt_price(price)}`\n"
-                f"📈 1h: `{fmt_change(change_1h)}` • 24h: `{fmt_change(change_24h)}` • 7d: `{fmt_change(change_7d)}`\n"
-                f"🏦 Market Cap: `${fmt_big(market_cap)}`\n"
-                f"📊 24h Volume: `${fmt_big(volume_24h)}`"
+            message = await get_quote(ticker)
+        except api.APIError as exc:
+            await _reply(
+                event,
+                f"❌ Could not get a price for `{ticker}`.\n"
+                f"Both free providers failed: {exc}\n"
+                f"Known tickers: {', '.join(sorted(COINS))}",
             )
+            return
+        except Exception as exc:  # noqa: BLE001
+            log.exception("crypto: unexpected failure")
+            await _reply(event, f"❌ {type(exc).__name__}: {exc}")
+            return
+        await _reply(event, message)
 
-            await event.reply(message)
-
-        except Exception as e:
-            await event.reply(f"❌ Error: {str(e)}")
+    async def _reply(event, text):
+        try:
+            await event.reply(text)
+        except Exception:
+            try:
+                await event.edit(text)
+            except Exception:
+                log.info("crypto: response could not be delivered")

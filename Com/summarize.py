@@ -1,22 +1,40 @@
 # Com/summarize.py
+import logging
 import os
 import re
-import asyncio
 from collections import Counter
+
 from telethon import events
 
-try:
-    import aiohttp
-    HAS_AIOHTTP = True
-except:
-    HAS_AIOHTTP = False
+import Com.api as api
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# Free-tier Gemini (Google AI Studio, no credit card). The old code called
+# `v1beta2/models/text-bison-001:generate`, an endpoint Google retired, with a
+# `Bearer` header instead of the `?key=` parameter -- so the LLM path could
+# never have worked and every call silently fell back to the local summarizer.
+#
+# Free text models as of this writing, cheapest quota first (per project):
+#   gemini-3.5-flash-lite / gemini-3.1-flash-lite  10 RPM, 500 RPD
+#   gemini-3.8-flash / gemini-3.6-flash             5 RPM,  20 RPD
+# GEMINI_MODEL (comma separated) overrides the chain without a code change.
+GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or "").strip()
+GEMINI_MODELS = [
+    model.strip()
+    for model in (os.getenv("GEMINI_MODEL") or "").split(",")
+    if model.strip()
+] or [
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
+    "gemini-3.8-flash",
+]
+
+log = logging.getLogger("selftg.summarize")
 
 __HELP__ = (
     "!summarize <text> (or reply) → Summarize the given text.\n"
     "!summarize chat [N] → Summarize the last N messages in this chat (default 50).\n"
-    "Uses Gemini if API key is set, otherwise local summarization (works for Persian & English)."
+    "Uses Gemini free tier when GEMINI_API_KEY is set, otherwise local summarization "
+    "(works for Persian & English)."
 )
 __CATEGORY__ = "Utilities"
 
@@ -124,28 +142,71 @@ def summarize_locally(text, max_sentences=5, max_chars=2000):
     return summary if summary else text[:500] + "..."
 
 
-# ---------- Gemini summarization ----------
+# ---------- Gemini summarization (free tier, best effort) ----------
+GEMINI_URL = (
+    "https://generativelanguage.googleapis.com/v1beta/models/"
+    "{model}:generateContent?key={key}"
+)
+MAX_PROMPT_CHARS = 12000  # keeps us inside the free per-minute token budget
+
+# Remembers the first model that answered so later calls skip dead IDs.
+_working_model = {"name": None}
+
+
+def _extract_text(data):
+    for candidate in data.get("candidates") or []:
+        for part in (candidate.get("content") or {}).get("parts") or []:
+            text = part.get("text")
+            if text:
+                return text.strip()
+    return None
+
+
 async def summarize_with_gemini(text):
-    if not GEMINI_API_KEY or not HAS_AIOHTTP:
+    """Return a summary, or None to fall back to the local summarizer."""
+    if not GEMINI_API_KEY:
         return None
-    url = "https://generativelanguage.googleapis.com/v1beta2/models/text-bison-001:generate"
-    headers = {"Authorization": f"Bearer {GEMINI_API_KEY}", "Content-Type": "application/json"}
+
+    prompt = (
+        "Summarize the following text in a few plain sentences. No preamble, "
+        "no markdown headings.\n\n" + text[:MAX_PROMPT_CHARS]
+    )
     payload = {
-        "prompt": f"Summarize this text in a few sentences:\n{text}",
-        "temperature": 0.3,
-        "maxOutputTokens": 200
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": 0.3, "maxOutputTokens": 600},
     }
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, headers=headers, json=payload, timeout=15) as resp:
-                if resp.status != 200:
-                    return None
-                data = await resp.json()
-                candidates = data.get("candidates", [])
-                if candidates:
-                    return candidates[0].get("content", "")
-    except:
-        pass
+
+    models = list(GEMINI_MODELS)
+    if _working_model["name"] in models:
+        models.remove(_working_model["name"])
+        models.insert(0, _working_model["name"])
+
+    for model in models:
+        try:
+            data = await api.post_json(
+                GEMINI_URL.format(model=model, key=GEMINI_API_KEY),
+                payload,
+                provider=f"gemini({model})",
+                timeout=25,
+                retries=0,
+            )
+        except api.RateLimited as exc:
+            # Quota is per project, so another model ID will not help.
+            log.info("gemini: rate limited (%s), using local summarizer", exc.describe())
+            return None
+        except api.APIError as exc:
+            log.info("gemini: %s failed (%s)", model, exc.describe())
+            continue
+        except Exception as exc:  # noqa: BLE001
+            log.info("gemini: %s crashed (%s)", model, type(exc).__name__)
+            continue
+
+        summary = _extract_text(data)
+        if summary:
+            _working_model["name"] = model
+            return summary
+        log.info("gemini: %s returned no text", model)
+
     return None
 
 
