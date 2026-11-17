@@ -30,6 +30,9 @@ moviepy==2.2.1           # !videometa. 1.x was removed from PyPI; 2.x has no `mo
                          # (Com/mediatools.py imports `moviepy` and loads it lazily)
 gTTS==2.5.1              # !tts
 Faker==24.14.0           # !mock
+beautifulsoup4==4.12.3   # !prettify --type html (was imported but never pinned)
+speedtest-cli==2.1.3     # !speedtest (was guarded as "not installed" on every run)
+base58==2.1.1            # !encode base58
 dnspython==2.6.1         # !dnsprobe, reverse DNS in !ip
 Flask==3.0.3             # dashboard.py
 requests==2.32.3         # gTTS transport
