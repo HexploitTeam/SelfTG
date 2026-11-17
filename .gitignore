@@ -8,3 +8,14 @@
 __pycache__/
 *.py[cod]
 .pythonlibs/
+
+# --- v3 runtime state: created and rewritten by the bot on the Repl ---
+# User data, not source. One machine's todos/notes/reminders must never be
+# merged into another checkout.
+mode/afk.json
+mode/notes.json
+mode/todos.json
+mode/reminders.json
+mode/polls.json
+mode/confirm.json
+mode/settings.json
