@@ -2,6 +2,7 @@
 import asyncio
 from telethon import events
 from telethon.tl.types import ReplyInlineMarkup, KeyboardButtonCallback, KeyboardButtonRow
+import Com.tgsend as tgsend
 
 from Com.bot import bot_client, BOT_ENABLED, get_bot_status
 
@@ -41,8 +42,7 @@ def setup(client, my_id):
                 return
 
         try:
-            await bot_client.send_message(
-                event.chat_id,
+            await bot_client.send_message(await tgsend.peer(event),
                 "🤖 **Owner Menu**\nUse the buttons below.",
                 buttons=get_owner_panel(),
                 reply_to=event.id

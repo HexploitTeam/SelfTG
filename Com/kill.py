@@ -4,6 +4,7 @@ import json
 import random
 import asyncio
 from telethon import events
+import Com.tgsend as tgsend
 
 __HELP__ = (
     "!kill <N> [@username] (optional reply) → Reply with N random lines from the main list.\n"
@@ -75,8 +76,7 @@ def setup(client, my_id):
                 else:
                     msg = text
                 # Send as reply if we have a reply target, otherwise as normal message
-                await client.send_message(
-                    event.chat_id,
+                await client.send_message(await tgsend.peer(event),
                     msg,
                     reply_to=reply_msg.id if reply_msg else None
                 )
@@ -84,8 +84,7 @@ def setup(client, my_id):
 
             # If we had to cap the number, send a warning as a new message
             if warn:
-                await client.send_message(
-                    event.chat_id,
+                await client.send_message(await tgsend.peer(event),
                     f"⚠️ Only {len(lines)} texts available, used all of them.",
                     reply_to=reply_msg.id if reply_msg else None
                 )
@@ -95,6 +94,6 @@ def setup(client, my_id):
         except Exception as e:
             # If command already deleted, send error as a new message
             try:
-                await client.send_message(event.chat_id, f"❌ Error: {str(e)}")
+                await client.send_message(await tgsend.peer(event), f"❌ Error: {str(e)}")
             except:
                 pass

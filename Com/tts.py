@@ -4,6 +4,7 @@ import os
 import shlex
 import tempfile
 from telethon import events
+import Com.tgsend as tgsend
 from gtts import gTTS
 from gtts.tts import gTTSError
 
@@ -114,8 +115,7 @@ def setup(client, my_id):
             if options['voice_note']:
                 # Send as voice note (Telegram voice message)
                 try:
-                    await client.send_file(
-                        event.chat_id,
+                    await client.send_file(await tgsend.peer(event),
                         tmp_path,
                         voice_note=True,
                         reply_to=event.id if event.is_reply else None
@@ -127,8 +127,7 @@ def setup(client, my_id):
             else:
                 # Send as audio file
                 try:
-                    await client.send_file(
-                        event.chat_id,
+                    await client.send_file(await tgsend.peer(event),
                         tmp_path,
                         caption=f"🔊 TTS ({lang})",
                         reply_to=event.id if event.is_reply else None

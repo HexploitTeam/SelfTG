@@ -2,6 +2,7 @@
 import os
 import json
 from telethon import events
+import Com.tgsend as tgsend
 
 from Com.storage import save_json
 
@@ -163,7 +164,7 @@ def setup(client, my_id):
                 import io
                 bio = io.BytesIO(msg.encode("utf-8"))
                 bio.name = "warnings.txt"
-                await client.send_file(event.chat_id, bio, caption="Warnings")
+                await client.send_file(await tgsend.peer(event), bio, caption="Warnings")
                 await event.delete()
             else:
                 await event.edit(msg)

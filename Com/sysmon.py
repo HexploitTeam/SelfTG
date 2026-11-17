@@ -6,6 +6,7 @@ import os
 import asyncio
 import json
 from telethon import events
+import Com.tgsend as tgsend
 
 from Com.storage import save_json as _save_json
 
@@ -167,6 +168,6 @@ def setup(client, my_id):
             await event.reply("❌ No logs found yet.")
             return
         await event.reply("📤 Exporting system monitor logs...")
-        await client.send_file(event.chat_id,
+        await client.send_file(await tgsend.peer(event),
                                LOG_FILE,
                                caption="📊 SysMon Logs")

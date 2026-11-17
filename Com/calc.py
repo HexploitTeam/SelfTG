@@ -1,5 +1,6 @@
 # Com/calc.py
 from telethon import events
+import Com.tgsend as tgsend
 
 from Com.safe_eval import evaluate as safe_evaluate
 
@@ -39,7 +40,7 @@ def setup(client, my_id):
 
             # Reply with result
             reply_msg = await event.get_reply_message()
-            await client.send_message(event.chat_id,
+            await client.send_message(await tgsend.peer(event),
                                       f"{result}",
                                       reply_to=reply_msg.id)
 

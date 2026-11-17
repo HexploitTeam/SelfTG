@@ -1,5 +1,6 @@
 # Com/info.py
 from telethon import events
+import Com.tgsend as tgsend
 
 __HELP__ = "!info → Show your profile info in the chat\n!info (reply) → Show info of replied user"
 __CATEGORY__ = "Information"
@@ -47,9 +48,9 @@ def setup(client, my_id):
             )
 
             if photo.total > 0:
-                await client.send_file(event.chat_id, photo[0], caption=info_text, reply_to=event.id)
+                await client.send_file(await tgsend.peer(event), photo[0], caption=info_text, reply_to=event.id)
             else:
-                await client.send_message(event.chat_id, info_text, reply_to=event.id)
+                await client.send_message(await tgsend.peer(event), info_text, reply_to=event.id)
 
         except Exception as e:
             await event.reply(f"❌ Failed to fetch info: {str(e)}")

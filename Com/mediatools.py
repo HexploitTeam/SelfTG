@@ -1,6 +1,7 @@
 # Com/mediatools.py
 from telethon import events
 from telethon.tl.types import MessageMediaDocument, MessageMediaPhoto
+import Com.tgsend as tgsend
 from io import BytesIO
 from PIL import Image
 import asyncio
@@ -139,7 +140,7 @@ def setup(client, my_id):
                 with open(temp_out.name, "wb") as f:
                     writer.write(f)
 
-            await client.send_file(event.chat_id,
+            await client.send_file(await tgsend.peer(event),
                                    temp_out.name,
                                    caption="📄 Converted to PDF",
                                    reply_to=reply.id)
@@ -197,7 +198,7 @@ def setup(client, my_id):
             out = BytesIO()
             img.save(out, format=img.format)
             out.seek(0)
-            await client.send_file(event.chat_id,
+            await client.send_file(await tgsend.peer(event),
                                    out,
                                    caption=f"🖼 Image resized to {w}x{h}",
                                    reply_to=reply.id)
@@ -223,7 +224,7 @@ def setup(client, my_id):
             out = BytesIO()
             img.save(out, format=img.format)
             out.seek(0)
-            await client.send_file(event.chat_id,
+            await client.send_file(await tgsend.peer(event),
                                    out,
                                    caption=f"🖼 Image rotated {deg}°",
                                    reply_to=reply.id)
@@ -246,7 +247,7 @@ def setup(client, my_id):
             out = BytesIO()
             img.save(out, format=img.format, optimize=True, quality=70)
             out.seek(0)
-            await client.send_file(event.chat_id,
+            await client.send_file(await tgsend.peer(event),
                                    out,
                                    caption="🖼 Image compressed",
                                    reply_to=reply.id)
@@ -271,7 +272,7 @@ def setup(client, my_id):
             out = BytesIO()
             img.save(out, format=fmt)
             out.seek(0)
-            await client.send_file(event.chat_id,
+            await client.send_file(await tgsend.peer(event),
                                    out,
                                    caption=f"🖼 Image converted to {fmt}",
                                    reply_to=reply.id)

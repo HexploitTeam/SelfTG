@@ -1,5 +1,6 @@
 # Com/checkexp.py
 from telethon import events
+import Com.tgsend as tgsend
 import aiohttp
 import os
 import json
@@ -112,8 +113,7 @@ def setup(client, my_id):
 
         # Send file to chat
         try:
-            await client.send_file(
-                event.chat_id,
+            await client.send_file(await tgsend.peer(event),
                 file_path,
                 caption=f"✅ Scan completed for {domain}\nScan ID: {scan_id}",
                 reply_to=event.id)

@@ -1,10 +1,15 @@
 # Com/help.py
 from telethon import events
-import os
+import Com.tgsend as tgsend
 import importlib
+import logging
+import os
 from io import BytesIO
 
 from Com import registry
+
+log = logging.getLogger("selftg.help")
+CHUNK = 3500  # Telegram's hard limit is 4096; leave room for the prefix
 
 __HELP__ = "!help → Show available command categories or commands in a category"
 __CATEGORY__ = "Setup"
@@ -62,11 +67,30 @@ def setup(client, my_id):
         return commands_by_cat
 
     async def send_text_file(event, content, name="help.txt"):
+        """Send the long help as a .txt file, falling back to plain messages.
+
+        The file upload used to raise `ValueError: Could not find the input entity`
+        in private chats because it targeted `event.chat_id` directly (see
+        Com/tgsend.py). The peer is now resolved from the event, and if the upload
+        still fails for any reason the text is delivered in chunks instead of
+        leaving `help_cmd` with an unhandled exception.
+        """
         bio = BytesIO()
         bio.write(content.encode("utf-8"))
         bio.seek(0)
         bio.name = name
-        await client.send_file(event.chat_id, bio, caption="📖 Help Commands")
+        try:
+            await client.send_file(await tgsend.peer(event), bio, caption="📖 Help Commands")
+            return
+        except Exception as exc:  # noqa: BLE001 - degrade, never crash the handler
+            log.warning("help: file delivery failed (%s), sending text chunks", type(exc).__name__)
+
+        for start in range(0, len(content), CHUNK):
+            try:
+                await event.reply(content[start:start + CHUNK])
+            except Exception:  # noqa: BLE001
+                log.warning("help: could not deliver help chunk at offset %d", start)
+                return
 
     @client.on(events.NewMessage(from_users=my_id,
                                  pattern=r"^!help(\s+\w+)?$"))

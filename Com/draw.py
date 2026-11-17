@@ -21,6 +21,7 @@ from io import BytesIO
 from urllib.parse import quote
 
 from telethon import events
+import Com.tgsend as tgsend
 
 import Com.api as api
 
@@ -83,8 +84,7 @@ def setup(client, my_id):
         bio = BytesIO(image_bytes)
         bio.name = "generated.jpg"
         try:
-            await client.send_file(
-                event.chat_id,
+            await client.send_file(await tgsend.peer(event),
                 bio,
                 caption=f"🖼️ {prompt}",
                 reply_to=event.id,

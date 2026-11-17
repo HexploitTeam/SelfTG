@@ -3,6 +3,7 @@ import os
 import sys
 import re
 from telethon import events
+import Com.tgsend as tgsend
 from pygments import highlight
 from pygments.lexers import get_lexer_by_name, guess_lexer, get_all_lexers
 from pygments.formatters import TerminalFormatter
@@ -79,7 +80,7 @@ def setup(client, my_id):
                     import io
                     bio = io.BytesIO(("\n".join(langs)).encode("utf-8"))
                     bio.name = "languages.txt"
-                    await client.send_file(event.chat_id, bio, caption="📚 All supported languages")
+                    await client.send_file(await tgsend.peer(event), bio, caption="📚 All supported languages")
                     await event.delete()
                 else:
                     await event.edit(msg)
@@ -129,7 +130,7 @@ def setup(client, my_id):
                 import io
                 bio = io.BytesIO(output.encode("utf-8"))
                 bio.name = f"syntax.{lang}.txt"
-                await client.send_file(event.chat_id, bio, caption=f"📝 Syntax: {lang}")
+                await client.send_file(await tgsend.peer(event), bio, caption=f"📝 Syntax: {lang}")
                 await event.delete()
             else:
                 await event.edit(output)

@@ -22,6 +22,7 @@ import logging
 import time
 
 from telethon import errors, events
+import Com.tgsend as tgsend
 
 import Com.registry as registry
 from Com import scheduler
@@ -263,7 +264,7 @@ def setup(client, my_id):
             if not allowed:
                 return
 
-            await client.send_message(event.chat_id, _reply_to_message(record))
+            await client.send_message(await tgsend.peer(event), _reply_to_message(record))
             _mark_cooldown(state, key)
 
         except errors.FloodWaitError as exc:

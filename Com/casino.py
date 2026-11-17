@@ -2,6 +2,7 @@
 import asyncio
 from telethon import events
 from telethon.tl.types import InputMediaDice
+import Com.tgsend as tgsend
 
 __HELP__ = (
     "!dice              → Random animated dice.\n"
@@ -65,8 +66,7 @@ def setup(client, my_id):
 
             if arg is None:
                 await event.delete()
-                await client.send_message(
-                    event.chat_id,
+                await client.send_message(await tgsend.peer(event),
                     file=InputMediaDice(emoticon="🎲"),
                     reply_to=reply_to
                 )
@@ -81,7 +81,7 @@ def setup(client, my_id):
 
         except Exception as e:
             try:
-                await client.send_message(event.chat_id, f"❌ Error: {str(e)}")
+                await client.send_message(await tgsend.peer(event), f"❌ Error: {str(e)}")
             except:
                 pass
 
@@ -127,8 +127,7 @@ def setup(client, my_id):
 
             if arg is None:
                 await event.delete()
-                await client.send_message(
-                    event.chat_id,
+                await client.send_message(await tgsend.peer(event),
                     file=InputMediaDice(emoticon="🎰"),
                     reply_to=reply_to
                 )
@@ -151,6 +150,6 @@ def setup(client, my_id):
 
         except Exception as e:
             try:
-                await client.send_message(event.chat_id, f"❌ Error: {str(e)}")
+                await client.send_message(await tgsend.peer(event), f"❌ Error: {str(e)}")
             except:
                 pass

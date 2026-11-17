@@ -1,5 +1,6 @@
 # Com/ginfo.py
 from telethon import events, functions, types
+import Com.tgsend as tgsend
 from datetime import datetime
 import pytz
 
@@ -30,8 +31,7 @@ def setup(client, my_id):
             try:
                 photos = await client.get_profile_photos(chat)
                 if photos.total > 0:
-                    await client.send_file(
-                        event.chat_id,
+                    await client.send_file(await tgsend.peer(event),
                         photos[0],
                         caption=(
                             f"📌 Name: {title}\n"

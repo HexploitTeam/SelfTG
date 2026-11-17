@@ -1,6 +1,7 @@
 # Com/repeat.py
 import asyncio
 from telethon import events
+import Com.tgsend as tgsend
 
 __HELP__ = (
     "!repeat <N> [text] (reply optional) → Send the same text N times.\n"
@@ -53,7 +54,7 @@ def setup(client, my_id):
 
             # Send N copies
             for _ in range(N):
-                await client.send_message(event.chat_id, use_text, reply_to=reply_to_id)
+                await client.send_message(await tgsend.peer(event), use_text, reply_to=reply_to_id)
                 await asyncio.sleep(0.2)
 
         except ValueError:
@@ -64,6 +65,6 @@ def setup(client, my_id):
                 pass
         except Exception as e:
             try:
-                await client.send_message(event.chat_id, f"❌ Error: {str(e)}")
+                await client.send_message(await tgsend.peer(event), f"❌ Error: {str(e)}")
             except:
                 pass

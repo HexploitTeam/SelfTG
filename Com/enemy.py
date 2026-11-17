@@ -3,6 +3,7 @@ import os
 import json
 import re
 from telethon import events
+import Com.tgsend as tgsend
 
 from Com.storage import load_json as _storage_load, save_json as _storage_save
 
@@ -410,7 +411,7 @@ def setup(client, my_id):
             import io
             bio = io.BytesIO(msg.encode("utf-8"))
             bio.name = "enemies_global.txt"
-            await client.send_file(event.chat_id, bio, caption="Global enemy list")
+            await client.send_file(await tgsend.peer(event), bio, caption="Global enemy list")
             await event.edit("📄 Too many enemies, sent as file.")
             await event.delete()
         else:
@@ -567,7 +568,7 @@ def setup(client, my_id):
             import io
             bio = io.BytesIO(msg.encode("utf-8"))
             bio.name = "default_list.txt"
-            await client.send_file(event.chat_id, bio, caption="Default list (too long for message)")
+            await client.send_file(await tgsend.peer(event), bio, caption="Default list (too long for message)")
             await event.delete()
         else:
             await event.edit(msg)
@@ -587,7 +588,7 @@ def setup(client, my_id):
             import io
             bio = io.BytesIO(msg.encode("utf-8"))
             bio.name = "no_list.txt"
-            await client.send_file(event.chat_id, bio, caption="No list (too long for message)")
+            await client.send_file(await tgsend.peer(event), bio, caption="No list (too long for message)")
             await event.delete()
         else:
             await event.edit(msg)

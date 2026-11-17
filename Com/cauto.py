@@ -1,5 +1,6 @@
 # Com/cauto.py
 from telethon import events
+import Com.tgsend as tgsend
 from datetime import datetime
 import re
 import os
@@ -90,7 +91,7 @@ def setup(client, my_id):
                 # This expression comes from somebody else's message, so it must
                 # never reach eval() (it was an RCE path via __subclasses__).
                 result = safe_evaluate(expression)
-                await client.send_message(event.chat_id,
+                await client.send_message(await tgsend.peer(event),
                                           str(result),
                                           reply_to=event.id)
                 await log_challenge(event.chat_id, event.id, "چالش ریاضی",

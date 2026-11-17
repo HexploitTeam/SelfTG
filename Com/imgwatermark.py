@@ -1,5 +1,6 @@
 # Com/imgwatermark.py
 from telethon import events
+import Com.tgsend as tgsend
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 import os
@@ -75,8 +76,7 @@ def setup(client, my_id):
             out_bio.seek(0)
 
             # Send watermarked image
-            await client.send_file(
-                event.chat_id,
+            await client.send_file(await tgsend.peer(event),
                 out_bio,
                 caption=f"💧 Watermarked Image with text: {text}",
                 reply_to=event.id)

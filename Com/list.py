@@ -5,6 +5,7 @@ import asyncio
 from datetime import datetime
 from telethon import events
 from telethon.tl.types import User
+import Com.tgsend as tgsend
 
 __HELP__ = (
     "!list create <name> → Create a new empty list\n"
@@ -137,7 +138,7 @@ def setup(client, my_id):
             import io
             bio = io.BytesIO(msg.encode("utf-8"))
             bio.name = f"{name}.txt"
-            await client.send_file(event.chat_id, bio, caption=f"📋 List: {name}")
+            await client.send_file(await tgsend.peer(event), bio, caption=f"📋 List: {name}")
             await event.delete()
         else:
             await event.edit(msg)

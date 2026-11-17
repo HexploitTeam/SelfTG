@@ -7,6 +7,7 @@ import tempfile
 import shutil
 from datetime import datetime
 from telethon import events
+import Com.tgsend as tgsend
 
 __HELP__ = (
     "!export → Export all settings (enemies, warns, mutes, lists, reactions, monitor) to a zip file.\n"
@@ -80,8 +81,7 @@ def setup(client, my_id):
         await event.edit("📦 Creating export archive...")
         zip_path = create_export_zip()
         await event.delete()
-        await client.send_file(
-            event.chat_id,
+        await client.send_file(await tgsend.peer(event),
             zip_path,
             caption=f"📦 Settings export ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})"
         )

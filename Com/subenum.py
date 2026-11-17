@@ -1,5 +1,6 @@
 # Com/subenum.py
 from telethon import events
+import Com.tgsend as tgsend
 import asyncio
 import json
 import logging
@@ -119,8 +120,7 @@ def setup(client, my_id):
                     await event.reply(
                         f"📄 Already scanned **{domain}**, sending saved file..."
                     )
-                    await client.send_file(
-                        event.chat_id,
+                    await client.send_file(await tgsend.peer(event),
                         info["file"],
                         caption=f"Subdomains for **{domain}** (ID: {task_id})")
                     return
@@ -161,8 +161,7 @@ def setup(client, my_id):
             }
             save_active(active_data)
 
-            await client.send_file(
-                event.chat_id,
+            await client.send_file(await tgsend.peer(event),
                 file_path,
                 caption=f"✅ Active subdomains for **{domain}** (ID: {task_id})"
             )

@@ -5,6 +5,7 @@ import codecs
 import html
 import re
 from telethon import events
+import Com.tgsend as tgsend
 
 __HELP__ = (
     "!encode <method> <text> → Encode text using a specific method.\n"
@@ -259,7 +260,7 @@ def setup(client, my_id):
                     import io
                     bio = io.BytesIO(output.encode('utf-8'))
                     bio.name = "encodings.txt"
-                    await client.send_file(event.chat_id, bio, caption="📦 All Encodings")
+                    await client.send_file(await tgsend.peer(event), bio, caption="📦 All Encodings")
                     await event.delete()
                 else:
                     await event.edit(output)

@@ -5,6 +5,7 @@ import shlex
 import textwrap
 from xml.dom import minidom
 from telethon import events
+import Com.tgsend as tgsend
 
 try:
     from bs4 import BeautifulSoup
@@ -184,7 +185,7 @@ def setup(client, my_id):
                 import io
                 bio = io.BytesIO(output.encode("utf-8"))
                 bio.name = f"prettified.{detected}.txt"
-                await client.send_file(event.chat_id, bio, caption=f"📝 Prettified ({detected})")
+                await client.send_file(await tgsend.peer(event), bio, caption=f"📝 Prettified ({detected})")
                 await event.delete()
             else:
                 await event.edit(final)

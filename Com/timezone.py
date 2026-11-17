@@ -3,6 +3,7 @@ import shlex
 from datetime import datetime
 import re
 from telethon import events
+import Com.tgsend as tgsend
 
 try:
     import zoneinfo
@@ -72,7 +73,7 @@ def setup(client, my_id):
                     import io
                     bio = io.BytesIO("\n".join(tz_list).encode("utf-8"))
                     bio.name = "timezones.txt"
-                    await client.send_file(event.chat_id, bio, caption="📋 All timezones")
+                    await client.send_file(await tgsend.peer(event), bio, caption="📋 All timezones")
                     await event.delete()
                 else:
                     await event.edit("📋 **Available timezones:**\n" + "\n".join(tz_list))

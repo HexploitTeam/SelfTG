@@ -2,6 +2,7 @@
 import shlex
 import random
 from telethon import events
+import Com.tgsend as tgsend
 from faker import Faker
 
 __HELP__ = (
@@ -194,7 +195,7 @@ def setup(client, my_id):
                     import io
                     bio = io.BytesIO(output.encode("utf-8"))
                     bio.name = "mock_profile.txt"
-                    await client.send_file(event.chat_id, bio, caption="📝 Mock Profile")
+                    await client.send_file(await tgsend.peer(event), bio, caption="📝 Mock Profile")
                     await event.delete()
                 else:
                     await event.edit(output)
@@ -229,7 +230,7 @@ def setup(client, my_id):
                 import io
                 bio = io.BytesIO(output.encode("utf-8"))
                 bio.name = f"mock_{mock_type}.txt"
-                await client.send_file(event.chat_id, bio, caption=f"📝 Mock: {mock_type}")
+                await client.send_file(await tgsend.peer(event), bio, caption=f"📝 Mock: {mock_type}")
                 await event.delete()
             else:
                 await event.edit(output)

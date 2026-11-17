@@ -3,6 +3,7 @@ import asyncio
 import re
 from telethon import events
 from telethon.tl.types import KeyboardButtonCallback, KeyboardButtonUrl
+import Com.tgsend as tgsend
 from Com import bot as bot_module
 
 __HELP__ = (
@@ -110,7 +111,7 @@ def setup(client, my_id):
             if telethon_rows:
                 await event.edit("⚠️ Bot not available. Sending as plain text without buttons.")
                 await asyncio.sleep(1)
-            await client.send_message(event.chat_id, text, reply_to=reply_to)
+            await client.send_message(await tgsend.peer(event), text, reply_to=reply_to)
             await event.delete()
 
         except Exception as e:

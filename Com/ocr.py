@@ -5,6 +5,7 @@ import os
 import shutil
 from io import BytesIO
 from telethon import events
+import Com.tgsend as tgsend
 
 import Com.api as api
 
@@ -137,7 +138,7 @@ async def output_result(event, client, text):
         import io
         bio = io.BytesIO(text.encode('utf-8'))
         bio.name = "ocr_result.txt"
-        await client.send_file(event.chat_id, bio, caption="📝 OCR Result")
+        await client.send_file(await tgsend.peer(event), bio, caption="📝 OCR Result")
         await event.delete()
     else:
         await event.edit(output)

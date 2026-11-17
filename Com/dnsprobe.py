@@ -1,5 +1,6 @@
 # Com/dnsprobe.py
 from telethon import events
+import Com.tgsend as tgsend
 import os
 import json
 import asyncio
@@ -88,8 +89,7 @@ def setup(client, my_id):
                 "timestamp": now
             }
 
-            await client.send_file(
-                event.chat_id,
+            await client.send_file(await tgsend.peer(event),
                 temp_file,
                 caption=f"✅ DNS Probe complete. Task ID: {probe_id}",
                 reply_to=event.id)

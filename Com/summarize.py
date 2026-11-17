@@ -5,6 +5,7 @@ import re
 from collections import Counter
 
 from telethon import events
+import Com.tgsend as tgsend
 
 import Com.api as api
 
@@ -268,7 +269,7 @@ def setup(client, my_id):
                     import io
                     bio = io.BytesIO(output.encode("utf-8"))
                     bio.name = "summary.txt"
-                    await client.send_file(event.chat_id, bio, caption="📝 Chat Summary")
+                    await client.send_file(await tgsend.peer(event), bio, caption="📝 Chat Summary")
                     await event.delete()
                 else:
                     await event.edit(output)
@@ -297,7 +298,7 @@ def setup(client, my_id):
                 import io
                 bio = io.BytesIO(output.encode("utf-8"))
                 bio.name = "summary.txt"
-                await client.send_file(event.chat_id, bio, caption="📝 Summary")
+                await client.send_file(await tgsend.peer(event), bio, caption="📝 Summary")
                 await event.delete()
             else:
                 await event.edit(output)

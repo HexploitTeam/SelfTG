@@ -1,6 +1,7 @@
 # Com/alias.py
 import re
 from telethon import events
+import Com.tgsend as tgsend
 
 __HELP__ = "Aliases for Persian commands (e.g., !راهنما → !help)"
 __CATEGORY__ = "Setup"
@@ -83,7 +84,7 @@ def setup(client, my_id):
             english_cmd = f"!{english_word}"
 
         # Send the English command to the same chat (as ourselves)
-        await client.send_message(event.chat_id, english_cmd)
+        await client.send_message(await tgsend.peer(event), english_cmd)
 
         # Delete the original Persian command message
         await event.delete()

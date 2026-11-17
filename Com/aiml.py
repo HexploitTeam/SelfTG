@@ -3,6 +3,7 @@ import os
 import sys
 import random
 from telethon import events
+import Com.tgsend as tgsend
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from ML.smart_markov import SmartMarkov
@@ -87,7 +88,7 @@ def setup(client, my_id):
         if not generated:
             generated = "I don't have enough data to continue that thought."
 
-        await client.send_message(event.chat_id, f"🧠 **AI generated:**\n{generated}", reply_to=event.id)
+        await client.send_message(await tgsend.peer(event), f"🧠 **AI generated:**\n{generated}", reply_to=event.id)
         await event.delete()
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!aiml status$"))

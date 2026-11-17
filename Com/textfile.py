@@ -1,5 +1,6 @@
 # Com/textfile.py
 from telethon import events
+import Com.tgsend as tgsend
 import os
 from datetime import datetime
 
@@ -33,7 +34,7 @@ def setup(client, my_id):
                 f.write(text)
 
             # Send the file
-            await client.send_file(event.chat_id,
+            await client.send_file(await tgsend.peer(event),
                                    filename,
                                    caption="📄 Here is your text file.",
                                    reply_to=event.id)
