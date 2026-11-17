@@ -8,6 +8,7 @@ import sys
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
+from Com import scheduler
 from Com.net import ReplitConnection
 
 logging.basicConfig(
@@ -144,6 +145,10 @@ async def _on_ready():
             log.info("[BOT] BOT_TOKEN not set, bot disabled.")
     except Exception:
         log.exception("[BOT] Failed to start")
+
+    # One loop for every periodic job (reminders, AFK cooldown sweeps). Started
+    # after load_commands() so all jobs are registered by then.
+    scheduler.start(client)
     log.info("📌 Bot is ready.")
 
 
@@ -197,6 +202,13 @@ async def _shutdown():
     if _background_tasks:
         await asyncio.gather(*_background_tasks, return_exceptions=True)
         _background_tasks.clear()
+
+    # Stop the job loop before the client goes away, so no job tries to send on
+    # a closing connection.
+    try:
+        await scheduler.stop()
+    except Exception:
+        log.warning("Error while stopping the scheduler", exc_info=True)
 
     try:
         await asyncio.wait_for(client.disconnect(), timeout=DISCONNECT_TIMEOUT)

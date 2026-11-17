@@ -4,6 +4,8 @@ import os
 import importlib
 from io import BytesIO
 
+from Com import registry
+
 __HELP__ = "!help → Show available command categories or commands in a category"
 __CATEGORY__ = "Setup"
 
@@ -101,6 +103,16 @@ def setup(client, my_id):
                     last_prefix = prefix
                 text += "\n"
             text += "💡 Tip: Use **`!help <Category>`** to view only one category."
+            if len(text) > 4000:
+                await send_text_file(event, text)
+            else:
+                await event.edit(text)
+            return
+
+        # Single command family (`!help afk`) -- rendered from the registry the
+        # module itself declared, so subcommands cannot drift from the code.
+        if registry.get(arg):
+            text = "📖 " + registry.render(arg)
             if len(text) > 4000:
                 await send_text_file(event, text)
             else:

@@ -27,13 +27,14 @@ Design notes
 """
 import logging
 import os
-import re
 import time
 from datetime import datetime, timedelta, timezone
 
 from telethon import errors, events
 from telethon.tl.types import Channel, Chat
 
+from Com.durations import format_duration, looks_like_duration
+from Com.durations import parse_duration as shared_parse_duration
 from Com.storage import load_json, save_json
 
 __HELP__ = (
@@ -57,64 +58,32 @@ os.makedirs(BASE_DIR, exist_ok=True)
 MIN_TEMPBAN_SECONDS = 60
 MAX_TEMPBAN_SECONDS = 366 * 24 * 3600
 
-MINUTE = 60
-UNIT_SECONDS = {"s": 1, "m": MINUTE, "h": 3600, "d": 86400, "w": 604800}
-_DURATION_RE = re.compile(r"(\d+)\s*([smhdw])", re.IGNORECASE)
-
-
 class BanUnsupported(Exception):
     """The chat type or the account's rights make this action impossible."""
 
 
 # ------------------------------
-# Duration helpers (pure, unit-tested)
+# Durations
 # ------------------------------
+# The grammar lives in Com/durations.py and is shared with !remind: one parser,
+# one set of error messages, no duplicated regex. Only the bounds differ, because
+# Telegram turns a ban shorter than 30s (or longer than 366 days) into a
+# permanent one.
 def parse_duration(text):
-    """Parse '10m', '2h', '7d', '1d12h' into seconds. Raises ValueError."""
-    raw = (text or "").strip()
-    if not raw:
-        raise ValueError("no duration given")
-
-    total = 0
-    position = 0
-    for match in _DURATION_RE.finditer(raw):
-        if match.start() != position:
-            raise ValueError(
-                f"could not read {raw!r}; use forms like 30m, 2h, 7d or 1d12h"
-            )
-        total += int(match.group(1)) * UNIT_SECONDS[match.group(2).lower()]
-        position = match.end()
-
-    if position != len(raw) or total <= 0:
-        raise ValueError(f"could not read {raw!r}; use forms like 30m, 2h, 7d")
-
-    if total < MIN_TEMPBAN_SECONDS:
-        raise ValueError(
-            f"{total}s is too short - Telegram treats anything under 30s as a "
-            f"permanent ban, so the minimum here is {MIN_TEMPBAN_SECONDS}s"
+    """Parse a ban duration into seconds, enforcing 60s .. 366d."""
+    try:
+        return shared_parse_duration(
+            text, minimum=MIN_TEMPBAN_SECONDS, maximum=MAX_TEMPBAN_SECONDS
         )
-    if total > MAX_TEMPBAN_SECONDS:
-        raise ValueError("durations over 366 days are treated by Telegram as permanent")
-    return total
-
-
-def format_duration(seconds):
-    """Seconds -> compact '1d 2h 3m' string."""
-    seconds = int(max(0, seconds))
-    parts = []
-    for unit, size in (("d", 86400), ("h", 3600), ("m", 60), ("s", 1)):
-        if seconds >= size:
-            value, seconds = divmod(seconds, size)
-            parts.append(f"{value}{unit}")
-    return " ".join(parts) or "0s"
+    except ValueError as exc:
+        message = str(exc)
+        if "minimum" in message:
+            message += " (Telegram treats bans under 30s as permanent)"
+        raise ValueError(message) from None
 
 
 def _is_duration(text):
-    try:
-        parse_duration(text)
-        return True
-    except ValueError:
-        return False
+    return looks_like_duration(text)
 
 
 def _utc(ts):
