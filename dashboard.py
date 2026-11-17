@@ -4,8 +4,13 @@ import json
 import datetime
 from flask import Flask, render_template_string, request, redirect, url_for, flash
 
+from Com.storage import save_json as _atomic_save_json
+
 app = Flask(__name__)
-app.secret_key = 'supersecretkey'  # for flash messages
+# Signs flash-message cookies only. The previous hardcoded value is in the git
+# history, so treat it as public; a random per-process key is enough for flash
+# messages and means no known secret ships with the repo.
+app.secret_key = os.environ.get("DASHBOARD_SECRET_KEY") or os.urandom(32)
 
 # Paths
 STATS_FILE = "mode/stats.json"
@@ -26,9 +31,8 @@ def load_json(fpath):
         return {}
 
 def save_json(fpath, data):
-    os.makedirs(os.path.dirname(fpath), exist_ok=True)
-    with open(fpath, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+    # Atomic write: the bot process reads these same files concurrently.
+    _atomic_save_json(fpath, data)
 
 def get_default_settings():
     return {
@@ -690,4 +694,10 @@ HTML_SETTINGS = '''
 # The nav is repeated in each template; for brevity we include a comment. In practice you would use a base template.
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # debug=True turned on the Werkzeug interactive debugger (remote code
+    # execution) on a dashboard that has no authentication at all.
+    app.run(
+        host='0.0.0.0',
+        port=int(os.environ.get('PORT', 5000)),
+        debug=os.environ.get('DASHBOARD_DEBUG') == '1',
+    )

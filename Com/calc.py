@@ -1,6 +1,8 @@
 # Com/calc.py
 from telethon import events
 
+from Com.safe_eval import evaluate as safe_evaluate
+
 __HELP__ = "!calc <num1> <op> <num2> → Calculate (supports + - × /). Must be used as reply."
 __CATEGORY__ = "Utilities"
 
@@ -24,10 +26,11 @@ def setup(client, my_id):
                 await event.edit("❌ Invalid expression")
                 return
 
-            # Evaluate safely
+            # Evaluate without eval(): the AST whitelist in Com/safe_eval.py only
+            # accepts numbers and arithmetic operators.
             try:
-                result = eval(expression, {"__builtins__": {}})
-            except Exception:
+                result = safe_evaluate(expression)
+            except (ValueError, ZeroDivisionError, OverflowError):
                 await event.edit("❌ Calculation error")
                 return
 

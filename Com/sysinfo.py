@@ -52,7 +52,12 @@ def setup(client, my_id):
 
             # Network
             net_io = psutil.net_io_counters()
-            conns = len(psutil.net_connections())
+            # psutil.net_connections() raises AccessDenied on non-root Linux and
+            # is expensive; one failure used to abort the entire report.
+            try:
+                conns = len(psutil.net_connections(kind="inet"))
+            except Exception:
+                conns = None
 
             # Uptime
             boot_time = datetime.fromtimestamp(psutil.boot_time(), tz=TZ)
@@ -133,10 +138,10 @@ def setup(client, my_id):
         # Memory
         mem = info.get("memory", {})
         lines.append(
-            f"💾 **Memory:** {mem.get('used') / 1e9:.2f}GB/{mem.get('total') / 1e9:.2f}GB ({mem.get('percent', 0)}%)"
+            f"💾 **Memory:** {(mem.get('used') or 0) / 1e9:.2f}GB/{(mem.get('total') or 0) / 1e9:.2f}GB ({mem.get('percent', 0)}%)"
         )
         lines.append(
-            f"🔄 Swap: {mem.get('swap_used', 0):.2f}B/{mem.get('swap_total',0):.2f}B ({mem.get('swap_percent',0)}%)\n-----------------------------"
+            f"🔄 Swap: {mem.get('swap_used') or 0:.2f}B/{mem.get('swap_total') or 0:.2f}B ({mem.get('swap_percent',0)}%)\n-----------------------------"
         )
 
         # Disks
@@ -175,6 +180,11 @@ def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!sysinfo$"))
     async def sysinfo_cmd(event):
         info = await collect_sysinfo()
+        if info.get("error"):
+            # format_sysinfo() divided None by 1e9 and raised, so the command
+            # used to fail with no reply at all when collection broke.
+            await event.edit(f"❌ Could not collect system info: {info['error']}")
+            return
         msg = await format_sysinfo(info)
         await event.reply(msg)
         await event.delete()
@@ -184,7 +194,10 @@ def setup(client, my_id):
     # -----------------------------
     async def auto_log():
         while True:
-            await collect_sysinfo()
+            try:
+                await collect_sysinfo()
+            except Exception as e:
+                print(f"[sysinfo] auto log failed: {e}")
             await asyncio.sleep(5)
 
     asyncio.create_task(auto_log())

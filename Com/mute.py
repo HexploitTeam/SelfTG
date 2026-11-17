@@ -3,6 +3,8 @@ import os
 import json
 from telethon import events
 
+from Com.storage import save_json
+
 __HELP__ = (
     "!mute add <user> (or reply) → Mute (admin mode: tries to delete)\n"
     "!mute addm <user> (or reply) → Mute (manual mode: always replies with 'del')\n"
@@ -25,8 +27,7 @@ def load_mutes():
         return json.load(f)
 
 def save_mutes(data):
-    with open(MUTE_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+    save_json(MUTE_FILE, data)
 
 def migrate_user_list(users):
     new_list = []
@@ -56,11 +57,12 @@ def set_muted_users(chat_id, users):
     data[str(chat_id)] = users
     save_mutes(data)
 
-def get_username(client, user_id):
+async def get_username(client, user_id):
+    # See Com/warn.py: run_until_complete() inside a running loop always failed.
     try:
-        user = client.loop.run_until_complete(client.get_entity(user_id))
+        user = await client.get_entity(user_id)
         return f"@{user.username}" if user.username else f"ID:{user_id}"
-    except:
+    except Exception:
         return f"ID:{user_id}"
 
 def setup(client, my_id):
@@ -136,7 +138,7 @@ def setup(client, my_id):
 
             muted_list.append({"user_id": target_user_id, "mode": mode})
             set_muted_users(chat_id, muted_list)
-            username = get_username(client, target_user_id)
+            username = await get_username(client, target_user_id)
             mode_label = "admin" if mode == "admin" else "manual"
             await event.edit(f"✅ Muted {username} ({mode_label} mode)")
             await event.delete()
@@ -178,7 +180,7 @@ def setup(client, my_id):
                 return
 
             set_muted_users(chat_id, new_list)
-            username = get_username(client, target_user_id)
+            username = await get_username(client, target_user_id)
             await event.edit(f"✅ Unmuted {username}")
             await event.delete()
 
@@ -197,7 +199,7 @@ def setup(client, my_id):
         for entry in muted_list:
             uid = entry["user_id"]
             mode = entry.get("mode", "admin")
-            name = get_username(client, uid)
+            name = await get_username(client, uid)
             lines.append(f"• {name} ({mode} mode)")
         msg = "📋 **Muted users in this chat:**\n" + "\n".join(lines)
         await event.edit(msg)

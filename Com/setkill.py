@@ -5,6 +5,8 @@ import asyncio
 import random
 from telethon import events
 
+from Com.storage import save_json
+
 __HELP__ = (
     "!setkill start <interval_seconds> [text] (reply optional) → Send a message every X seconds.\n"
     "   - If text is provided, that text is sent every interval.\n"
@@ -45,8 +47,7 @@ def load_timers():
         return {"next_id": 1, "timers": []}
 
 def save_timers(data):
-    with open(SETKILL_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+    save_json(SETKILL_FILE, data)
 
 async def run_timer(client, timer_id, chat_id, interval, text, reply_to):
     """Scheduled task that sends a message every `interval` seconds."""

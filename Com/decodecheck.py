@@ -9,9 +9,20 @@ import html
 import json
 import ast
 import quopri
-import uu
-import binhex
 import unicodedata
+
+# uu/binhex are deprecated stdlib modules (removed in Python 3.13) and some
+# 3.12 builds ship without binhex. Importing them unconditionally made this
+# whole module -- and therefore !decodecheck -- disappear on those interpreters.
+try:
+    import uu
+except ImportError:  # pragma: no cover - depends on the interpreter build
+    uu = None
+
+try:
+    import binhex
+except ImportError:  # pragma: no cover - depends on the interpreter build
+    binhex = None
 from io import BytesIO
 from telethon import events
 
@@ -215,6 +226,8 @@ def try_quoted_printable(text):
         return None
 
 def try_uu(text):
+    if uu is None:
+        return None
     try:
         decoded = uu.decode(BytesIO(text.encode('utf-8')))
         return decoded.decode('utf-8', errors='ignore')
@@ -326,7 +339,7 @@ def try_reverse(text):
         return None
 
 def try_octal_escapes(text):
-    """Decode octal escapes like \123\456."""
+    """Decode octal escapes like \\123\\456."""
     try:
         # Replace \ooo with actual byte
         pattern = re.compile(r'\\([0-7]{1,3})')

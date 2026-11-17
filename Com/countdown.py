@@ -3,6 +3,8 @@ import asyncio
 import os
 import json
 
+from Com.storage import save_json
+
 __HELP__ = (
     "!countdown <number><s/m/h> <reason> → Start a countdown in this chat\n"
     "!countdown stop → Stop the countdown running in this chat")
@@ -29,8 +31,7 @@ def setup(client, my_id):
                 "remaining": info["remaining"],
                 "reason": info["reason"]
             }
-        with open(CD_FILE, "w") as f:
-            json.dump(data, f)
+        save_json(CD_FILE, data)
 
     async def load_cd():
         if not os.path.exists(CD_FILE):

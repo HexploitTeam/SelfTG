@@ -4,6 +4,8 @@ import json
 import re
 from telethon import events
 
+from Com.storage import save_json
+
 __HELP__ = (
     "!monitor add <keyword> → Add keyword to watch (in current chat or global)\n"
     "!monitor remove <keyword> → Remove keyword\n"
@@ -53,8 +55,7 @@ def load_data():
         return DEFAULT_DATA
 
 def save_data(data):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+    save_json(DATA_FILE, data)
 
 def get_scope(data, chat_id):
     """Return the scope dict for the chat or global if global_enabled."""

@@ -10,9 +10,8 @@ __HELP__ = (
     "!wordlist download → Download rockyou.txt (14M real passwords) and save as mode/rockyou.txt.\n"
     "   - This is the most common wordlist for password recovery/analysis.\n"
     "   - Download size ~200MB, decompressed ~15M entries.\n"
-    "!wordlist generate → Generate a smaller wordlist from built‑in words (no download).\n"
     "!wordlist status → Show wordlist size and location.\n"
-    "!wordlist merge → Merge rockyou.txt with generated wordlist (saves as mode/wordlist.txt).\n"
+    "!wordlist merge → Copy rockyou.txt to mode/wordlist.txt.\n"
 )
 __CATEGORY__ = "Utilities"
 
@@ -43,21 +42,26 @@ def count_lines(filepath):
     with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
         return sum(1 for _ in f)
 
+async def count_lines_async(filepath):
+    # Counting rockyou.txt means reading ~130 MB; doing that inline froze the
+    # whole bot (every handler) for several seconds.
+    return await asyncio.get_running_loop().run_in_executor(None, count_lines, filepath)
+
 def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!wordlist download$"))
     async def download_cmd(event):
         await event.edit("📥 Downloading rockyou.txt (≈200MB)... this may take a few minutes.")
         try:
             msg = await download_rockyou()
-            count = count_lines(ROCKYOU_FILE)
+            count = await count_lines_async(ROCKYOU_FILE)
             await event.edit(f"✅ {msg}\nEntries: {count:,}")
         except Exception as e:
             await event.edit(f"❌ Download failed: {e}")
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!wordlist status$"))
     async def status_cmd(event):
-        rockyou_count = count_lines(ROCKYOU_FILE)
-        wordlist_count = count_lines(WORDLIST_FILE)
+        rockyou_count = await count_lines_async(ROCKYOU_FILE)
+        wordlist_count = await count_lines_async(WORDLIST_FILE)
         msg = "📊 **Wordlist Status**\n"
         if rockyou_count:
             msg += f"rockyou.txt: {rockyou_count:,} entries\n"
@@ -85,5 +89,5 @@ def setup(client, my_id):
         # But we can also add the built‑in words from generate, but not needed.
         # For simplicity, we'll just copy rockyou to wordlist.txt
         shutil.copy2(ROCKYOU_FILE, WORDLIST_FILE)
-        count = count_lines(WORDLIST_FILE)
+        count = await count_lines_async(WORDLIST_FILE)
         await event.edit(f"✅ Merged! `wordlist.txt` now has {count:,} entries.")

@@ -5,6 +5,8 @@ import json
 import asyncio
 import random
 
+from Com.storage import save_json
+
 __HELP__ = "!f → Manage and send random replies with IDs"
 __CATEGORY__ = "Utilities"
 
@@ -31,8 +33,7 @@ def setup(client, my_id):
             return json.load(f)
 
     def save_items(items):
-        with open(F_FILE, "w", encoding="utf-8") as f:
-            json.dump(items, f, indent=2)
+        save_json(F_FILE, items)
 
     def get_next_id():
         with open(ID_FILE, "r", encoding="utf-8") as f:

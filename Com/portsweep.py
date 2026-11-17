@@ -17,7 +17,7 @@ active_scans = {
 
 def setup(client, my_id):
 
-    async def scan_ports(host, ports, scan_id):
+    async def scan_ports(chat_id, host, ports, scan_id):
         open_ports = []
         for port in ports:
             try:
@@ -38,8 +38,10 @@ def setup(client, my_id):
             for p in open_ports:
                 f.write(f"{p}\n")
 
+        # Previously sent to `scan_id` (a numeric string) or `client.me`, i.e.
+        # never to the chat that asked for the scan.
         await client.send_file(
-            client.me if scan_id.startswith("dm") else scan_id,
+            chat_id,
             filename,
             caption=f"✅ Portsweep completed for {host}. Scan ID: {scan_id}")
         active_scans.pop(scan_id, None)
@@ -73,14 +75,25 @@ def setup(client, my_id):
             # Parse host and ports
             parts = args.split()
             host = parts[0]
-            if len(parts) > 1 and "-" in parts[1]:
-                start_port, end_port = map(int, parts[1].split("-"))
+            if len(parts) > 1:
+                if "-" in parts[1]:
+                    start_port, end_port = map(int, parts[1].split("-", 1))
+                else:
+                    # A single port used to be silently ignored (the whole
+                    # 1-1024 range was scanned instead).
+                    start_port = end_port = int(parts[1])
             else:
                 start_port, end_port = 1, 1024
 
+            if not (1 <= start_port <= end_port <= 65535):
+                await event.reply(
+                    "❌ Invalid port range. Use 1-65535 with start <= end.")
+                return
+
             ports = list(range(start_port, end_port + 1))
             scan_id = str(int(datetime.now().timestamp() * 1000))
-            task = asyncio.create_task(scan_ports(host, ports, scan_id))
+            task = asyncio.create_task(
+                scan_ports(event.chat_id, host, ports, scan_id))
             active_scans[scan_id] = {
                 "host": host,
                 "ports": ports,

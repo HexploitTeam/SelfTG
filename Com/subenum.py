@@ -7,6 +7,8 @@ import json
 from datetime import datetime
 import socket
 
+from Com.storage import save_json
+
 __HELP__ = (
     "!subenum <domain> → Enumerate active subdomains and send as TXT file\n"
     "!subenum del <ID> → Delete a previously saved subdomain TXT file")
@@ -55,8 +57,7 @@ def setup(client, my_id):
         return {}
 
     def save_active(active_data):
-        with open(ACTIVE_FILE, "w", encoding="utf-8") as f:
-            json.dump(active_data, f, indent=2)
+        save_json(ACTIVE_FILE, active_data)
 
     @client.on(
         events.NewMessage(from_users=my_id, pattern=r"^!subenum(?:\s+(.+))?"))

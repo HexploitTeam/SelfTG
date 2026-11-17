@@ -1,9 +1,9 @@
 # Com/inline.py
-import shlex
+import asyncio
 import re
 from telethon import events
-from telethon.tl.types import ReplyInlineMarkup, KeyboardButtonCallback, KeyboardButtonUrl
-from Com.bot import send_inline, BOT_ENABLED
+from telethon.tl.types import KeyboardButtonCallback, KeyboardButtonUrl
+from Com import bot as bot_module
 
 __HELP__ = (
     "!inline <text> | button:label:action:value ... → Send a message with inline buttons (via bot).\n"
@@ -96,17 +96,22 @@ def setup(client, my_id):
                 reply_to = reply_msg.id
 
             # If bot is available, send inline message via bot
-            if BOT_ENABLED and telethon_rows:
-                # Send using bot
-                await send_inline(event.chat_id, text, telethon_rows, reply_to)
+            sent = False
+            if bot_module.BOT_ENABLED and telethon_rows and bot_module.bot_client:
+                sent = await bot_module.send_inline(
+                    event.chat_id, text, telethon_rows, reply_to
+                )
+
+            if sent:
                 await event.delete()
-            else:
-                # Fallback: send plain text (no buttons) using selfbot
-                if telethon_rows:
-                    await event.edit("⚠️ Bot not available. Sending as plain text without buttons.")
-                    await asyncio.sleep(1)
-                await client.send_message(event.chat_id, text, reply_to=reply_to)
-                await event.delete()
+                return
+
+            # Fallback: send plain text (no buttons) using selfbot
+            if telethon_rows:
+                await event.edit("⚠️ Bot not available. Sending as plain text without buttons.")
+                await asyncio.sleep(1)
+            await client.send_message(event.chat_id, text, reply_to=reply_to)
+            await event.delete()
 
         except Exception as e:
             await event.edit(f"❌ Error: {e}")

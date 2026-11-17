@@ -146,4 +146,13 @@ def setup(client, my_id):
         await event.edit("🔄 Restarting session...")
 
         # Restart the process
-        os.execv(sys.executable, [sys.executable] + sys.argv)
+        try:
+            os.execv(sys.executable, [sys.executable] + sys.argv)
+        except Exception as e:
+            # execv only returns if it failed; without this the bot died silently
+            # and left mode/restart.json behind to fire on the next boot.
+            try:
+                os.remove(RESTART_FILE)
+            except OSError:
+                pass
+            await event.edit(f"❌ Restart failed: {e}")

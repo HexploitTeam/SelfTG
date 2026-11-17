@@ -7,6 +7,8 @@ import json
 import asyncio
 from datetime import datetime
 
+from Com.storage import save_json
+
 __HELP__ = (
     "!reaction <@Username/ID> <Emoji/alias> → React with emoji to all future messages from the user\n"
     "!reaction (reply) <Emoji/alias> → React to messages of replied user\n"
@@ -134,8 +136,7 @@ def setup(client, my_id):
         data = {}
         for tid, info in active_reactions.items():
             data[str(tid)] = {"user_id": info["user_id"], "emoji": info["emoji"]}
-        with open(REACTION_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
+        save_json(REACTION_FILE, data)
 
     async def load_existing_reactions():
         if not os.path.exists(REACTION_FILE):

@@ -3,7 +3,20 @@ import os
 import json
 from telethon import events
 
+from Com.storage import save_json
+
+__HELP__ = (
+    "!reply on (reply to a message) → Mirror everything you say in this chat as a "
+    "reply to that message, then delete the original.\n"
+    "!reply off → Stop mirroring\n"
+    "!reply status → Show current mirror target"
+)
+__CATEGORY__ = "Utilities"
+
 FILE = "mode/reply.json"
+# Cap for attachments copied by the mirror; the old code downloaded whole files
+# into RAM with no limit, which is fatal in a small Replit container.
+MAX_COPY_BYTES = 20 * 1024 * 1024
 os.makedirs("mode", exist_ok=True)
 
 def load_data():
@@ -16,8 +29,7 @@ def load_data():
         return {"enabled": False, "target_chat": None, "target_msg": None}
 
 def save_data(data):
-    with open(FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+    save_json(FILE, data)
 
 async def copy_message(client, event, target_chat, target_msg):
     msg = event.message
@@ -25,7 +37,16 @@ async def copy_message(client, event, target_chat, target_msg):
     media = msg.media
 
     if media:
-        file_bytes = await client.download_media(media, bytes)
+        size = getattr(getattr(msg, "file", None), "size", None)
+        if size and size > MAX_COPY_BYTES:
+            await client.send_message(
+                target_chat,
+                f"⚠️ Skipped a {size // (1024 * 1024)} MB attachment "
+                f"(auto-copy limit is {MAX_COPY_BYTES // (1024 * 1024)} MB).",
+                reply_to=target_msg,
+            )
+            return
+        file_bytes = await msg.download_media(file=bytes)
         if file_bytes:
             await client.send_message(
                 target_chat,

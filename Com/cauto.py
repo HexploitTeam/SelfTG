@@ -5,6 +5,9 @@ import re
 import os
 import json
 
+from Com.safe_eval import evaluate as safe_evaluate
+from Com.storage import save_json
+
 __HELP__ = "!cauto ON/OFF → Auto solve math challenges in groups/DMs"
 
 # Store state
@@ -49,12 +52,17 @@ def setup(client, my_id):
         try:
             with open(LOG_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
+            if not isinstance(data, list):
+                data = []
         except Exception:
             data = []
 
         data.append(log_entry)
-        with open(LOG_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
+        # Keep the log bounded: it grew by one entry per solved challenge and was
+        # re-read and re-written in full every time (unbounded file + O(n²)).
+        if len(data) > 1000:
+            data = data[-1000:]
+        save_json(LOG_FILE, data)
 
     # Auto-solver
     @client.on(events.NewMessage())
@@ -79,7 +87,9 @@ def setup(client, my_id):
             expression = expression.replace("×", "*").replace("÷", "/")
 
             try:
-                result = eval(expression, {"__builtins__": {}})
+                # This expression comes from somebody else's message, so it must
+                # never reach eval() (it was an RCE path via __subclasses__).
+                result = safe_evaluate(expression)
                 await client.send_message(event.chat_id,
                                           str(result),
                                           reply_to=event.id)
@@ -101,7 +111,7 @@ def setup(client, my_id):
             expr = f"{a}{op}{b}"
 
             try:
-                result = str(eval(expr, {"__builtins__": {}}))
+                result = str(safe_evaluate(expr))
             except Exception:
                 return
 

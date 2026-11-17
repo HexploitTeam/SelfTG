@@ -83,8 +83,11 @@ def encode_quoted_printable(text):
     return out.getvalue().decode('utf-8')
 
 def encode_uuencode(text):
-    import uu
     from io import BytesIO
+    try:
+        import uu  # deprecated stdlib module, removed in Python 3.13
+    except ImportError:
+        return "⚠️ uuencode unavailable: the 'uu' module was removed from this Python"
     in_file = BytesIO(text.encode('utf-8'))
     out_file = BytesIO()
     uu.encode(in_file, out_file, "text.txt")

@@ -1,4 +1,5 @@
 # Com/draw.py
+import asyncio
 import os
 import aiohttp
 from telethon import events
@@ -26,7 +27,8 @@ async def generate_image(prompt):
     headers = {"Authorization": f"Bearer {API_TOKEN}"}
     payload = {"inputs": prompt}
     url = f"https://api-inference.huggingface.co/models/{MODEL}"
-    async with aiohttp.ClientSession() as session:
+    timeout = aiohttp.ClientTimeout(total=120)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.post(url, headers=headers, json=payload) as resp:
             if resp.status == 200:
                 return await resp.read(), None

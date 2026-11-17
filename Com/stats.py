@@ -6,6 +6,8 @@ from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 from telethon import events
 
+from Com.storage import save_json
+
 __HELP__ = (
     "!stats → Show detailed stats for this chat\n"
     "!stats all → Show combined stats across ALL chats (top words, emojis, mentions, etc.)\n"
@@ -46,8 +48,7 @@ def load_stats():
         return {}
 
 def save_stats(data):
-    with open(STATS_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    save_json(STATS_FILE, data)
 
 def get_chat_stats(chat_id):
     data = load_stats()

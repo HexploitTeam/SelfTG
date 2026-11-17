@@ -5,6 +5,8 @@ import asyncio
 from telethon import TelegramClient, events
 from telethon.tl.types import ReplyInlineMarkup, KeyboardButtonCallback, KeyboardButtonRow
 
+from Com.storage import load_json as _load_json, save_json as _save_json
+
 # ---------- Global config ----------
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 BOT_ENABLED = bool(BOT_TOKEN)  # True if token exists
@@ -14,24 +16,54 @@ OWNER_ID = None
 # Shared JSON paths
 BASE_DIR = "mode"
 ENEMY_FILE = os.path.join(BASE_DIR, "Enemy.json")
-WARN_FILE = os.path.join(BASE_DIR, "Warn.json")
-MUTE_FILE = os.path.join(BASE_DIR, "Mute.json")
+# NOTE: these were "Warn.json"/"Mute.json", while Com/warn.py, Com/mute.py and
+# dashboard.py have always used the lowercase names. On Linux (Replit) those are
+# different files, so the bot's /warns, /mutes, /set_warn and /add_mute commands
+# silently operated on state that nothing else could see. Unified to lowercase.
+WARN_FILE = os.path.join(BASE_DIR, "warn.json")
+MUTE_FILE = os.path.join(BASE_DIR, "mute.json")
 ELIST_FILE = os.path.join(BASE_DIR, "EList.json")
+
+LEGACY_STATE_FILES = (
+    (os.path.join(BASE_DIR, "Warn.json"), WARN_FILE),
+    (os.path.join(BASE_DIR, "Mute.json"), MUTE_FILE),
+)
 
 # ---------- Helpers ----------
 def load_json(fpath):
-    if not os.path.exists(fpath):
-        return {}
-    try:
-        with open(fpath, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except:
-        return {}
+    return _load_json(fpath, {})
 
 def save_json(fpath, data):
-    os.makedirs(os.path.dirname(fpath), exist_ok=True)
-    with open(fpath, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+    _save_json(fpath, data)
+
+def migrate_legacy_state():
+    """Copy data from the old CamelCase state files once, without clobbering."""
+    for legacy_path, current_path in LEGACY_STATE_FILES:
+        if not os.path.exists(legacy_path) or os.path.exists(current_path):
+            continue
+        legacy_data = _load_json(legacy_path, None)
+        if legacy_data is None:
+            continue
+        save_json(current_path, legacy_data)
+        print(f"[BOT] Migrated legacy state {legacy_path} -> {current_path}")
+
+async def send_inline(chat_id, text, buttons=None, reply_to=None):
+    """Send a message through the bot client with inline buttons.
+
+    Imported by Com/inline.py (which used to import a function that never
+    existed here, so that module silently failed to load). Returns True on
+    success so callers can fall back to a plain self-bot message.
+    """
+    if bot_client is None:
+        return False
+    try:
+        await bot_client.send_message(
+            chat_id, text, buttons=buttons or None, reply_to=reply_to
+        )
+        return True
+    except Exception as exc:
+        print(f"[BOT] send_inline failed: {exc}")
+        return False
 
 def get_bot_status():
     global BOT_ENABLED, bot_client, OWNER_ID
@@ -53,6 +85,7 @@ async def start_bot(owner_id):
     OWNER_ID = owner_id
     API_ID = int(os.getenv("API_ID"))
     API_HASH = os.getenv("API_HASH")
+    migrate_legacy_state()
     bot_client = TelegramClient("bot_session", API_ID, API_HASH)
     await bot_client.start(bot_token=BOT_TOKEN)
     print(f"[BOT] Bot is running. Owner ID: {OWNER_ID}")

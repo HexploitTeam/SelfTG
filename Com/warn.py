@@ -3,6 +3,8 @@ import os
 import json
 from telethon import events
 
+from Com.storage import save_json
+
 __HELP__ = (
     "!warn add <user> [reason] (or reply) → Add a warning to a user\n"
     "!warn limit <number> → Set warning limit for this chat (default: 3)\n"
@@ -35,8 +37,7 @@ def load_warns():
         return {}
 
 def save_warns(data):
-    with open(WARN_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+    save_json(WARN_FILE, data)
 
 def get_chat_data(chat_id):
     data = load_warns()
@@ -51,11 +52,14 @@ def save_chat_data(chat_id, chat_data):
     data[str(chat_id)] = chat_data
     save_warns(data)
 
-def get_username(client, user_id):
+async def get_username(client, user_id):
+    # Was a synchronous helper calling client.loop.run_until_complete() from
+    # inside the running loop, which always raised and silently degraded every
+    # listing to a bare numeric ID.
     try:
-        user = client.loop.run_until_complete(client.get_entity(user_id))
+        user = await client.get_entity(user_id)
         return f"@{user.username}" if user.username else f"ID:{user_id}"
-    except:
+    except Exception:
         return f"ID:{user_id}"
 
 def setup(client, my_id):
@@ -109,7 +113,7 @@ def setup(client, my_id):
             save_chat_data(chat_id, chat_data)
 
             # Check if limit reached
-            username = get_username(client, target_user_id)
+            username = await get_username(client, target_user_id)
             count = len(user_warnings)
             response = f"⚠️ Warning added to {username} (now {count}/{limit}): {reason}"
             if count >= limit:
@@ -150,7 +154,7 @@ def setup(client, my_id):
             lines = []
             for uid_str, reasons in warnings.items():
                 uid = int(uid_str)
-                name = get_username(client, uid)
+                name = await get_username(client, uid)
                 lines.append(f"• {name} ({uid}) – {len(reasons)} warning(s)")
                 for i, r in enumerate(reasons, start=1):
                     lines.append(f"  {i}. {r}")
@@ -204,7 +208,8 @@ def setup(client, my_id):
             del warnings[uid_str]
             chat_data["warnings"] = warnings
             save_chat_data(chat_id, chat_data)
-            await event.edit(f"✅ Cleared warnings for {get_username(client, target_user_id)}.")
+            cleared_name = await get_username(client, target_user_id)
+            await event.edit(f"✅ Cleared warnings for {cleared_name}.")
             await event.delete()
         except Exception as e:
             await event.edit(f"❌ Error: {str(e)}")
@@ -249,7 +254,8 @@ def setup(client, my_id):
                 warnings[uid_str] = user_warnings
             chat_data["warnings"] = warnings
             save_chat_data(chat_id, chat_data)
-            await event.edit(f"✅ Removed warning #{index+1}: '{removed}' from {get_username(client, target_user_id)}.")
+            removed_name = await get_username(client, target_user_id)
+            await event.edit(f"✅ Removed warning #{index+1}: '{removed}' from {removed_name}.")
             await event.delete()
         except Exception as e:
             await event.edit(f"❌ Error: {str(e)}")

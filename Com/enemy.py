@@ -4,6 +4,8 @@ import json
 import re
 from telethon import events
 
+from Com.storage import load_json as _storage_load, save_json as _storage_save
+
 # -------------------------
 # Scary messages for !enemy load
 # -------------------------
@@ -113,12 +115,10 @@ if not os.path.exists(STATE_FILE):
 # Helper functions
 # -------------------------
 def load_json(fpath):
-    with open(fpath, "r", encoding="utf-8") as f:
-        return json.load(f)
+    return _storage_load(fpath, {})
 
 def save_json(fpath, data):
-    with open(fpath, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+    _storage_save(fpath, data)
 
 def get_next_id(data):
     """Return max existing id + 1, or 1 if empty."""
@@ -149,11 +149,13 @@ def find_enemy_by_user_id(chat_id, user_id):
             return e
     return None
 
-def get_username(client, user_id):
+async def get_username(client, user_id):
+    # Was a synchronous call to client.loop.run_until_complete() from inside the
+    # running event loop, which always raised, so listings showed bare IDs.
     try:
-        user = client.loop.run_until_complete(client.get_entity(user_id))
+        user = await client.get_entity(user_id)
         return f"@{user.username}" if user.username else f"ID:{user_id}"
-    except:
+    except Exception:
         return f"ID:{user_id}"
 
 # ---------- Round‑robin state ----------
@@ -167,8 +169,7 @@ def load_state():
         return {}
 
 def save_state(state):
-    with open(STATE_FILE, "w", encoding="utf-8") as f:
-        json.dump(state, f, indent=2)
+    _storage_save(STATE_FILE, state)
 
 def get_next_index(chat_id, category):
     """Return the current index and increment it for next time."""
@@ -362,7 +363,7 @@ def setup(client, my_id):
         lines = []
         for e in enemies:
             uid = e["user_id"]
-            name = get_username(client, uid)
+            name = await get_username(client, uid)
             cat = e.get("category", "default")
             custom = e.get("custom_text")
             custom_str = f" (custom: {custom})" if custom else ""
@@ -397,7 +398,7 @@ def setup(client, my_id):
             lines.append(f"**Chat:** {chat_name} (ID: {chat_id_str})")
             for e in enemies:
                 uid = e["user_id"]
-                name = get_username(client, uid)
+                name = await get_username(client, uid)
                 cat = e.get("category", "default")
                 custom = e.get("custom_text")
                 custom_str = f" (custom: {custom})" if custom else ""

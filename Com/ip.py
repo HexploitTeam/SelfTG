@@ -95,7 +95,9 @@ async def dns_lookup(domain, record_type='A'):
 
 async def resolve_host(host):
     try:
-        addrs = socket.getaddrinfo(host, None)
+        # getaddrinfo() is blocking; the loop version runs it in the executor so
+        # slow DNS cannot stall every other handler.
+        addrs = await asyncio.get_running_loop().getaddrinfo(host, None)
         ips = sorted(set(addr[4][0] for addr in addrs))
         return f"🌐 **Resolved {host}**\n" + "\n".join(ips)
     except Exception as e:
@@ -103,7 +105,8 @@ async def resolve_host(host):
 
 async def reverse_lookup(ip):
     try:
-        hostname, _, _ = socket.gethostbyaddr(ip)
+        hostname, _, _ = await asyncio.get_running_loop().run_in_executor(
+            None, socket.gethostbyaddr, ip)
         return f"🔁 **Reverse DNS for {ip}**\n`{hostname}`"
     except socket.herror:
         return f"❌ No reverse DNS entry for {ip}"
@@ -135,17 +138,35 @@ async def port_check(host, port):
         return f"❌ Error: {str(e)}"
 
 async def ping_host(host):
+    # create_subprocess_exec instead of blocking subprocess.run(): the old call
+    # froze the whole event loop (every handler) for up to 10 seconds.
     try:
-        result = subprocess.run(['ping', '-c', '4', '-W', '2', host], capture_output=True, text=True, timeout=10)
-        if result.returncode == 0:
-            lines = result.stdout.splitlines()
-            return f"📡 **Ping to {host}**\n" + "\n".join(lines[-4:])
-        else:
-            return f"❌ Ping failed: {result.stderr or 'unknown error'}"
+        proc = await asyncio.create_subprocess_exec(
+            'ping', '-c', '4', '-W', '2', host,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
     except FileNotFoundError:
         return "❌ ping command not found on this system."
     except Exception as e:
         return f"❌ Error: {str(e)}"
+
+    try:
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=12)
+    except asyncio.TimeoutError:
+        try:
+            proc.kill()
+            await proc.wait()
+        except ProcessLookupError:
+            pass
+        return f"❌ Ping to {host} timed out."
+
+    out = stdout.decode(errors='replace')
+    err = stderr.decode(errors='replace')
+    if proc.returncode == 0:
+        lines = out.splitlines()
+        return f"📡 **Ping to {host}**\n" + "\n".join(lines[-4:])
+    return f"❌ Ping failed: {err or 'unknown error'}"
 
 def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r'^!ip(?:\s+(.*))?$'))

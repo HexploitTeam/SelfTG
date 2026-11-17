@@ -1,4 +1,5 @@
 # ML/smart_markov.py
+import ast
 import os
 import json
 import random
@@ -102,7 +103,15 @@ class SmartMarkov:
         with open(filepath, 'r', encoding='utf-8') as f:
             data = json.load(f)
         mc = cls(order=data["order"])
-        mc.transitions = {eval(k): v for k, v in data["transitions"].items()}
+        # ast.literal_eval instead of eval: the model file is untrusted input and
+        # eval() there allowed arbitrary code execution from a crafted model.
+        transitions = defaultdict(list)
+        for key, value in data["transitions"].items():
+            try:
+                transitions[ast.literal_eval(key)] = value
+            except (ValueError, SyntaxError, TypeError):
+                continue
+        mc.transitions = transitions
         mc.start_words = data["start_words"]
         mc.all_words = data["all_words"]
         mc.word_counter = Counter(data["word_counter"])

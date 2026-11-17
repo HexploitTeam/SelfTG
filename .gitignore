@@ -1,0 +1,10 @@
+# --- Secrets and session files: never commit these ---
+*.session
+*.session-journal
+.env
+.dev.vars
+
+# --- Python bytecode / caches ---
+__pycache__/
+*.py[cod]
+.pythonlibs/

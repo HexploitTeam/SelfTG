@@ -32,7 +32,9 @@ my_id = None
 # ------------------------------
 def load_commands():
     total_loaded = 0
-    for filename in os.listdir("Com"):
+    failures = []
+    # Sorted so handler registration order is deterministic between restarts.
+    for filename in sorted(os.listdir("Com")):
         if filename.endswith(".py") and filename != "__init__.py":
             modulename = filename[:-3]
             fullname = f"Com.{modulename}"
@@ -41,11 +43,18 @@ def load_commands():
                 if hasattr(module, "setup"):
                     module.setup(client, my_id)
                 if hasattr(module, "__HELP__"):
-                    print(f"Loaded command: {module.__HELP__}")
+                    print(f"Loaded command: {module.__HELP__.splitlines()[0]}")
                     total_loaded += 1
             except Exception as e:
+                failures.append(f"{fullname}: {e}")
                 print(f"Failed to import {fullname}: {e}")
     print(f"📂 Total commands loaded: {total_loaded}")
+    if failures:
+        # Make broken modules visible at startup instead of only in one log line.
+        print(f"⚠️ {len(failures)} module(s) failed to load:")
+        for failure in failures:
+            print(f"   - {failure}")
+    return failures
 
 
 # ------------------------------
@@ -53,7 +62,17 @@ def load_commands():
 # ------------------------------
 async def main():
     global my_id
-    await client.start()
+
+    # connect() + explicit authorization check instead of client.start(): a
+    # self-bot cannot complete the interactive phone/code login on Replit, so a
+    # bad SESSION_STRING used to hang the process waiting for stdin forever.
+    await client.connect()
+    if not await client.is_user_authorized():
+        raise SystemExit(
+            "❌ SESSION_STRING is not authorized. Generate a new string session "
+            "and update the secret, then restart."
+        )
+
     me = await client.get_me()
     my_id = me.id
     print(
@@ -62,25 +81,29 @@ async def main():
 
     # Now that client is started, load commands
     load_commands()
-    print(
-        "📌 Bot is ready."
-    )
+    print("📌 Bot is ready.")
+
     # Start the separate bot as a background task
     try:
-        from Com.bot import start_bot
-        asyncio.create_task(start_bot(my_id))
-        print("[BOT] Bot started.")
+        from Com import bot as bot_module
+
+        if bot_module.BOT_ENABLED:
+            asyncio.create_task(bot_module.start_bot(my_id))
+            print("[BOT] Bot starting.")
+        else:
+            print("[BOT] BOT_TOKEN not set, bot disabled.")
     except Exception as e:
         print(f"[BOT] Failed to start: {e}")
-    global bot_client, BOT_ENABLED
-    bot_client = ...  # the client after start
-    BOT_ENABLED = True
-    
+
     # Keep running
     await client.run_until_disconnected()
+
 
 # ------------------------------
 # Run
 # ------------------------------
-loop = asyncio.get_event_loop()
-loop.run_until_complete(main())
+if __name__ == "__main__":
+    # asyncio.run() creates and closes the loop itself; the previous
+    # loop = asyncio.get_event_loop() / run_until_complete() pattern is
+    # deprecated on 3.10+ and raises on 3.14.
+    asyncio.run(main())
