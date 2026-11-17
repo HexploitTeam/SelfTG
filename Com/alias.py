@@ -42,6 +42,19 @@ PERSIAN_ALIASES = {
     "ترجمه": "translate",
     "فایل": "fileinfo",
     "کوتاه": "shorturl",
+
+    # Moderation / formatting / v2 additions
+    "مسدود": "ban",
+    "آزاد": "ban",
+    "چت": "chat",
+    "قالب": "chat",
+    "آبوهوا": "weather",
+    "هوا": "weather",
+    "ویکی": "wiki",
+    "دانشنامه": "wiki",
+    "یادآوری": "remind",
+    "یادآور": "remind",
+    "سرگرمی": "trivia",
 }
 
 
