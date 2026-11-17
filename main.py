@@ -65,7 +65,17 @@ async def main():
     print(
         "📌 Bot is ready."
     )
-
+    # Start the separate bot as a background task
+    try:
+        from Com.bot import start_bot
+        asyncio.create_task(start_bot(my_id))
+        print("[BOT] Bot started.")
+    except Exception as e:
+        print(f"[BOT] Failed to start: {e}")
+    global bot_client, BOT_ENABLED
+    bot_client = ...  # the client after start
+    BOT_ENABLED = True
+    
     # Keep running
     await client.run_until_disconnected()
 

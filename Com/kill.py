@@ -1,0 +1,100 @@
+# Com/kill.py
+import os
+import json
+import random
+import asyncio
+from telethon import events
+
+__HELP__ = (
+    "!kill <N> [@username] (optional reply) → Reply with N random lines from the main list.\n"
+    "Each line is sent as a separate message (or reply if you reply to a message).\n"
+    "No repeats. If @username is provided, each starts with '@username' on a new line.\n"
+    "Example: !kill 5 @ImSunpr\n"
+    "The command is deleted immediately."
+)
+__CATEGORY__ = "Utilities"
+
+BASE_DIR = "mode"
+ELIST_FILE = os.path.join(BASE_DIR, "EList.json")
+
+def load_list():
+    if not os.path.exists(ELIST_FILE):
+        return []
+    try:
+        with open(ELIST_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return []
+
+def setup(client, my_id):
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!kill\s+(\d+)(?:\s+@?(\w+))?$"))
+    async def kill_cmd(event):
+        try:
+            # Parse N
+            N = int(event.pattern_match.group(1))
+            if N < 1:
+                await event.edit("❌ Number must be at least 1.")
+                return
+
+            # Parse optional username
+            username = event.pattern_match.group(2)  # may be None
+            if username and not username.startswith("@"):
+                username = "@" + username
+
+            # Load the list
+            lines = load_list()
+            if not lines:
+                await event.edit("❌ The main list is empty. Add texts with `!enemy list add` or `!enemy clist`.")
+                return
+
+            # Cap N to list size
+            warn = False
+            if N > len(lines):
+                N = len(lines)
+                warn = True
+
+            # Pick N unique random lines (without replacement)
+            selected = random.sample(lines, N)
+
+            # Get the target reply message (if any)
+            reply_msg = None
+            if event.is_reply:
+                reply_msg = await event.get_reply_message()
+
+            # Delete the command message immediately
+            try:
+                await event.delete()
+            except Exception:
+                pass
+
+            # Send each selected text
+            for item in selected:
+                text = item["text"]
+                if username:
+                    msg = f"{username}\n{text}"
+                else:
+                    msg = text
+                # Send as reply if we have a reply target, otherwise as normal message
+                await client.send_message(
+                    event.chat_id,
+                    msg,
+                    reply_to=reply_msg.id if reply_msg else None
+                )
+                await asyncio.sleep(1)  # slight delay to avoid rate limits
+
+            # If we had to cap the number, send a warning as a new message
+            if warn:
+                await client.send_message(
+                    event.chat_id,
+                    f"⚠️ Only {len(lines)} texts available, used all of them.",
+                    reply_to=reply_msg.id if reply_msg else None
+                )
+
+        except ValueError:
+            await event.edit("❌ Invalid number. Use `!kill <N> [@username]`.")
+        except Exception as e:
+            # If command already deleted, send error as a new message
+            try:
+                await client.send_message(event.chat_id, f"❌ Error: {str(e)}")
+            except:
+                pass

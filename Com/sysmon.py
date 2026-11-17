@@ -116,7 +116,7 @@ def setup(client, my_id):
                 stats = format_stats()
                 save_stats(stats)  # log into file
                 await msg.edit(pretty_stats(stats))
-                await asyncio.sleep(5)
+                await asyncio.sleep(2)
         except asyncio.CancelledError:
             pass
         except Exception as e:

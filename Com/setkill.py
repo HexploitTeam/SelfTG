@@ -1,0 +1,210 @@
+# Com/setkill.py
+import os
+import json
+import asyncio
+import random
+from telethon import events
+
+__HELP__ = (
+    "!setkill start <interval_seconds> [text] (reply optional) → Send a message every X seconds.\n"
+    "   - If text is provided, that text is sent every interval.\n"
+    "   - If no text, a random line from the main list is sent each time.\n"
+    "   - If you reply to a message, the scheduled messages are replies to that message.\n"
+    "   - Example: !setkill start 10 Hello (every 10s)\n"
+    "   - Example: !setkill start 5 (random lines every 5s, reply to a message to reply to it)\n"
+    "!setkill stop [id] → Stop the scheduled timer (by ID, or current chat if no ID).\n"
+    "!setkill list → Show all active timers.\n"
+    "!setkill status → Show info for the current chat's timer."
+)
+__CATEGORY__ = "Utilities"
+
+BASE_DIR = "mode"
+SETKILL_FILE = os.path.join(BASE_DIR, "setkill.json")
+ELIST_FILE = os.path.join(BASE_DIR, "EList.json")
+os.makedirs(BASE_DIR, exist_ok=True)
+
+active_timers = {}  # id -> asyncio.Task
+timer_data = {}     # id -> settings
+
+def load_list():
+    if not os.path.exists(ELIST_FILE):
+        return []
+    try:
+        with open(ELIST_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return []
+
+def load_timers():
+    if not os.path.exists(SETKILL_FILE):
+        return {"next_id": 1, "timers": []}
+    try:
+        with open(SETKILL_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except:
+        return {"next_id": 1, "timers": []}
+
+def save_timers(data):
+    with open(SETKILL_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
+async def run_timer(client, timer_id, chat_id, interval, text, reply_to):
+    """Scheduled task that sends a message every `interval` seconds."""
+    while True:
+        await asyncio.sleep(interval)
+        # Check if timer still exists
+        if timer_id not in active_timers:
+            break
+        # Get text
+        if text:
+            msg_text = text
+        else:
+            lines = load_list()
+            if lines:
+                msg_text = random.choice(lines)["text"]
+            else:
+                msg_text = "(no texts available)"
+        try:
+            await client.send_message(chat_id, msg_text, reply_to=reply_to)
+        except Exception as e:
+            print(f"[setkill] Error sending: {e}")
+            # If the message fails (e.g., chat not found), stop the timer
+            await stop_timer(timer_id)
+            break
+
+async def stop_timer(timer_id):
+    """Cancel the task and remove from data."""
+    if timer_id in active_timers:
+        active_timers[timer_id].cancel()
+        try:
+            await active_timers[timer_id]
+        except asyncio.CancelledError:
+            pass
+        del active_timers[timer_id]
+    data = load_timers()
+    data["timers"] = [t for t in data["timers"] if t["id"] != timer_id]
+    save_timers(data)
+    if timer_id in timer_data:
+        del timer_data[timer_id]
+
+def setup(client, my_id):
+    # ----- Resume timers on startup -----
+    async def resume_timers():
+        data = load_timers()
+        for t in data["timers"]:
+            task = asyncio.create_task(
+                run_timer(client, t["id"], t["chat_id"], t["interval"], t.get("text"), t.get("reply_to"))
+            )
+            active_timers[t["id"]] = task
+            timer_data[t["id"]] = t
+
+    asyncio.create_task(resume_timers())
+
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!setkill start\s+(\d+)(?:\s+(.+))?$"))
+    async def setkill_start(event):
+        try:
+            interval = int(event.pattern_match.group(1))
+            if interval < 1:
+                await event.edit("❌ Interval must be at least 1 second.")
+                return
+            text = event.pattern_match.group(2)  # may be None
+            # If text is provided, remove leading/trailing quotes if any
+            if text:
+                if (text.startswith('"') and text.endswith('"')) or (text.startswith("'") and text.endswith("'")):
+                    text = text[1:-1]
+
+            # Determine reply target
+            reply_to = None
+            if event.is_reply:
+                reply_msg = await event.get_reply_message()
+                reply_to = reply_msg.id
+
+            # Create new timer
+            data = load_timers()
+            new_id = data["next_id"]
+            data["next_id"] += 1
+            timer_entry = {
+                "id": new_id,
+                "chat_id": event.chat_id,
+                "interval": interval,
+                "text": text,
+                "reply_to": reply_to
+            }
+            data["timers"].append(timer_entry)
+            save_timers(data)
+
+            # Start the task
+            task = asyncio.create_task(
+                run_timer(client, new_id, event.chat_id, interval, text, reply_to)
+            )
+            active_timers[new_id] = task
+            timer_data[new_id] = timer_entry
+
+            await event.edit(f"✅ Timer started! ID: {new_id}, interval: {interval}s, text: {text or 'random'}")
+            await event.delete()
+        except ValueError:
+            await event.edit("❌ Invalid interval. Use `!setkill start <seconds> [text]`.")
+        except Exception as e:
+            await event.edit(f"❌ Error: {e}")
+
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!setkill stop(?:\s+(\d+))?$"))
+    async def setkill_stop(event):
+        timer_id = event.pattern_match.group(1)
+        if timer_id:
+            timer_id = int(timer_id)
+            if timer_id not in active_timers:
+                await event.edit(f"❌ Timer {timer_id} not found.")
+                return
+            await stop_timer(timer_id)
+            await event.edit(f"✅ Timer {timer_id} stopped.")
+            await event.delete()
+        else:
+            # Stop timer for current chat
+            chat_id = event.chat_id
+            data = load_timers()
+            found = None
+            for t in data["timers"]:
+                if t["chat_id"] == chat_id:
+                    found = t["id"]
+                    break
+            if found is None:
+                await event.edit("❌ No timer running for this chat.")
+                return
+            await stop_timer(found)
+            await event.edit(f"✅ Timer for this chat stopped.")
+            await event.delete()
+
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!setkill list$"))
+    async def setkill_list(event):
+        data = load_timers()
+        if not data["timers"]:
+            await event.edit("📭 No active timers.")
+            return
+        lines = ["📋 **Active Timers:**"]
+        for t in data["timers"]:
+            lines.append(
+                f"ID: {t['id']} | Chat: {t['chat_id']} | Interval: {t['interval']}s | "
+                f"Text: {t.get('text') or 'random'} | Reply: {t.get('reply_to') or 'No'}"
+            )
+        await event.edit("\n".join(lines))
+
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!setkill status$"))
+    async def setkill_status(event):
+        chat_id = event.chat_id
+        data = load_timers()
+        found = None
+        for t in data["timers"]:
+            if t["chat_id"] == chat_id:
+                found = t
+                break
+        if found is None:
+            await event.edit("📭 No timer running for this chat.")
+            return
+        lines = [
+            f"**Timer Status for this chat**",
+            f"ID: {found['id']}",
+            f"Interval: {found['interval']}s",
+            f"Text: {found.get('text') or 'random'}",
+            f"Reply to: {found.get('reply_to') or 'No'}"
+        ]
+        await event.edit("\n".join(lines))

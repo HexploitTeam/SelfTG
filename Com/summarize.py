@@ -1,52 +1,245 @@
 # Com/summarize.py
 import os
-import aiohttp
+import re
+import asyncio
+from collections import Counter
 from telethon import events
 
-__HELP__ = "!summarize <text> → Summarize the given text using Google Gemini AI"
+try:
+    import aiohttp
+    HAS_AIOHTTP = True
+except:
+    HAS_AIOHTTP = False
+
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+__HELP__ = (
+    "!summarize <text> (or reply) → Summarize the given text.\n"
+    "!summarize chat [N] → Summarize the last N messages in this chat (default 50).\n"
+    "Uses Gemini if API key is set, otherwise local summarization (works for Persian & English)."
+)
 __CATEGORY__ = "Utilities"
 
+
+# ---------- Improved local summarization ----------
+def summarize_locally(text, max_sentences=5, max_chars=2000):
+    """Extract key sentences using word frequency (works for Persian & English)."""
+    if not text:
+        return "No text to summarize."
+
+    # If text is short, return it as-is
+    if len(text) < 200:
+        return text
+
+    # Step 1: Split into paragraphs (by double newlines)
+    paragraphs = [p.strip() for p in re.split(r'\n\s*\n', text.strip()) if p.strip()]
+    if not paragraphs:
+        paragraphs = [text]
+
+    # Step 2: Split each paragraph into sentences
+    # Persian/English sentence boundaries: ., !, ?, ؟, …, ...
+    sentence_splitter = re.compile(r'(?<=[.!?…؟])\s+')
+    all_sentences = []
+    for p in paragraphs:
+        # If paragraph has no punctuation, treat it as one sentence
+        if not re.search(r'[.!?…؟]', p):
+            all_sentences.append(p.strip())
+        else:
+            for s in sentence_splitter.split(p):
+                s = s.strip()
+                if s:
+                    all_sentences.append(s)
+
+    # Remove very short sentences (less than 3 words)
+    all_sentences = [s for s in all_sentences if len(s.split()) >= 3]
+
+    if not all_sentences:
+        return text[:500] + "..." if len(text) > 500 else text
+
+    # If we have very few sentences, return them all (they are already short)
+    if len(all_sentences) <= max_sentences:
+        summary = " ".join(all_sentences)
+        if len(summary) > max_chars:
+            return summary[:max_chars] + "..."
+        return summary
+
+    # Step 3: Compute word frequencies (exclude stopwords)
+    # Persian and English stopwords (common)
+    stopwords = {
+        "the", "be", "to", "of", "and", "a", "in", "that", "have", "i",
+        "it", "for", "not", "on", "with", "he", "as", "you", "do", "at",
+        "this", "but", "his", "by", "from", "they", "we", "say", "her", "she",
+        "or", "an", "will", "my", "one", "all", "would", "there", "their",
+        "what", "so", "up", "out", "if", "about", "who", "get", "which", "go",
+        "me", "when", "make", "can", "like", "time", "no", "just", "him", "know",
+        "take", "people", "into", "year", "your", "good", "some", "could", "them",
+        "see", "other", "than", "then", "now", "look", "only", "come", "its", "over",
+        "think", "also", "back", "after", "use", "two", "how", "our", "work", "first",
+        "well", "way", "even", "new", "want", "because", "any", "these", "give", "day",
+        "most", "us", "is", "am", "are", "was", "were", "been", "being",
+        # Persian stopwords
+        "و", "به", "از", "با", "برای", "که", "این", "آن", "را", "در", "روی",
+        "بر", "تا", "هم", "همین", "چون", "چرا", "آیا", "اما", "اگر", "هر", "چه",
+        "شود", "می", "نیز", "همچنین", "بله", "خیر", "نه", "یا", "ولی", "باز",
+        "داشت", "دارد", "دارند", "باش", "بود", "بوده", "بودند"
+    }
+
+    word_freq = Counter()
+    for sent in all_sentences:
+        # Split into words (allow Persian letters, numbers, and apostrophes)
+        words = re.findall(r'[\w\u0600-\u06FF]+', sent.lower())
+        for w in words:
+            if w not in stopwords and len(w) > 1:
+                word_freq[w] += 1
+
+    # Step 4: Score each sentence by sum of word frequencies
+    scored = []
+    for sent in all_sentences:
+        words = re.findall(r'[\w\u0600-\u06FF]+', sent.lower())
+        score = sum(word_freq.get(w, 0) for w in words)
+        # Normalize by sentence length (avoid long sentences dominating)
+        score = score / (len(words) + 1)
+        scored.append((sent, score))
+
+    # Step 5: Pick top sentences (but we want to keep variety)
+    scored.sort(key=lambda x: x[1], reverse=True)
+    top_sentences = [s for s, _ in scored[:max_sentences]]
+
+    # Step 6: Reconstruct in original order
+    ordered = []
+    for sent in all_sentences:
+        if sent in top_sentences:
+            ordered.append(sent)
+
+    summary = " ".join(ordered)
+
+    # Step 7: Trim if too long
+    if len(summary) > max_chars:
+        summary = summary[:max_chars] + "..."
+
+    # If summary is still as long as original, it means we failed – return first 500 chars
+    if len(summary) >= len(text) * 0.8:
+        return text[:500] + "..." if len(text) > 500 else text
+
+    return summary if summary else text[:500] + "..."
+
+
+# ---------- Gemini summarization ----------
+async def summarize_with_gemini(text):
+    if not GEMINI_API_KEY or not HAS_AIOHTTP:
+        return None
+    url = "https://generativelanguage.googleapis.com/v1beta2/models/text-bison-001:generate"
+    headers = {"Authorization": f"Bearer {GEMINI_API_KEY}", "Content-Type": "application/json"}
+    payload = {
+        "prompt": f"Summarize this text in a few sentences:\n{text}",
+        "temperature": 0.3,
+        "maxOutputTokens": 200
+    }
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, headers=headers, json=payload, timeout=15) as resp:
+                if resp.status != 200:
+                    return None
+                data = await resp.json()
+                candidates = data.get("candidates", [])
+                if candidates:
+                    return candidates[0].get("content", "")
+    except:
+        pass
+    return None
+
+
+# ---------- Main command ----------
 def setup(client, my_id):
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-    GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta2/models/text-bison-001:generate"
-
-    @client.on(
-        events.NewMessage(from_users=my_id, pattern=r"^!summarize\s+(.+)"))
-    async def summarize(event):
-        text_to_summarize = event.pattern_match.group(1).strip()
-
-        if not text_to_summarize:
-            await event.reply("❌ Please provide text to summarize!")
-            return
-
-        msg = await event.reply("⏳ Summarizing...")
-
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!summarize(?:\s+(.*))?$"))
+    async def summarize_cmd(event):
         try:
-            headers = {
-                "Authorization": f"Bearer {GEMINI_API_KEY}",
-                "Content-Type": "application/json"
-            }
+            arg_str = event.pattern_match.group(1)
+            if not arg_str and not event.is_reply:
+                await event.edit("📖 **Summarize Help**\n" + __HELP__)
+                return
 
-            payload = {
-                "prompt": f"Summarize this text:\n{text_to_summarize}",
-                "temperature": 0.3,
-                "maxOutputTokens": 500
-            }
+            # ---------- Chat summarization ----------
+            if arg_str and arg_str.startswith("chat"):
+                parts = arg_str.split()
+                limit = 50
+                if len(parts) > 1:
+                    try:
+                        limit = int(parts[1])
+                        if limit < 1:
+                            limit = 1
+                        if limit > 200:
+                            limit = 200
+                    except:
+                        pass
 
-            async with aiohttp.ClientSession() as session:
-                async with session.post(GEMINI_URL,
-                                        headers=headers,
-                                        json=payload) as response:
-                    if response.status != 200:
-                        text = await response.text()
-                        await msg.edit(f"❌ Error: {response.status} - {text}")
-                        return
+                await event.edit(f"⏳ Fetching last {limit} messages...")
+                try:
+                    messages = await client.get_messages(event.chat_id, limit=limit)
+                except Exception as e:
+                    await event.edit(f"❌ Failed to fetch messages: {e}")
+                    return
 
-                    data = await response.json()
+                if not messages:
+                    await event.edit("📭 No messages found.")
+                    return
 
-            summary = data.get("candidates",
-                               [{}])[0].get("content", "No summary returned.")
-            await msg.edit(f"📝 Summary:\n{summary}")
+                texts = []
+                for m in messages:
+                    if m.text and not m.text.startswith("!"):
+                        texts.append(m.text)
+                if not texts:
+                    await event.edit("📭 No text messages to summarize.")
+                    return
+
+                combined = " ".join(texts)
+                await event.edit("⏳ Summarizing...")
+
+                # Try Gemini first
+                summary = await summarize_with_gemini(combined)
+                if summary:
+                    output = f"📝 **Chat Summary** (last {len(messages)} messages)\n\n{summary}"
+                else:
+                    summary = summarize_locally(combined, max_sentences=7, max_chars=2000)
+                    output = f"📝 **Chat Summary** (local, last {len(messages)} messages)\n\n{summary}"
+
+                if len(output) > 4000:
+                    import io
+                    bio = io.BytesIO(output.encode("utf-8"))
+                    bio.name = "summary.txt"
+                    await client.send_file(event.chat_id, bio, caption="📝 Chat Summary")
+                    await event.delete()
+                else:
+                    await event.edit(output)
+                return
+
+            # ---------- Text summarization ----------
+            text = arg_str
+            if not text and event.is_reply:
+                reply = await event.get_reply_message()
+                text = reply.text or reply.raw_text
+            if not text:
+                await event.edit("❌ No text provided. Use `!summarize <text>` or reply to a message.")
+                return
+
+            await event.edit("⏳ Summarizing...")
+
+            # Try Gemini
+            summary = await summarize_with_gemini(text)
+            if summary:
+                output = f"📝 **Summary**\n\n{summary}"
+            else:
+                summary = summarize_locally(text, max_sentences=5, max_chars=2000)
+                output = f"📝 **Summary** (local)\n\n{summary}"
+
+            if len(output) > 4000:
+                import io
+                bio = io.BytesIO(output.encode("utf-8"))
+                bio.name = "summary.txt"
+                await client.send_file(event.chat_id, bio, caption="📝 Summary")
+                await event.delete()
+            else:
+                await event.edit(output)
 
         except Exception as e:
-            await msg.edit(f"❌ Error: {str(e)}")
+            await event.edit(f"❌ Error: {str(e)}")

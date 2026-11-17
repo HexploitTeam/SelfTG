@@ -1,0 +1,9 @@
+{
+  "enemy_enabled": true,
+  "warn_enabled": true,
+  "mute_enabled": true,
+  "reply_enabled": true,
+  "log_enabled": true,
+  "auto_solve": true,
+  "stats_enabled": true
+}

@@ -4,6 +4,64 @@ import json
 import re
 from telethon import events
 
+# -------------------------
+# Scary messages for !enemy load
+# -------------------------
+SCARY_MESSAGES = [
+    "☠️ Bot is ready. Kill 'em all. No mercy, no survivors.",
+    "🔫 Locked and loaded. Every single one of them is a target. Who’s first?",
+    "🎯 Target acquired. Eliminate with extreme prejudice. No witnesses.",
+    "💀 Execute order 66. The time has come to purge the unworthy.",
+    "🌙 The hunt begins at midnight. They won’t see it coming.",
+    "⚔️ We ride at dawn. Blood will be spilled. Legends will be born.",
+    "🔥 No survivors. Burn everything to the ground. Let the ashes tell the tale.",
+    "😈 This is where the fun begins. Let the games of death commence.",
+    "👊 I'm about to end this man's whole career. Permanently.",
+    "🪓 Rip and tear. Until it is done. No one is safe.",
+    "😎 Let's get dangerous. They made a grave mistake crossing us.",
+    "🦅 The predator is here. Stalking. Hunting. Killing. Just another day.",
+    "🚨 It's about to get real. Panic won't save them. Nothing will.",
+    "🧨 Say your prayers. The reaper is knocking and I'm holding the door.",
+    "💣 Tick tock... Time’s running out. Make peace with your gods.",
+    "👿 Rise and shine, it's judgment day. The scales are tipping.",
+    "🏴‍☠️ Dead men tell no tales. Neither will they.",
+    "🩸 Blood will flow like rivers. The ground will drink deeply.",
+    "🧛 The night is dark and full of terrors. I am one of them.",
+    "👾 System override. Autopilot engaged. Termination sequence started.",
+    "🤖 Engage kill mode. All systems green. No mercy protocol active.",
+    "☢️ Radiation levels critical. Everyone in range is already dead.",
+    "🌪️ The storm is coming. I am the eye of destruction.",
+    "⚡ Thunder rolls. Lightning strikes. So will I. Again and again.",
+    "🌀 Twist of fate. Their luck just ran out. Completely.",
+    "🌋 Eruption imminent. The ground will swallow them whole.",
+    "🌊 Tsunami warning. They'll be swept away. No trace left.",
+    "🪐 Rings of Saturn. Distant and cold. Just like their future.",
+    "💥 Explosive impact. Nothing remains. Just dust and regret.",
+    "🧠 Mind games. Psychological warfare. They'll break before they fall.",
+    "👁️ I see everything. Every move, every fear. It's already over.",
+    "🗡️ The blade is sharp. One cut is all it takes. I'll make it count.",
+    "🏹 Arrow aimed. Perfect trajectory. Bullseye every time.",
+    "🔪 Slice and dice. They won't even feel it. Just a whisper.",
+    "🪚 Chain reaction. One falls, the rest follow. Inevitable.",
+    "⛓️ Bound by fear. They can't escape. Their fate is sealed.",
+    "🧨 Fuse lit. Boom. They'll never know what hit them.",
+    "🚀 Liftoff. Straight to hell. No return ticket.",
+    "🛸 Abduction. They'll be gone before they can scream.",
+    "👻 Ghost protocol. Invisible. Untouchable. Unstoppable.",
+    "💀 Skull and crossbones. Pirate code. Kill or be killed.",
+    "🖤 Darkness falls. I am the shadow that hunts.",
+    "🌑 Eclipse. Total blackout. They'll be blind. I'll be deadly.",
+    "🔦 Spotlight. They can't hide. I see every corner.",
+    "🚪 Door slam. Their last chance just closed. Locked in.",
+    "🪑 Seat's taken. They can't run. Nowhere to go.",
+    "🛏️ Nightmare fuel. They'll never sleep again. Ever.",
+    "📦 Boxed in. No escape. Just me and them.",
+    "📦 Pandora's box. They opened it. Now they pay.",
+    "🔮 Crystal ball. I see their death. Clear as day.",
+    "🧿 Evil eye. Cursed. They’ll never be the same.",
+    "🎭 Mask on. The show is about to start. They're the main event.",
+]
+
 __HELP__ = (
     "!enemy add (reply) → Add replied user as enemy (default category)\n"
     "!enemy add no (reply) → Add replied user as enemy (no category)\n"
@@ -21,7 +79,8 @@ __HELP__ = (
     "!enemy clist (reply) → Add replied message text to default list\n"
     "!enemy clist no (reply) → Add replied message text to no list\n"
     "!enemy clist show → Show default list with IDs\n"
-    "!enemy clist no show → Show no list with IDs"
+    "!enemy clist no show → Show no list with IDs\n"
+    "!enemy load → Scare them with a random gangster message"
 )
 __CATEGORY__ = "Utilities"
 
@@ -49,7 +108,6 @@ for fpath in [ELIST_FILE, ELISTNO_FILE]:
 if not os.path.exists(STATE_FILE):
     with open(STATE_FILE, "w", encoding="utf-8") as f:
         json.dump({}, f, indent=2)
-
 
 # -------------------------
 # Helper functions
@@ -119,7 +177,6 @@ def get_next_index(chat_id, category):
     if chat_key not in state:
         state[chat_key] = {"default": 0, "no": 0}
     idx = state[chat_key].get(category, 0)
-    # Increment for next call (will be saved after the reply)
     return idx
 
 def save_next_index(chat_id, category, new_idx):
@@ -129,7 +186,6 @@ def save_next_index(chat_id, category, new_idx):
         state[chat_key] = {"default": 0, "no": 0}
     state[chat_key][category] = new_idx
     save_state(state)
-
 
 # -------------------------
 # Setup
@@ -473,7 +529,6 @@ def setup(client, my_id):
         data.append({"id": new_id, "text": text})
         save_json(ELIST_FILE, data)
         await event.edit(f"✅ Added to default list (ID: {new_id})")
-        await asyncio.sleep(3)
         await event.delete()
 
     # -------------------------
@@ -494,7 +549,6 @@ def setup(client, my_id):
         data.append({"id": new_id, "text": text})
         save_json(ELISTNO_FILE, data)
         await event.edit(f"✅ Added to no list (ID: {new_id})")
-        await asyncio.sleep(3)
         await event.delete()
 
     # -------------------------
@@ -538,6 +592,15 @@ def setup(client, my_id):
             await event.edit(msg)
 
     # -------------------------
+    # !enemy load (scary gangster message)
+    # -------------------------
+    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!enemy load$"))
+    async def enemy_load(event):
+        import random
+        msg = random.choice(SCARY_MESSAGES)
+        await event.edit(msg)
+
+    # -------------------------
     # Catch‑all for wrong usage
     # -------------------------
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!enemy(?:\s+help)?$"))
@@ -560,5 +623,6 @@ def setup(client, my_id):
             "• `!enemy clist` (reply) – add replied text to default list\n"
             "• `!enemy clist no` (reply) – add replied text to no list\n"
             "• `!enemy clist show` – show default list\n"
-            "• `!enemy clist no show` – show no list"
+            "• `!enemy clist no show` – show no list\n"
+            "• `!enemy load` – scare them with a random gangster message"
         )

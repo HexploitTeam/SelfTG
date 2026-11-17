@@ -1,44 +1,134 @@
 # Com/tts.py
+import os
+import shlex
+import tempfile
 from telethon import events
 from gtts import gTTS
-import os
+from gtts.tts import gTTSError
 
-__HELP__ = "!tts <lang> <text> or reply → Convert text to speech"
+__HELP__ = (
+    "!tts [options] <text> (or reply) → Convert text to speech.\n"
+    "Options:\n"
+    "  --lang <code>     Language code (e.g., en, fa, fr, de, es) – default: en\n"
+    "  --tld <domain>    Accent/domain (e.g., com, co.uk, ca, com.au) – default: com\n"
+    "  --voice-note      Send as a voice message (Telegram voice note) instead of audio file.\n"
+    "Examples:\n"
+    "  !tts --lang fa سلام\n"
+    "  !tts --lang en --tld co.uk 'Hello from the UK'\n"
+    "  !tts (reply to a message) – uses that text with default settings."
+)
 __CATEGORY__ = "Utilities"
 
 TTS_FOLDER = "mode/tts"
 os.makedirs(TTS_FOLDER, exist_ok=True)
 
+def parse_args(args):
+    options = {'lang': 'en', 'tld': 'com', 'voice_note': False}
+    text_parts = []
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        if arg.startswith('--'):
+            if arg == '--lang':
+                if i + 1 >= len(args):
+                    raise ValueError("Missing value for --lang")
+                options['lang'] = args[i+1]
+                i += 2
+            elif arg == '--tld':
+                if i + 1 >= len(args):
+                    raise ValueError("Missing value for --tld")
+                options['tld'] = args[i+1]
+                i += 2
+            elif arg == '--voice-note':
+                options['voice_note'] = True
+                i += 1
+            else:
+                raise ValueError(f"Unknown option: {arg}")
+        else:
+            text_parts.append(arg)
+            i += 1
+    return options, ' '.join(text_parts)
 
 def setup(client, my_id):
-
-    @client.on(
-        events.NewMessage(from_users=my_id, pattern=r"^!tts\s+(\w+)\s+(.+)"))
-    async def tts_handler(event):
+    @client.on(events.NewMessage(from_users=my_id, pattern=r'^!tts(?:\s+(.*))?$'))
+    async def tts_cmd(event):
         try:
-            lang = event.pattern_match.group(1)
-            text = event.pattern_match.group(2).strip()
+            arg_str = event.pattern_match.group(1)
+            text = None
+            options = {'lang': 'en', 'tld': 'com', 'voice_note': False}
 
-            # If no text, check reply
-            if not text and event.is_reply:
-                reply_msg = await event.get_reply_message()
-                text = reply_msg.text or reply_msg.message or ""
-
-            if not text:
-                await event.reply(
-                    "❌ Provide text to convert or reply to a message.")
+            # If no arguments and not a reply, show help
+            if not arg_str and not event.is_reply:
+                await event.edit("📖 **TTS Help**\n" + __HELP__)
                 return
 
-            # Create TTS
-            tts = gTTS(text=text, lang=lang)
-            filename = os.path.join(TTS_FOLDER, f"tts_{event.id}.mp3")
-            tts.save(filename)
+            # Parse arguments if provided
+            if arg_str:
+                args = shlex.split(arg_str)
+                options, text = parse_args(args)
 
-            # Send the audio
-            await event.reply(file=filename)
+            # If no text, try reply
+            if not text and event.is_reply:
+                reply = await event.get_reply_message()
+                text = reply.text or reply.raw_text
+            if not text:
+                await event.edit("❌ No text to convert. Provide text or reply to a message.")
+                return
 
-            # Cleanup
-            os.remove(filename)
+            # Validate language
+            lang = options['lang']
+            tld = options['tld']
+            # gTTS supports many langs; we'll just try
 
+            await event.edit(f"🔊 Generating TTS (lang: {lang}, tld: {tld})...")
+
+            # Generate TTS in memory
+            try:
+                tts = gTTS(text=text, lang=lang, tld=tld, slow=False)
+                # Save to temp file
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as tmp:
+                    tmp_path = tmp.name
+                    tts.save(tmp_path)
+            except gTTSError as e:
+                await event.edit(f"❌ TTS error: {e}")
+                return
+            except Exception as e:
+                await event.edit(f"❌ Error: {e}")
+                return
+
+            # Determine send method
+            if options['voice_note']:
+                # Send as voice note (Telegram voice message)
+                try:
+                    await client.send_file(
+                        event.chat_id,
+                        tmp_path,
+                        voice_note=True,
+                        reply_to=event.id if event.is_reply else None
+                    )
+                except Exception as e:
+                    await event.edit(f"❌ Failed to send voice note: {e}")
+                    os.remove(tmp_path)
+                    return
+            else:
+                # Send as audio file
+                try:
+                    await client.send_file(
+                        event.chat_id,
+                        tmp_path,
+                        caption=f"🔊 TTS ({lang})",
+                        reply_to=event.id if event.is_reply else None
+                    )
+                except Exception as e:
+                    await event.edit(f"❌ Failed to send audio: {e}")
+                    os.remove(tmp_path)
+                    return
+
+            # Cleanup and delete command
+            os.remove(tmp_path)
+            await event.delete()
+
+        except ValueError as e:
+            await event.edit(f"❌ {e}")
         except Exception as e:
-            await event.reply(f"❌ Error: {str(e)}")
+            await event.edit(f"❌ Error: {str(e)}")

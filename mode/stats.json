@@ -1,0 +1,3262 @@
+{
+  "8355449196": {
+    "total_msgs": 533,
+    "total_chars": 5370,
+    "total_words": 44,
+    "total_emojis": 5,
+    "total_mentions": 0,
+    "replies_given": 138,
+    "media": {
+      "MessageMediaDocument": 29,
+      "MessageMediaWebPage": 1,
+      "MessageMediaPhoto": 3,
+      "MessageMediaDice": 2
+    },
+    "word_counts": {
+      "kill": 13,
+      "load": 14,
+      "enemy": 1,
+      "ping": 1,
+      "https": 1,
+      "me": 1,
+      "edfdwgzrj": 1,
+      "hhnwux": 1,
+      "football": 1,
+      "slot": 2,
+      "seven": 2,
+      "dice": 1,
+      "lemon": 1,
+      "grapes": 2,
+      "bars": 1,
+      "na": 1
+    },
+    "emoji_counts": {
+      "🚬": 3,
+      "😾": 1,
+      "😭": 1
+    },
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-22": 201,
+      "2026-07-23": 10,
+      "2026-07-26": 8,
+      "2026-07-27": 4,
+      "2026-07-29": 31,
+      "2026-08-01": 54,
+      "2026-08-05": 4,
+      "2026-08-06": 53,
+      "2026-08-07": 5,
+      "2026-08-08": 34,
+      "2026-08-09": 49,
+      "2026-08-10": 27,
+      "2026-08-11": 3,
+      "2026-08-19": 8,
+      "2026-08-26": 27,
+      "2026-09-11": 4,
+      "2026-09-13": 11
+    },
+    "hourly_counts": {
+      "15": 82,
+      "16": 159,
+      "17": 30,
+      "19": 17,
+      "20": 50,
+      "21": 34,
+      "10": 15,
+      "18": 37,
+      "11": 21,
+      "12": 50,
+      "22": 34,
+      "23": 3,
+      "0": 1
+    },
+    "first_message": "2026-07-22T15:52:25+00:00",
+    "last_message": "2026-09-13T16:27:12+00:00"
+  },
+  "8587740508": {
+    "total_msgs": 390,
+    "total_chars": 6127,
+    "total_words": 1091,
+    "total_emojis": 4,
+    "total_mentions": 0,
+    "replies_given": 125,
+    "media": {
+      "MessageMediaDocument": 15,
+      "MessageMediaWebPage": 3,
+      "MessageMediaPhoto": 3
+    },
+    "word_counts": {
+      "uh": 5,
+      "im": 11,
+      "kaaren": 1,
+      "and": 1,
+      "from": 5,
+      "guilan": 4,
+      "when": 4,
+      "was": 1,
+      "got": 7,
+      "tho": 11,
+      "guess": 13,
+      "we": 7,
+      "cant": 1,
+      "take": 1,
+      "another": 1,
+      "exam": 3,
+      "the": 15,
+      "last": 1,
+      "bahman": 1,
+      "month": 1,
+      "didnt": 4,
+      "see": 5,
+      "that": 24,
+      "yes": 1,
+      "it": 7,
+      "is": 8,
+      "idk": 6,
+      "kanzjsnzjwnjajwisnw": 3,
+      "thats": 9,
+      "acrually": 3,
+      "nice": 12,
+      "welp": 6,
+      "gotta": 3,
+      "help": 3,
+      "ya": 16,
+      "if": 3,
+      "you": 37,
+      "try": 3,
+      "to": 20,
+      "motivate": 3,
+      "british": 3,
+      "so": 9,
+      "imma": 3,
+      "use": 9,
+      "full": 3,
+      "sentence": 3,
+      "what": 13,
+      "will": 3,
+      "get": 9,
+      "want": 3,
+      "with": 15,
+      "me": 11,
+      "ll": 3,
+      "be": 3,
+      "fluent": 3,
+      "soon": 3,
+      "cuz": 6,
+      "are": 3,
+      "already": 3,
+      "good": 9,
+      "random": 6,
+      "person": 7,
+      "would": 9,
+      "not": 18,
+      "understand": 3,
+      "any": 6,
+      "of": 6,
+      "things": 6,
+      "said": 3,
+      "at": 10,
+      "first": 4,
+      "whats": 3,
+      "yc": 3,
+      "right": 6,
+      "dang": 3,
+      "love": 3,
+      "spend": 3,
+      "some": 9,
+      "time": 4,
+      "no": 7,
+      "better": 6,
+      "than": 4,
+      "nothing": 9,
+      "meant": 3,
+      "youre": 7,
+      "soooooo": 3,
+      "much": 15,
+      "then": 3,
+      "yep": 3,
+      "heartheartheart": 3,
+      "auf": 3,
+      "da": 6,
+      "haider": 3,
+      "idea": 3,
+      "feel": 4,
+      "actual": 3,
+      "about": 3,
+      "em": 3,
+      "furnace": 3,
+      "incident": 3,
+      "um": 3,
+      "yea": 4,
+      "aight": 13,
+      "where": 3,
+      "nah": 9,
+      "mean": 16,
+      "all": 5,
+      "which": 3,
+      "city": 3,
+      "tehran": 3,
+      "rash": 3,
+      "dontworry": 3,
+      "worry": 3,
+      "yeayeayea": 3,
+      "its": 3,
+      "totally": 6,
+      "man": 6,
+      "okay": 3,
+      "havin": 3,
+      "lang": 6,
+      "partner": 3,
+      "boy": 9,
+      "one": 3,
+      "your": 6,
+      "bf": 3,
+      "or": 7,
+      "husband": 3,
+      "as": 4,
+      "let": 3,
+      "my": 9,
+      "gf": 5,
+      "have": 7,
+      "partn": 3,
+      "haven": 6,
+      "dont": 3,
+      "havent": 9,
+      "did": 7,
+      "completed": 3,
+      "game": 3,
+      "can": 6,
+      "just": 5,
+      "had": 3,
+      "fr": 9,
+      "aint": 4,
+      "using": 3,
+      "these": 3,
+      "too": 10,
+      "done": 3,
+      "lets": 3,
+      "continue": 3,
+      "anyways": 3,
+      "know": 4,
+      "yk": 3,
+      "ruski": 3,
+      "frfr": 3,
+      "wont": 5,
+      "like": 5,
+      "also": 6,
+      "mais": 3,
+      "je": 3,
+      "connais": 3,
+      "le": 3,
+      "yeayea": 6,
+      "agreed": 3,
+      "learned": 3,
+      "words": 3,
+      "ohnepixel": 3,
+      "on": 3,
+      "yt": 3,
+      "gold": 12,
+      "waaaas": 3,
+      "ohne": 3,
+      "pixel": 3,
+      "am": 4,
+      "oh": 3,
+      "nvm": 3,
+      "daily": 3,
+      "channel": 3,
+      "wait": 3,
+      "pov": 3,
+      "https": 3,
+      "yeaa": 6,
+      "piano": 3,
+      "stranger": 3,
+      "anymore": 3,
+      "ami": 3,
+      "nicee": 3,
+      "canihear": 9,
+      "checked": 3,
+      "spooku": 3,
+      "carrier": 3,
+      "metal": 3,
+      "instrumental": 3,
+      "music": 5,
+      "producer": 3,
+      "still": 3,
+      "earn": 3,
+      "say": 4,
+      "used": 3,
+      "talents": 3,
+      "reach": 3,
+      "somewhere": 3,
+      "here": 3,
+      "send": 3,
+      "musics": 3,
+      "wanna": 4,
+      "taste": 3,
+      "nostalgia": 1,
+      "but": 1,
+      "memories": 1,
+      "age": 1,
+      "number": 1,
+      "show": 1,
+      "yourself": 1,
+      "yeah": 1,
+      "important": 1,
+      "look": 1,
+      "seeing": 1,
+      "papers": 1,
+      "before": 1,
+      "starts": 1,
+      "why": 1,
+      "curious": 1,
+      "pleasesesese": 1,
+      "who": 2,
+      "talking": 1,
+      "yo": 1,
+      "older": 1,
+      "tfym": 1,
+      "by": 1,
+      "naah": 1,
+      "doin": 1,
+      "for": 1,
+      "someone": 1,
+      "thinking": 1,
+      "need": 1,
+      "do": 1,
+      "wanted": 1,
+      "talkin": 1,
+      "bruh": 1,
+      "maybe": 1,
+      "became": 1,
+      "friends": 1,
+      "shit": 1,
+      "knows": 1,
+      "bebinamet": 1,
+      "asked": 1
+    },
+    "emoji_counts": {
+      "😾": 3,
+      "😭": 1
+    },
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-22": 390
+    },
+    "hourly_counts": {
+      "15": 28,
+      "16": 359,
+      "17": 3
+    },
+    "first_message": "2026-07-22T15:50:29+00:00",
+    "last_message": "2026-07-22T17:00:25+00:00"
+  },
+  "-1003893593860": {
+    "total_msgs": 648,
+    "total_chars": 14329,
+    "total_words": 202,
+    "total_emojis": 65,
+    "total_mentions": 40,
+    "replies_given": 309,
+    "media": {
+      "MessageMediaDocument": 32,
+      "MessageMediaPhoto": 31,
+      "MessageMediaStory": 2,
+      "MessageMediaWebPage": 2
+    },
+    "word_counts": {
+      "home": 3,
+      "enemy": 10,
+      "add": 2,
+      "repeat": 8,
+      "kill": 9,
+      "load": 4,
+      "rep": 1,
+      "del": 1,
+      "my": 1,
+      "pussy": 1,
+      "tastes": 1,
+      "like": 1,
+      "pepsi": 1,
+      "cola": 1,
+      "negarriiiii": 1,
+      "aliwwea": 1,
+      "weroiiu": 1,
+      "leyti": 1,
+      "deuniet": 1,
+      "alirvzv": 1,
+      "dlikou": 1,
+      "ping": 3,
+      "latency": 1,
+      "setkill": 10,
+      "start": 6,
+      "stop": 3,
+      "list": 2,
+      "meme": 4,
+      "name": 3,
+      "tags": 2,
+      "panel": 8,
+      "botstatus": 7,
+      "tajjavooz": 1,
+      "shared": 1,
+      "folder": 1,
+      "unzip": 2,
+      "file": 2,
+      "zip": 2,
+      "full": 1,
+      "birth": 1,
+      "date": 1,
+      "years": 1,
+      "national": 1,
+      "code": 1,
+      "card": 1,
+      "number": 2,
+      "mobile": 1,
+      "monitor": 1,
+      "help": 2,
+      "information": 1,
+      "sysmon": 1,
+      "https": 2,
+      "me": 1,
+      "the": 1,
+      "girl": 1,
+      "next": 1,
+      "door": 1,
+      "instrumental": 1,
+      "youtu": 1,
+      "be": 1,
+      "si": 1,
+      "dice": 33,
+      "updae": 2,
+      "seven": 3,
+      "bar": 3,
+      "lemon": 3,
+      "grape": 3,
+      "cherry": 1,
+      "slot": 11,
+      "basketball": 1,
+      "football": 1,
+      "dart": 1,
+      "grapes": 2,
+      "draw": 1,
+      "rolex": 1,
+      "amoofirooz": 1
+    },
+    "emoji_counts": {
+      "🤣": 4,
+      "😂": 16,
+      "📛": 4,
+      "💢": 4,
+      "💥": 4,
+      "😐": 14,
+      "👇": 3,
+      "🙃": 2,
+      "🛑": 3,
+      "❌": 2,
+      "😉": 7,
+      "💕": 1,
+      "💍": 1
+    },
+    "mention_counts": {
+      "@ahangify_bot": 5,
+      "@amir_00_97": 12,
+      "@Nina_0o": 5,
+      "@Dani_elow": 1,
+      "@Fandan13": 1,
+      "@Blue666XO": 1,
+      "@Negarriiiii": 1,
+      "@Aliwwea": 1,
+      "@amirnamacr7": 1,
+      "@Y2JChrisJericho": 1,
+      "@Z0owli": 1,
+      "@Weroiiu": 1,
+      "@leyti": 1,
+      "@deuniet": 1,
+      "@freak5277": 1,
+      "@alirvzv": 1,
+      "@Asali051": 1,
+      "@sh4pur": 1,
+      "@Dlikou": 1,
+      "@Karaj_68_68N": 1,
+      "@Tajjavooz": 1
+    },
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-22": 190,
+      "2026-07-23": 23,
+      "2026-07-26": 60,
+      "2026-07-27": 3,
+      "2026-07-29": 70,
+      "2026-08-01": 6,
+      "2026-08-06": 51,
+      "2026-08-07": 109,
+      "2026-08-09": 17,
+      "2026-08-19": 19,
+      "2026-08-26": 95,
+      "2026-09-11": 2,
+      "2026-09-13": 3
+    },
+    "hourly_counts": {
+      "15": 52,
+      "16": 41,
+      "19": 107,
+      "20": 33,
+      "21": 85,
+      "10": 23,
+      "9": 3,
+      "17": 41,
+      "18": 46,
+      "12": 121,
+      "13": 26,
+      "23": 11,
+      "14": 59
+    },
+    "first_message": "2026-07-22T15:52:38+00:00",
+    "last_message": "2026-09-13T16:32:07+00:00"
+  },
+  "-1002232048031": {
+    "total_msgs": 121,
+    "total_chars": 3709,
+    "total_words": 41,
+    "total_emojis": 2,
+    "total_mentions": 6,
+    "replies_given": 66,
+    "media": {
+      "MessageMediaDocument": 14,
+      "MessageMediaPhoto": 1
+    },
+    "word_counts": {
+      "kill": 8,
+      "error": 1,
+      "nonetype": 1,
+      "object": 1,
+      "has": 1,
+      "no": 1,
+      "attribute": 1,
+      "id": 2,
+      "enemy": 5,
+      "add": 1,
+      "zero": 1,
+      "day": 1,
+      "repeat": 7,
+      "off": 1,
+      "tg": 1,
+      "user": 1,
+      "del": 1,
+      "addm": 1,
+      "rep": 1,
+      "ping": 1,
+      "help": 2,
+      "all": 1
+    },
+    "emoji_counts": {
+      "❌": 1,
+      "🙌": 1
+    },
+    "mention_counts": {
+      "@amir_00_97": 6
+    },
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-22": 6,
+      "2026-07-27": 66,
+      "2026-08-01": 1,
+      "2026-08-05": 26,
+      "2026-09-11": 18,
+      "2026-10-24": 4
+    },
+    "hourly_counts": {
+      "15": 18,
+      "19": 3,
+      "9": 6,
+      "16": 60,
+      "20": 1,
+      "10": 26,
+      "14": 3,
+      "23": 4
+    },
+    "first_message": "2026-07-22T15:39:58+00:00",
+    "last_message": "2026-10-24T23:24:42+00:00"
+  },
+  "7409172218": {
+    "total_msgs": 24,
+    "total_chars": 168,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 9,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-22": 24
+    },
+    "hourly_counts": {
+      "16": 24
+    },
+    "first_message": "2026-07-22T16:00:36+00:00",
+    "last_message": "2026-07-22T16:07:05+00:00"
+  },
+  "7058329028": {
+    "total_msgs": 12,
+    "total_chars": 42,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 3,
+    "media": {
+      "MessageMediaDocument": 3
+    },
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-22": 12
+    },
+    "hourly_counts": {
+      "16": 9,
+      "20": 3
+    },
+    "first_message": "2026-07-22T16:24:46+00:00",
+    "last_message": "2026-07-22T20:43:04+00:00"
+  },
+  "955741574": {
+    "total_msgs": 22,
+    "total_chars": 209,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 3,
+    "replies_given": 7,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {
+      "@o_0qh": 3
+    },
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-22": 22
+    },
+    "hourly_counts": {
+      "16": 22
+    },
+    "first_message": "2026-07-22T16:33:04+00:00",
+    "last_message": "2026-07-22T16:54:36+00:00"
+  },
+  "8857531447": {
+    "total_msgs": 4,
+    "total_chars": 78,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-22": 4
+    },
+    "hourly_counts": {
+      "16": 4
+    },
+    "first_message": "2026-07-22T16:33:19+00:00",
+    "last_message": "2026-07-22T16:34:56+00:00"
+  },
+  "7789133781": {
+    "total_msgs": 20,
+    "total_chars": 170,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 2,
+    "media": {
+      "MessageMediaDocument": 1
+    },
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-22": 20
+    },
+    "hourly_counts": {
+      "16": 8,
+      "17": 12
+    },
+    "first_message": "2026-07-22T16:36:40+00:00",
+    "last_message": "2026-07-22T17:49:49+00:00"
+  },
+  "8394156075": {
+    "total_msgs": 102,
+    "total_chars": 1300,
+    "total_words": 1,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 29,
+    "media": {
+      "MessageMediaPhoto": 2,
+      "MessageMediaDocument": 4
+    },
+    "word_counts": {
+      "husband": 1
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-22": 62,
+      "2026-07-23": 40
+    },
+    "hourly_counts": {
+      "16": 5,
+      "17": 7,
+      "19": 8,
+      "20": 40,
+      "21": 42
+    },
+    "first_message": "2026-07-22T16:55:06+00:00",
+    "last_message": "2026-07-23T21:29:02+00:00"
+  },
+  "-1002013567951": {
+    "total_msgs": 2,
+    "total_chars": 48,
+    "total_words": 4,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {
+      "dirty": 1,
+      "talk": 1,
+      "or": 1,
+      "shits": 1
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-22": 1,
+      "2026-08-09": 1
+    },
+    "hourly_counts": {
+      "17": 1,
+      "23": 1
+    },
+    "first_message": "2026-07-22T17:01:54+00:00",
+    "last_message": "2026-08-09T23:36:21+00:00"
+  },
+  "8370354341": {
+    "total_msgs": 33,
+    "total_chars": 301,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 7,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-22": 33
+    },
+    "hourly_counts": {
+      "17": 33
+    },
+    "first_message": "2026-07-22T17:03:47+00:00",
+    "last_message": "2026-07-22T17:47:49+00:00"
+  },
+  "2048345520": {
+    "total_msgs": 1,
+    "total_chars": 3,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-22": 1
+    },
+    "hourly_counts": {
+      "17": 1
+    },
+    "first_message": "2026-07-22T17:41:55+00:00",
+    "last_message": "2026-07-22T17:41:55+00:00"
+  },
+  "-1003964134732": {
+    "total_msgs": 2,
+    "total_chars": 41,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 2,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-22": 1,
+      "2026-07-29": 1
+    },
+    "hourly_counts": {
+      "17": 2
+    },
+    "first_message": "2026-07-22T17:42:22+00:00",
+    "last_message": "2026-07-29T17:36:41+00:00"
+  },
+  "7856514078": {
+    "total_msgs": 337,
+    "total_chars": 9847,
+    "total_words": 67,
+    "total_emojis": 5,
+    "total_mentions": 19,
+    "replies_given": 162,
+    "media": {
+      "MessageMediaPhoto": 12,
+      "MessageMediaDocument": 18
+    },
+    "word_counts": {
+      "enemy": 8,
+      "add": 2,
+      "del": 2,
+      "load": 1,
+      "rep": 2,
+      "repeat": 38,
+      "negarriiiii": 1,
+      "aliwwea": 1,
+      "weroiiu": 1,
+      "leyti": 1,
+      "deuniet": 1,
+      "alirvzv": 1,
+      "dlikou": 1,
+      "kill": 7
+    },
+    "emoji_counts": {
+      "😐": 1,
+      "😄": 2,
+      "😂": 2
+    },
+    "mention_counts": {
+      "@nam_gc": 2,
+      "@amir_00_97": 1,
+      "@Dani_elow": 1,
+      "@Fandan13": 1,
+      "@Blue666XO": 1,
+      "@Negarriiiii": 1,
+      "@Aliwwea": 1,
+      "@amirnamacr7": 1,
+      "@Y2JChrisJericho": 1,
+      "@Z0owli": 1,
+      "@Weroiiu": 1,
+      "@leyti": 1,
+      "@deuniet": 1,
+      "@freak5277": 1,
+      "@alirvzv": 1,
+      "@Asali051": 1,
+      "@sh4pur": 1,
+      "@Dlikou": 1
+    },
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-22": 337
+    },
+    "hourly_counts": {
+      "19": 102,
+      "20": 115,
+      "21": 120
+    },
+    "first_message": "2026-07-22T19:22:27+00:00",
+    "last_message": "2026-07-22T21:30:13+00:00"
+  },
+  "-1002658640874": {
+    "total_msgs": 13,
+    "total_chars": 219,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 10,
+    "media": {
+      "MessageMediaPhoto": 1,
+      "MessageMediaDocument": 1
+    },
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-22": 3,
+      "2026-07-29": 2,
+      "2026-08-19": 6,
+      "2026-08-26": 2
+    },
+    "hourly_counts": {
+      "20": 4,
+      "18": 2,
+      "19": 5,
+      "15": 2
+    },
+    "first_message": "2026-07-22T20:17:02+00:00",
+    "last_message": "2026-08-26T15:43:15+00:00"
+  },
+  "-1003421813254": {
+    "total_msgs": 43,
+    "total_chars": 581,
+    "total_words": 23,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 10,
+    "media": {
+      "MessageMediaPhoto": 2,
+      "MessageMediaDocument": 3
+    },
+    "word_counts": {
+      "bardiya": 1,
+      "tg": 1,
+      "user": 1,
+      "id": 1,
+      "gif": 1,
+      "the": 1,
+      "girl": 1,
+      "next": 1,
+      "door": 1,
+      "instrumental": 1,
+      "ping": 2,
+      "enemy": 3,
+      "list": 1,
+      "show": 1,
+      "help": 2,
+      "all": 1,
+      "calc": 3
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-22": 4,
+      "2026-07-23": 3,
+      "2026-08-09": 1,
+      "2026-10-24": 2,
+      "2026-11-16": 33
+    },
+    "hourly_counts": {
+      "21": 27,
+      "10": 3,
+      "17": 1,
+      "22": 12
+    },
+    "first_message": "2026-07-22T21:21:25+00:00",
+    "last_message": "2026-11-16T22:27:17+00:00"
+  },
+  "6978332259": {
+    "total_msgs": 1,
+    "total_chars": 3,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-23": 1
+    },
+    "hourly_counts": {
+      "10": 1
+    },
+    "first_message": "2026-07-23T10:16:20+00:00",
+    "last_message": "2026-07-23T10:16:20+00:00"
+  },
+  "7531900260": {
+    "total_msgs": 33,
+    "total_chars": 312,
+    "total_words": 1,
+    "total_emojis": 8,
+    "total_mentions": 0,
+    "replies_given": 5,
+    "media": {
+      "MessageMediaDocument": 4,
+      "MessageMediaPhoto": 9
+    },
+    "word_counts": {
+      "kill": 1
+    },
+    "emoji_counts": {
+      "😂": 8
+    },
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-23": 32,
+      "2026-08-11": 1
+    },
+    "hourly_counts": {
+      "10": 32,
+      "15": 1
+    },
+    "first_message": "2026-07-23T10:16:30+00:00",
+    "last_message": "2026-08-11T15:13:46+00:00"
+  },
+  "1578813639": {
+    "total_msgs": 25,
+    "total_chars": 564,
+    "total_words": 9,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 10,
+    "media": {
+      "MessageMediaPhoto": 1,
+      "MessageMediaDocument": 2
+    },
+    "word_counts": {
+      "enemy": 1,
+      "add": 1,
+      "repeat": 6,
+      "kill": 1
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-23": 25
+    },
+    "hourly_counts": {
+      "10": 25
+    },
+    "first_message": "2026-07-23T10:17:12+00:00",
+    "last_message": "2026-07-23T10:32:37+00:00"
+  },
+  "-1002198871077": {
+    "total_msgs": 15,
+    "total_chars": 150,
+    "total_words": 2,
+    "total_emojis": 10,
+    "total_mentions": 1,
+    "replies_given": 3,
+    "media": {
+      "MessageMediaPhoto": 2
+    },
+    "word_counts": {
+      "gif": 2
+    },
+    "emoji_counts": {
+      "😂": 10
+    },
+    "mention_counts": {
+      "@Lakestan_IeL": 1
+    },
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-23": 6,
+      "2026-08-11": 1,
+      "2026-08-19": 8
+    },
+    "hourly_counts": {
+      "10": 6,
+      "15": 1,
+      "20": 8
+    },
+    "first_message": "2026-07-23T10:40:33+00:00",
+    "last_message": "2026-08-19T20:19:45+00:00"
+  },
+  "7370523267": {
+    "total_msgs": 20,
+    "total_chars": 196,
+    "total_words": 12,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 6,
+    "media": {},
+    "word_counts": {
+      "enemy": 6,
+      "ping": 1,
+      "kill": 1,
+      "add": 2,
+      "del": 2
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-23": 20
+    },
+    "hourly_counts": {
+      "21": 20
+    },
+    "first_message": "2026-07-23T21:18:10+00:00",
+    "last_message": "2026-07-23T21:21:00+00:00"
+  },
+  "5370910945": {
+    "total_msgs": 9,
+    "total_chars": 132,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 4,
+    "media": {
+      "MessageMediaDocument": 2
+    },
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-26": 9
+    },
+    "hourly_counts": {
+      "21": 9
+    },
+    "first_message": "2026-07-26T21:00:36+00:00",
+    "last_message": "2026-07-26T21:02:36+00:00"
+  },
+  "6598551909": {
+    "total_msgs": 14,
+    "total_chars": 370,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 4,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-29": 14
+    },
+    "hourly_counts": {
+      "17": 14
+    },
+    "first_message": "2026-07-29T17:46:04+00:00",
+    "last_message": "2026-07-29T17:47:40+00:00"
+  },
+  "93372553": {
+    "total_msgs": 8,
+    "total_chars": 79,
+    "total_words": 9,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {
+      "newbot": 2,
+      "mybots": 1,
+      "hexploit": 1,
+      "self": 1,
+      "helper": 1,
+      "hxphelper": 1,
+      "hxphelperbot": 1,
+      "start": 1
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-29": 8
+    },
+    "hourly_counts": {
+      "17": 6,
+      "18": 2
+    },
+    "first_message": "2026-07-29T17:56:45+00:00",
+    "last_message": "2026-07-29T18:36:29+00:00"
+  },
+  "7608367570": {
+    "total_msgs": 12,
+    "total_chars": 72,
+    "total_words": 12,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {
+      "start": 12
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-29": 12
+    },
+    "hourly_counts": {
+      "18": 12
+    },
+    "first_message": "2026-07-29T18:04:13+00:00",
+    "last_message": "2026-07-29T18:41:31+00:00"
+  },
+  "-1003919874441": {
+    "total_msgs": 5,
+    "total_chars": 38,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 3,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-29": 5
+    },
+    "hourly_counts": {
+      "18": 5
+    },
+    "first_message": "2026-07-29T18:13:26+00:00",
+    "last_message": "2026-07-29T18:19:21+00:00"
+  },
+  "5595184937": {
+    "total_msgs": 8,
+    "total_chars": 175,
+    "total_words": 19,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {
+      "MessageMediaDocument": 4,
+      "MessageMediaPhoto": 3
+    },
+    "word_counts": {
+      "new": 1,
+      "release": 1,
+      "name": 1,
+      "marg": 1,
+      "by": 1,
+      "spooku": 1,
+      "album": 1,
+      "single": 1,
+      "type": 1,
+      "sad": 1,
+      "listen": 1,
+      "to": 1,
+      "it": 1,
+      "directly": 1,
+      "on": 1,
+      "telegram": 1,
+      "https": 1,
+      "me": 1,
+      "spookuofficial": 1
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-07-29": 1,
+      "2026-08-01": 1,
+      "2026-08-06": 2,
+      "2026-08-07": 1,
+      "2026-08-09": 2,
+      "2026-10-24": 1
+    },
+    "hourly_counts": {
+      "18": 1,
+      "20": 1,
+      "12": 2,
+      "13": 1,
+      "23": 2,
+      "22": 1
+    },
+    "first_message": "2026-07-29T18:15:37+00:00",
+    "last_message": "2026-10-24T22:22:00+00:00"
+  },
+  "7247247287": {
+    "total_msgs": 5,
+    "total_chars": 69,
+    "total_words": 14,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 2,
+    "media": {},
+    "word_counts": {
+      "hope": 1,
+      "so": 1,
+      "gn": 2,
+      "nah": 1,
+      "my": 1,
+      "country": 1,
+      "is": 1,
+      "already": 1,
+      "occupied": 1,
+      "by": 1,
+      "aome": 1,
+      "terrorists": 1,
+      "bye": 1
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-01": 5
+    },
+    "hourly_counts": {
+      "20": 5
+    },
+    "first_message": "2026-08-01T20:01:32+00:00",
+    "last_message": "2026-08-01T20:17:05+00:00"
+  },
+  "-1003916372687": {
+    "total_msgs": 110,
+    "total_chars": 12564,
+    "total_words": 26,
+    "total_emojis": 18,
+    "total_mentions": 8,
+    "replies_given": 44,
+    "media": {
+      "MessageMediaDocument": 2,
+      "MessageMediaPhoto": 2
+    },
+    "word_counts": {
+      "modern": 1,
+      "meadow": 1,
+      "bio": 1,
+      "wool": 1,
+      "lab": 1,
+      "grown": 1,
+      "leather": 1,
+      "seal": 1,
+      "mp": 1,
+      "ircm": 1,
+      "mh": 1,
+      "qkd": 1,
+      "siprnet": 1,
+      "ts": 1,
+      "sci": 1,
+      "ai": 1,
+      "ids": 1,
+      "nuclear": 1,
+      "biological": 1,
+      "chemical": 1,
+      "droneshield": 1,
+      "uh": 1,
+      "qrf": 1,
+      "dia": 1,
+      "nsa": 1,
+      "aim": 1
+    },
+    "emoji_counts": {
+      "🤧": 1,
+      "😂": 9,
+      "🚢": 1,
+      "✔": 7
+    },
+    "mention_counts": {
+      "@Mn7_ii": 5,
+      "@hasan_4_1": 2,
+      "@hasan_4_0": 1
+    },
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-01": 53,
+      "2026-08-07": 42,
+      "2026-08-08": 14,
+      "2026-08-10": 1
+    },
+    "hourly_counts": {
+      "20": 13,
+      "21": 37,
+      "22": 17,
+      "13": 33,
+      "18": 7,
+      "19": 2,
+      "10": 1
+    },
+    "first_message": "2026-08-01T20:28:31+00:00",
+    "last_message": "2026-08-10T10:52:35+00:00"
+  },
+  "-1003750248799": {
+    "total_msgs": 145,
+    "total_chars": 3156,
+    "total_words": 7,
+    "total_emojis": 51,
+    "total_mentions": 0,
+    "replies_given": 96,
+    "media": {
+      "MessageMediaDocument": 5,
+      "MessageMediaPhoto": 4
+    },
+    "word_counts": {
+      "enemy": 1,
+      "load": 1,
+      "kill": 2,
+      "help": 2,
+      "all": 1
+    },
+    "emoji_counts": {
+      "😂": 41,
+      "👏": 5,
+      "🔴": 5
+    },
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-01": 27,
+      "2026-08-05": 1,
+      "2026-08-06": 5,
+      "2026-08-07": 52,
+      "2026-08-08": 44,
+      "2026-08-11": 16
+    },
+    "hourly_counts": {
+      "20": 9,
+      "21": 14,
+      "22": 48,
+      "10": 1,
+      "12": 5,
+      "13": 52,
+      "15": 16
+    },
+    "first_message": "2026-08-01T20:29:53+00:00",
+    "last_message": "2026-08-11T15:35:48+00:00"
+  },
+  "8313432924": {
+    "total_msgs": 7,
+    "total_chars": 133,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 3,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-01": 6,
+      "2026-08-11": 1
+    },
+    "hourly_counts": {
+      "20": 5,
+      "21": 1,
+      "14": 1
+    },
+    "first_message": "2026-08-01T20:46:48+00:00",
+    "last_message": "2026-08-11T14:58:34+00:00"
+  },
+  "7085337124": {
+    "total_msgs": 4,
+    "total_chars": 15,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 1,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-01": 4
+    },
+    "hourly_counts": {
+      "21": 4
+    },
+    "first_message": "2026-08-01T21:38:31+00:00",
+    "last_message": "2026-08-01T21:49:18+00:00"
+  },
+  "8254640523": {
+    "total_msgs": 2,
+    "total_chars": 54,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-01": 2
+    },
+    "hourly_counts": {
+      "21": 2
+    },
+    "first_message": "2026-08-01T21:44:00+00:00",
+    "last_message": "2026-08-01T21:46:29+00:00"
+  },
+  "-1004342084363": {
+    "total_msgs": 1,
+    "total_chars": 34,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {
+      "MessageMediaDocument": 1
+    },
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-06": 1
+    },
+    "hourly_counts": {
+      "11": 1
+    },
+    "first_message": "2026-08-06T11:47:58+00:00",
+    "last_message": "2026-08-06T11:47:58+00:00"
+  },
+  "2045205639": {
+    "total_msgs": 3,
+    "total_chars": 28,
+    "total_words": 1,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {
+      "start": 1
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-06": 1,
+      "2026-08-09": 2
+    },
+    "hourly_counts": {
+      "12": 1,
+      "17": 2
+    },
+    "first_message": "2026-08-06T12:40:09+00:00",
+    "last_message": "2026-08-09T17:16:36+00:00"
+  },
+  "567149497": {
+    "total_msgs": 1,
+    "total_chars": 6,
+    "total_words": 1,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {
+      "start": 1
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-06": 1
+    },
+    "hourly_counts": {
+      "12": 1
+    },
+    "first_message": "2026-08-06T12:40:14+00:00",
+    "last_message": "2026-08-06T12:40:14+00:00"
+  },
+  "-1004344412728": {
+    "total_msgs": 5,
+    "total_chars": 72,
+    "total_words": 4,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 1,
+    "media": {},
+    "word_counts": {
+      "enemy": 2,
+      "load": 2
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-07": 5
+    },
+    "hourly_counts": {
+      "12": 4,
+      "18": 1
+    },
+    "first_message": "2026-08-07T12:27:41+00:00",
+    "last_message": "2026-08-07T18:18:05+00:00"
+  },
+  "7164102853": {
+    "total_msgs": 33,
+    "total_chars": 1116,
+    "total_words": 11,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 3,
+    "media": {
+      "MessageMediaPhoto": 1,
+      "MessageMediaDocument": 1
+    },
+    "word_counts": {
+      "full": 1,
+      "name": 1,
+      "birth": 1,
+      "date": 1,
+      "years": 1,
+      "national": 1,
+      "code": 1,
+      "card": 1,
+      "number": 2,
+      "mobile": 1
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-07": 28,
+      "2026-08-19": 5
+    },
+    "hourly_counts": {
+      "12": 16,
+      "13": 8,
+      "18": 9
+    },
+    "first_message": "2026-08-07T12:44:03+00:00",
+    "last_message": "2026-08-19T18:48:50+00:00"
+  },
+  "5886953954": {
+    "total_msgs": 10,
+    "total_chars": 137,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 2,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-07": 10
+    },
+    "hourly_counts": {
+      "13": 10
+    },
+    "first_message": "2026-08-07T13:29:26+00:00",
+    "last_message": "2026-08-07T13:35:23+00:00"
+  },
+  "8700366658": {
+    "total_msgs": 2,
+    "total_chars": 6,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-07": 2
+    },
+    "hourly_counts": {
+      "13": 2
+    },
+    "first_message": "2026-08-07T13:47:57+00:00",
+    "last_message": "2026-08-07T13:48:07+00:00"
+  },
+  "-1002020956035": {
+    "total_msgs": 7,
+    "total_chars": 78,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 4,
+    "media": {
+      "MessageMediaDocument": 1
+    },
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-07": 7
+    },
+    "hourly_counts": {
+      "18": 7
+    },
+    "first_message": "2026-08-07T18:28:22+00:00",
+    "last_message": "2026-08-07T18:30:14+00:00"
+  },
+  "-1004464577286": {
+    "total_msgs": 32,
+    "total_chars": 684,
+    "total_words": 8,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 25,
+    "media": {},
+    "word_counts": {
+      "kill": 6,
+      "enemy": 1,
+      "add": 1
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-07": 6,
+      "2026-08-11": 26
+    },
+    "hourly_counts": {
+      "18": 6,
+      "15": 26
+    },
+    "first_message": "2026-08-07T18:36:37+00:00",
+    "last_message": "2026-08-11T15:28:50+00:00"
+  },
+  "8196848749": {
+    "total_msgs": 5,
+    "total_chars": 51,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 1,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-07": 2,
+      "2026-08-08": 3
+    },
+    "hourly_counts": {
+      "18": 1,
+      "19": 1,
+      "22": 3
+    },
+    "first_message": "2026-08-07T18:58:48+00:00",
+    "last_message": "2026-08-08T22:31:45+00:00"
+  },
+  "-1001647763034": {
+    "total_msgs": 260,
+    "total_chars": 6958,
+    "total_words": 89,
+    "total_emojis": 31,
+    "total_mentions": 95,
+    "replies_given": 126,
+    "media": {
+      "MessageMediaDocument": 25,
+      "MessageMediaPhoto": 20
+    },
+    "word_counts": {
+      "repeat": 8,
+      "enemy": 14,
+      "add": 6,
+      "load": 2,
+      "kill": 2,
+      "amhsiwi": 1,
+      "list": 3,
+      "del": 1,
+      "show": 1,
+      "sysmon": 1,
+      "start": 1,
+      "bokonekheylia": 1,
+      "ttaahhaax": 2,
+      "flexcilvenom": 2,
+      "arteryam": 2,
+      "kjnarsis": 2,
+      "warirangt": 2,
+      "negarriiiii": 2,
+      "aliwwea": 2,
+      "weroiiu": 2,
+      "leyti": 2,
+      "deuniet": 2,
+      "alirvzv": 2,
+      "dlikou": 2,
+      "loas": 1,
+      "help": 1,
+      "ping": 1,
+      "new": 1,
+      "release": 1,
+      "name": 1,
+      "eteraaf": 1,
+      "by": 1,
+      "spooku": 1,
+      "album": 1,
+      "single": 1,
+      "type": 1,
+      "sad": 1,
+      "listen": 1,
+      "to": 1,
+      "it": 1,
+      "directly": 1,
+      "on": 1,
+      "telegram": 1,
+      "https": 1,
+      "me": 1,
+      "spookuofficial": 1,
+      "stg": 2
+    },
+    "emoji_counts": {
+      "😂": 31
+    },
+    "mention_counts": {
+      "@PaImer_A10": 22,
+      "@Adrian77770": 15,
+      "@amhsiwi": 1,
+      "@BokoneKheylia": 1,
+      "@ttaahhaax": 2,
+      "@FlexcilVenom": 2,
+      "@Arteryam": 2,
+      "@mmdhm16": 2,
+      "@N7_UI8": 2,
+      "@Yeganeh138811": 2,
+      "@KJnarsis": 2,
+      "@Warirangt": 2,
+      "@amir_00_97": 2,
+      "@WINE_FeRi": 2,
+      "@Dani_elow": 2,
+      "@Fandan13": 2,
+      "@Blue666XO": 2,
+      "@Negarriiiii": 2,
+      "@Aliwwea": 2,
+      "@amirnamacr7": 2,
+      "@Y2JChrisJericho": 2,
+      "@Z0owli": 2,
+      "@Weroiiu": 2,
+      "@leyti": 2,
+      "@deuniet": 2,
+      "@Godpotato2": 2,
+      "@freak5277": 2,
+      "@alirvzv": 2,
+      "@Asali051": 2,
+      "@sh4pur": 2,
+      "@Dlikou": 2,
+      "@PAYA71": 1,
+      "@ARIA6066": 1
+    },
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-08": 45,
+      "2026-08-09": 192,
+      "2026-08-10": 16,
+      "2026-08-11": 7
+    },
+    "hourly_counts": {
+      "21": 5,
+      "22": 40,
+      "15": 23,
+      "16": 76,
+      "17": 27,
+      "23": 73,
+      "0": 12,
+      "11": 4
+    },
+    "first_message": "2026-08-08T21:58:34+00:00",
+    "last_message": "2026-08-11T15:29:02+00:00"
+  },
+  "8471004824": {
+    "total_msgs": 1,
+    "total_chars": 6,
+    "total_words": 1,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {
+      "start": 1
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-09": 1
+    },
+    "hourly_counts": {
+      "17": 1
+    },
+    "first_message": "2026-08-09T17:16:42+00:00",
+    "last_message": "2026-08-09T17:16:42+00:00"
+  },
+  "600536228": {
+    "total_msgs": 1,
+    "total_chars": 11,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-09": 1
+    },
+    "hourly_counts": {
+      "17": 1
+    },
+    "first_message": "2026-08-09T17:17:14+00:00",
+    "last_message": "2026-08-09T17:17:14+00:00"
+  },
+  "-1004497449235": {
+    "total_msgs": 6,
+    "total_chars": 137,
+    "total_words": 4,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 3,
+    "media": {
+      "MessageMediaWebPage": 1,
+      "MessageMediaDocument": 1
+    },
+    "word_counts": {
+      "https": 1,
+      "youtu": 1,
+      "be": 1,
+      "si": 1
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-09": 3,
+      "2026-08-19": 3
+    },
+    "hourly_counts": {
+      "17": 3,
+      "18": 3
+    },
+    "first_message": "2026-08-09T17:51:19+00:00",
+    "last_message": "2026-08-19T18:47:11+00:00"
+  },
+  "8052894811": {
+    "total_msgs": 36,
+    "total_chars": 615,
+    "total_words": 8,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 2,
+    "media": {
+      "MessageMediaPhoto": 1,
+      "MessageMediaDocument": 1
+    },
+    "word_counts": {
+      "repeat": 8
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-09": 36
+    },
+    "hourly_counts": {
+      "23": 36
+    },
+    "first_message": "2026-08-09T23:21:49+00:00",
+    "last_message": "2026-08-09T23:25:46+00:00"
+  },
+  "-1002203075640": {
+    "total_msgs": 5,
+    "total_chars": 181,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 3,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-09": 5
+    },
+    "hourly_counts": {
+      "23": 5
+    },
+    "first_message": "2026-08-09T23:32:58+00:00",
+    "last_message": "2026-08-09T23:38:13+00:00"
+  },
+  "8009279019": {
+    "total_msgs": 8,
+    "total_chars": 102,
+    "total_words": 8,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {
+      "MessageMediaWebPage": 2
+    },
+    "word_counts": {
+      "start": 2,
+      "https": 2,
+      "me": 2,
+      "spookuofficial": 2
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-09": 8
+    },
+    "hourly_counts": {
+      "23": 8
+    },
+    "first_message": "2026-08-09T23:55:14+00:00",
+    "last_message": "2026-08-09T23:55:39+00:00"
+  },
+  "8817685363": {
+    "total_msgs": 5,
+    "total_chars": 60,
+    "total_words": 7,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 2,
+    "media": {},
+    "word_counts": {
+      "kill": 1,
+      "enemy": 3,
+      "add": 3
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-10": 5
+    },
+    "hourly_counts": {
+      "10": 4,
+      "11": 1
+    },
+    "first_message": "2026-08-10T10:41:05+00:00",
+    "last_message": "2026-08-10T11:08:56+00:00"
+  },
+  "8961359319": {
+    "total_msgs": 7,
+    "total_chars": 223,
+    "total_words": 4,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 3,
+    "media": {},
+    "word_counts": {
+      "kill": 1,
+      "enemy": 1,
+      "add": 1,
+      "repeat": 1
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-10": 7
+    },
+    "hourly_counts": {
+      "10": 4,
+      "11": 3
+    },
+    "first_message": "2026-08-10T10:41:20+00:00",
+    "last_message": "2026-08-10T11:08:41+00:00"
+  },
+  "-1002422684216": {
+    "total_msgs": 69,
+    "total_chars": 1156,
+    "total_words": 24,
+    "total_emojis": 31,
+    "total_mentions": 0,
+    "replies_given": 37,
+    "media": {
+      "MessageMediaPhoto": 16,
+      "MessageMediaDocument": 1
+    },
+    "word_counts": {
+      "enemy": 9,
+      "add": 2,
+      "repeat": 1,
+      "kill": 2,
+      "remove": 1,
+      "del": 1,
+      "list": 1,
+      "clist": 2,
+      "show": 1,
+      "help": 1,
+      "catch": 1,
+      "kose": 1,
+      "naabi": 1
+    },
+    "emoji_counts": {
+      "😂": 23,
+      "🔴": 8
+    },
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-11": 47,
+      "2026-08-26": 22
+    },
+    "hourly_counts": {
+      "14": 60,
+      "15": 9
+    },
+    "first_message": "2026-08-11T14:50:56+00:00",
+    "last_message": "2026-08-26T15:04:17+00:00"
+  },
+  "5039050886": {
+    "total_msgs": 2,
+    "total_chars": 55,
+    "total_words": 2,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {
+      "https": 1,
+      "me": 1
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-11": 2
+    },
+    "hourly_counts": {
+      "14": 2
+    },
+    "first_message": "2026-08-11T14:52:13+00:00",
+    "last_message": "2026-08-11T14:52:16+00:00"
+  },
+  "8296548015": {
+    "total_msgs": 11,
+    "total_chars": 85,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 3,
+    "media": {
+      "MessageMediaPhoto": 4
+    },
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-11": 11
+    },
+    "hourly_counts": {
+      "14": 1,
+      "15": 10
+    },
+    "first_message": "2026-08-11T14:58:42+00:00",
+    "last_message": "2026-08-11T15:22:20+00:00"
+  },
+  "-1003761530113": {
+    "total_msgs": 63,
+    "total_chars": 1065,
+    "total_words": 14,
+    "total_emojis": 2,
+    "total_mentions": 0,
+    "replies_given": 37,
+    "media": {
+      "MessageMediaPhoto": 8
+    },
+    "word_counts": {
+      "enemy": 4,
+      "add": 1,
+      "kill": 4,
+      "zero": 1,
+      "day": 1,
+      "del": 1,
+      "list": 1,
+      "nodejs": 1
+    },
+    "emoji_counts": {
+      "❤": 2
+    },
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-11": 16,
+      "2026-08-19": 47
+    },
+    "hourly_counts": {
+      "15": 16,
+      "19": 2,
+      "20": 45
+    },
+    "first_message": "2026-08-11T15:00:19+00:00",
+    "last_message": "2026-08-19T20:17:39+00:00"
+  },
+  "1719165338": {
+    "total_msgs": 5,
+    "total_chars": 118,
+    "total_words": 1,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {
+      "kill": 1
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-11": 5
+    },
+    "hourly_counts": {
+      "15": 5
+    },
+    "first_message": "2026-08-11T15:04:32+00:00",
+    "last_message": "2026-08-11T15:05:05+00:00"
+  },
+  "1678603577": {
+    "total_msgs": 1,
+    "total_chars": 29,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-11": 1
+    },
+    "hourly_counts": {
+      "15": 1
+    },
+    "first_message": "2026-08-11T15:05:20+00:00",
+    "last_message": "2026-08-11T15:05:20+00:00"
+  },
+  "-5559330015": {
+    "total_msgs": 14,
+    "total_chars": 190,
+    "total_words": 7,
+    "total_emojis": 0,
+    "total_mentions": 1,
+    "replies_given": 11,
+    "media": {
+      "MessageMediaPhoto": 2
+    },
+    "word_counts": {
+      "enemy": 1,
+      "add": 1,
+      "kill": 5
+    },
+    "emoji_counts": {},
+    "mention_counts": {
+      "@Lakestan_IeL": 1
+    },
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-11": 14
+    },
+    "hourly_counts": {
+      "15": 14
+    },
+    "first_message": "2026-08-11T15:09:15+00:00",
+    "last_message": "2026-08-11T15:19:24+00:00"
+  },
+  "-1003706268156": {
+    "total_msgs": 15,
+    "total_chars": 298,
+    "total_words": 2,
+    "total_emojis": 0,
+    "total_mentions": 4,
+    "replies_given": 5,
+    "media": {
+      "MessageMediaPhoto": 5
+    },
+    "word_counts": {
+      "enemy": 1,
+      "add": 1
+    },
+    "emoji_counts": {},
+    "mention_counts": {
+      "@Lakestan_IeL": 4
+    },
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-11": 15
+    },
+    "hourly_counts": {
+      "15": 15
+    },
+    "first_message": "2026-08-11T15:11:50+00:00",
+    "last_message": "2026-08-11T15:23:16+00:00"
+  },
+  "7542484994": {
+    "total_msgs": 93,
+    "total_chars": 1399,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 19,
+    "media": {
+      "MessageMediaDice": 1,
+      "MessageMediaDocument": 1
+    },
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-19": 91,
+      "2026-08-26": 2
+    },
+    "hourly_counts": {
+      "18": 51,
+      "19": 14,
+      "20": 26,
+      "15": 2
+    },
+    "first_message": "2026-08-19T18:24:59+00:00",
+    "last_message": "2026-08-26T15:55:11+00:00"
+  },
+  "-1003910412543": {
+    "total_msgs": 31,
+    "total_chars": 658,
+    "total_words": 3,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 16,
+    "media": {
+      "MessageMediaDocument": 1,
+      "MessageMediaPhoto": 1
+    },
+    "word_counts": {
+      "repeat": 1,
+      "help": 1,
+      "enemy": 1
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-19": 31
+    },
+    "hourly_counts": {
+      "18": 31
+    },
+    "first_message": "2026-08-19T18:30:37+00:00",
+    "last_message": "2026-08-19T18:49:39+00:00"
+  },
+  "-1002184925856": {
+    "total_msgs": 8,
+    "total_chars": 174,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 1,
+    "media": {
+      "MessageMediaPhoto": 1
+    },
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-19": 8
+    },
+    "hourly_counts": {
+      "18": 3,
+      "19": 5
+    },
+    "first_message": "2026-08-19T18:35:34+00:00",
+    "last_message": "2026-08-19T19:25:02+00:00"
+  },
+  "8934647915": {
+    "total_msgs": 1,
+    "total_chars": 8,
+    "total_words": 1,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {
+      "kill": 1
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-19": 1
+    },
+    "hourly_counts": {
+      "18": 1
+    },
+    "first_message": "2026-08-19T18:37:21+00:00",
+    "last_message": "2026-08-19T18:37:21+00:00"
+  },
+  "8071838628": {
+    "total_msgs": 2,
+    "total_chars": 15,
+    "total_words": 1,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {
+      "kill": 1
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-19": 2
+    },
+    "hourly_counts": {
+      "18": 2
+    },
+    "first_message": "2026-08-19T18:40:12+00:00",
+    "last_message": "2026-08-19T18:40:16+00:00"
+  },
+  "7407361001": {
+    "total_msgs": 227,
+    "total_chars": 5012,
+    "total_words": 19,
+    "total_emojis": 82,
+    "total_mentions": 0,
+    "replies_given": 68,
+    "media": {
+      "MessageMediaPhoto": 17,
+      "MessageMediaDocument": 2
+    },
+    "word_counts": {
+      "enemy": 1,
+      "add": 1,
+      "repeat": 6,
+      "full": 1,
+      "name": 1,
+      "birth": 1,
+      "date": 1,
+      "years": 1,
+      "national": 1,
+      "code": 1,
+      "card": 1,
+      "number": 2,
+      "mobile": 1
+    },
+    "emoji_counts": {
+      "😁": 52,
+      "😺": 2,
+      "😹": 28
+    },
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-19": 227
+    },
+    "hourly_counts": {
+      "19": 227
+    },
+    "first_message": "2026-08-19T19:10:08+00:00",
+    "last_message": "2026-08-19T19:56:59+00:00"
+  },
+  "6764190771": {
+    "total_msgs": 14,
+    "total_chars": 366,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 1,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-19": 14
+    },
+    "hourly_counts": {
+      "19": 14
+    },
+    "first_message": "2026-08-19T19:23:36+00:00",
+    "last_message": "2026-08-19T19:31:48+00:00"
+  },
+  "6027874814": {
+    "total_msgs": 1,
+    "total_chars": 7,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-19": 1
+    },
+    "hourly_counts": {
+      "19": 1
+    },
+    "first_message": "2026-08-19T19:29:05+00:00",
+    "last_message": "2026-08-19T19:29:05+00:00"
+  },
+  "-1004477545554": {
+    "total_msgs": 1,
+    "total_chars": 9,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-19": 1
+    },
+    "hourly_counts": {
+      "20": 1
+    },
+    "first_message": "2026-08-19T20:00:31+00:00",
+    "last_message": "2026-08-19T20:00:31+00:00"
+  },
+  "-1002990503738": {
+    "total_msgs": 1,
+    "total_chars": 26,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 1,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-19": 1
+    },
+    "hourly_counts": {
+      "20": 1
+    },
+    "first_message": "2026-08-19T20:23:41+00:00",
+    "last_message": "2026-08-19T20:23:41+00:00"
+  },
+  "8515612191": {
+    "total_msgs": 2,
+    "total_chars": 20,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {
+      "MessageMediaDocument": 1
+    },
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-26": 2
+    },
+    "hourly_counts": {
+      "15": 2
+    },
+    "first_message": "2026-08-26T15:46:24+00:00",
+    "last_message": "2026-08-26T15:46:28+00:00"
+  },
+  "6776171110": {
+    "total_msgs": 1,
+    "total_chars": 55,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-08-26": 1
+    },
+    "hourly_counts": {
+      "15": 1
+    },
+    "first_message": "2026-08-26T15:52:36+00:00",
+    "last_message": "2026-08-26T15:52:36+00:00"
+  },
+  "8467152207": {
+    "total_msgs": 2,
+    "total_chars": 1488,
+    "total_words": 117,
+    "total_emojis": 0,
+    "total_mentions": 5,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {
+      "vless": 4,
+      "tgfree": 2,
+      "rush": 2,
+      "server": 2,
+      "com": 6,
+      "security": 4,
+      "reality": 2,
+      "encryption": 4,
+      "none": 8,
+      "pbk": 2,
+      "headertype": 3,
+      "fp": 2,
+      "ios": 1,
+      "type": 4,
+      "tcp": 3,
+      "flow": 2,
+      "xtls": 2,
+      "rprx": 2,
+      "vision": 2,
+      "sni": 2,
+      "sid": 2,
+      "chrome": 1,
+      "generalconfiig": 1,
+      "pl": 1,
+      "irancell": 1,
+      "xelfona": 2,
+      "ir": 2,
+      "path": 1,
+      "host": 2,
+      "play": 2,
+      "apps": 2,
+      "features": 2,
+      "googleusercontent": 2,
+      "httpupgrade": 1,
+      "iranjrvpn": 2,
+      "ac": 2,
+      "db": 12,
+      "da": 4,
+      "aa": 9,
+      "af": 2,
+      "ad": 2,
+      "gr": 1,
+      "mci": 1,
+      "http": 1
+    },
+    "emoji_counts": {},
+    "mention_counts": {
+      "@tgfree": 2,
+      "@GeneralConfiig": 1,
+      "@pl": 1,
+      "@gr": 1
+    },
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-09-11": 2
+    },
+    "hourly_counts": {
+      "15": 2
+    },
+    "first_message": "2026-09-11T15:25:09+00:00",
+    "last_message": "2026-09-11T15:49:29+00:00"
+  },
+  "-1004415634381": {
+    "total_msgs": 120,
+    "total_chars": 3318,
+    "total_words": 22,
+    "total_emojis": 60,
+    "total_mentions": 4,
+    "replies_given": 43,
+    "media": {
+      "MessageMediaPhoto": 9,
+      "MessageMediaWebPage": 1,
+      "MessageMediaDocument": 2
+    },
+    "word_counts": {
+      "enemy": 2,
+      "ping": 2,
+      "list": 1,
+      "javad": 1,
+      "tg": 2,
+      "user": 1,
+      "id": 1,
+      "https": 1,
+      "me": 1,
+      "openmessage": 1,
+      "danny": 1,
+      "built": 1,
+      "in": 2,
+      "the": 1,
+      "streets": 1,
+      "dressed": 1,
+      "centre": 1,
+      "repeat": 1
+    },
+    "emoji_counts": {
+      "😂": 60
+    },
+    "mention_counts": {
+      "@Karaj_68_68N": 2,
+      "@LllllIl90": 1,
+      "@i_raHaD1": 1
+    },
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-09-13": 3,
+      "2026-10-24": 117
+    },
+    "hourly_counts": {
+      "15": 3,
+      "22": 105,
+      "23": 12
+    },
+    "first_message": "2026-09-13T15:36:20+00:00",
+    "last_message": "2026-10-24T23:09:47+00:00"
+  },
+  "-1002666323020": {
+    "total_msgs": 107,
+    "total_chars": 3411,
+    "total_words": 11,
+    "total_emojis": 8,
+    "total_mentions": 0,
+    "replies_given": 100,
+    "media": {
+      "MessageMediaDocument": 3,
+      "MessageMediaPhoto": 5
+    },
+    "word_counts": {
+      "enemy": 5,
+      "add": 5,
+      "amir": 1
+    },
+    "emoji_counts": {
+      "⛔": 2,
+      "❌": 6
+    },
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-09-13": 107
+    },
+    "hourly_counts": {
+      "15": 26,
+      "16": 81
+    },
+    "first_message": "2026-09-13T15:36:47+00:00",
+    "last_message": "2026-09-13T16:49:51+00:00"
+  },
+  "-1004484925904": {
+    "total_msgs": 11,
+    "total_chars": 121,
+    "total_words": 1,
+    "total_emojis": 6,
+    "total_mentions": 0,
+    "replies_given": 8,
+    "media": {
+      "MessageMediaDocument": 1
+    },
+    "word_counts": {
+      "deal": 1
+    },
+    "emoji_counts": {
+      "😋": 6
+    },
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-09-13": 11
+    },
+    "hourly_counts": {
+      "16": 11
+    },
+    "first_message": "2026-09-13T16:23:40+00:00",
+    "last_message": "2026-09-13T16:27:40+00:00"
+  },
+  "6608225555": {
+    "total_msgs": 8,
+    "total_chars": 664,
+    "total_words": 15,
+    "total_emojis": 0,
+    "total_mentions": 35,
+    "replies_given": 2,
+    "media": {},
+    "word_counts": {
+      "arteryam": 1,
+      "amizazzz": 1,
+      "ghazmoz": 1,
+      "gutspentint": 1,
+      "ttaahhaax": 1,
+      "deuniet": 1,
+      "aliwwea": 1,
+      "kjnarsis": 1,
+      "warirangt": 1,
+      "negarriiiii": 1,
+      "weroiiu": 1,
+      "leyti": 1,
+      "alirvzv": 1,
+      "dlikou": 1,
+      "mopcztqw": 1
+    },
+    "emoji_counts": {},
+    "mention_counts": {
+      "@Arteryam": 1,
+      "@Fal1enGod10": 1,
+      "@Amizazzz": 1,
+      "@Ab9lDylm": 1,
+      "@PARSA_PL3": 1,
+      "@Ghazmoz": 1,
+      "@Guts901": 1,
+      "@Gutspentint": 1,
+      "@MrZaker125": 1,
+      "@ttaahhaax": 1,
+      "@Adrian77770": 1,
+      "@PAYA71": 1,
+      "@deuniet": 1,
+      "@Aliwwea": 1,
+      "@amir_00_97": 1,
+      "@virtual_number_159": 1,
+      "@Yeganeh138811": 1,
+      "@KJnarsis": 1,
+      "@Warirangt": 1,
+      "@WINE_FeRi": 1,
+      "@Dani_elow": 1,
+      "@Fandan13": 1,
+      "@Blue666XO": 1,
+      "@Negarriiiii": 1,
+      "@amirnamacr7": 1,
+      "@Y2JChrisJericho": 1,
+      "@Weroiiu": 1,
+      "@leyti": 1,
+      "@Godpotato2": 1,
+      "@freak5277": 1,
+      "@alirvzv": 1,
+      "@Asali051": 1,
+      "@sh4pur": 1,
+      "@Dlikou": 1,
+      "@MOPCZTQW": 1
+    },
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-09-13": 8
+    },
+    "hourly_counts": {
+      "16": 8
+    },
+    "first_message": "2026-09-13T16:47:56+00:00",
+    "last_message": "2026-09-13T16:50:01+00:00"
+  },
+  "6591054452": {
+    "total_msgs": 2,
+    "total_chars": 6,
+    "total_words": 1,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {
+      "MessageMediaDocument": 1
+    },
+    "word_counts": {
+      "start": 1
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-10-24": 2
+    },
+    "hourly_counts": {
+      "22": 2
+    },
+    "first_message": "2026-10-24T22:22:29+00:00",
+    "last_message": "2026-10-24T22:22:36+00:00"
+  },
+  "8763231073": {
+    "total_msgs": 2,
+    "total_chars": 19,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 1,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {
+      "@i_raHaD1": 1
+    },
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-10-24": 2
+    },
+    "hourly_counts": {
+      "22": 1,
+      "23": 1
+    },
+    "first_message": "2026-10-24T22:23:26+00:00",
+    "last_message": "2026-10-24T23:27:59+00:00"
+  },
+  "7841914132": {
+    "total_msgs": 1,
+    "total_chars": 47,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-10-24": 1
+    },
+    "hourly_counts": {
+      "22": 1
+    },
+    "first_message": "2026-10-24T22:34:07+00:00",
+    "last_message": "2026-10-24T22:34:07+00:00"
+  },
+  "1778548127": {
+    "total_msgs": 1,
+    "total_chars": 21,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-10-24": 1
+    },
+    "hourly_counts": {
+      "23": 1
+    },
+    "first_message": "2026-10-24T23:06:33+00:00",
+    "last_message": "2026-10-24T23:06:33+00:00"
+  },
+  "6397207741": {
+    "total_msgs": 1,
+    "total_chars": 15,
+    "total_words": 1,
+    "total_emojis": 0,
+    "total_mentions": 1,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {
+      "spookuofficial": 1
+    },
+    "emoji_counts": {},
+    "mention_counts": {
+      "@SpookuOfficial": 1
+    },
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-10-24": 1
+    },
+    "hourly_counts": {
+      "23": 1
+    },
+    "first_message": "2026-10-24T23:22:49+00:00",
+    "last_message": "2026-10-24T23:22:49+00:00"
+  },
+  "1234060895": {
+    "total_msgs": 6,
+    "total_chars": 33,
+    "total_words": 4,
+    "total_emojis": 6,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {
+      "view": 2,
+      "profiles": 2
+    },
+    "emoji_counts": {
+      "🚀": 2,
+      "👎": 3,
+      "❤": 1
+    },
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-10-24": 6
+    },
+    "hourly_counts": {
+      "23": 6
+    },
+    "first_message": "2026-10-24T23:28:42+00:00",
+    "last_message": "2026-10-24T23:29:03+00:00"
+  },
+  "8176324911": {
+    "total_msgs": 1,
+    "total_chars": 3,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-10-24": 1
+    },
+    "hourly_counts": {
+      "23": 1
+    },
+    "first_message": "2026-10-24T23:31:16+00:00",
+    "last_message": "2026-10-24T23:31:16+00:00"
+  },
+  "7693980086": {
+    "total_msgs": 1,
+    "total_chars": 0,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {
+      "MessageMediaDocument": 1
+    },
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-10-24": 1
+    },
+    "hourly_counts": {
+      "23": 1
+    },
+    "first_message": "2026-10-24T23:48:36+00:00",
+    "last_message": "2026-10-24T23:48:36+00:00"
+  },
+  "8730956277": {
+    "total_msgs": 1,
+    "total_chars": 24,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-10-24": 1
+    },
+    "hourly_counts": {
+      "23": 1
+    },
+    "first_message": "2026-10-24T23:49:07+00:00",
+    "last_message": "2026-10-24T23:49:07+00:00"
+  },
+  "-1002502590224": {
+    "total_msgs": 5,
+    "total_chars": 23,
+    "total_words": 4,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 2,
+    "media": {},
+    "word_counts": {
+      "enemy": 2,
+      "add": 1,
+      "del": 1
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-11-16": 4,
+      "2026-11-17": 1
+    },
+    "hourly_counts": {
+      "21": 2,
+      "22": 2,
+      "13": 1
+    },
+    "first_message": "2026-11-16T21:51:52+00:00",
+    "last_message": "2026-11-17T13:39:26+00:00"
+  },
+  "7699250635": {
+    "total_msgs": 8,
+    "total_chars": 48,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 0,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-11-16": 7,
+      "2026-11-17": 1
+    },
+    "hourly_counts": {
+      "21": 3,
+      "22": 4,
+      "13": 1
+    },
+    "first_message": "2026-11-16T21:54:27+00:00",
+    "last_message": "2026-11-17T13:41:11+00:00"
+  },
+  "7461284437": {
+    "total_msgs": 7,
+    "total_chars": 87,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 2,
+    "media": {},
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-11-16": 7
+    },
+    "hourly_counts": {
+      "22": 7
+    },
+    "first_message": "2026-11-16T22:24:15+00:00",
+    "last_message": "2026-11-16T22:50:31+00:00"
+  },
+  "-1003844964754": {
+    "total_msgs": 1,
+    "total_chars": 3,
+    "total_words": 1,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 1,
+    "media": {},
+    "word_counts": {
+      "coj": 1
+    },
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-11-16": 1
+    },
+    "hourly_counts": {
+      "22": 1
+    },
+    "first_message": "2026-11-16T22:40:20+00:00",
+    "last_message": "2026-11-16T22:40:20+00:00"
+  },
+  "8844033064": {
+    "total_msgs": 32,
+    "total_chars": 402,
+    "total_words": 0,
+    "total_emojis": 0,
+    "total_mentions": 0,
+    "replies_given": 13,
+    "media": {
+      "MessageMediaPhoto": 1,
+      "MessageMediaDocument": 2
+    },
+    "word_counts": {},
+    "emoji_counts": {},
+    "mention_counts": {},
+    "reply_to_users": {},
+    "reply_from_users": {},
+    "daily_counts": {
+      "2026-11-16": 32
+    },
+    "hourly_counts": {
+      "22": 32
+    },
+    "first_message": "2026-11-16T22:40:27+00:00",
+    "last_message": "2026-11-16T22:50:16+00:00"
+  }
+}

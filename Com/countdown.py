@@ -8,22 +8,12 @@ __HELP__ = (
     "!countdown stop → Stop the countdown running in this chat")
 __CATEGORY__ = "Utilities"
 
-# -----------------------------
-# Ensure mods folder exists
-# -----------------------------
 os.makedirs("mods", exist_ok=True)
 CD_FILE = "mods/cd.json"
 
-# -----------------------------
-# Active countdowns dict
-# -----------------------------
-active_countdowns = {
-}  # chat_id: {"remaining": seconds, "reason": str, "msg": Message, "task": Task}
+active_countdowns = {}  # chat_id: {"remaining": seconds, "reason": str, "msg": Message, "task": Task}
 
 
-# -----------------------------
-# Setup function for Telethon
-# -----------------------------
 def setup(client, my_id):
 
     def format_hms(seconds: int) -> str:
@@ -84,9 +74,6 @@ def setup(client, my_id):
             active_countdowns.pop(chat_id, None)
             await save_cd()
 
-    # -----------------------------
-    # Resume countdowns from cd.json
-    # -----------------------------
     async def resume_cds():
         data = await load_cd()
         for chat_id_str, info in data.items():
@@ -99,9 +86,6 @@ def setup(client, my_id):
 
     asyncio.create_task(resume_cds())
 
-    # -----------------------------
-    # Start a countdown
-    # -----------------------------
     @client.on(
         events.NewMessage(from_users=my_id,
                           pattern=r"^!countdown\s+(\d+)([smh])\s+(.+)$"))
@@ -129,12 +113,8 @@ def setup(client, my_id):
 
         msg = await event.reply(f"⏳ Countdown: {format_hms(total_seconds)}")
         asyncio.create_task(run_countdown(chat_id, total_seconds, reason, msg))
+        await event.delete()
 
-        await event.delete()  # remove the command
-
-    # -----------------------------
-    # Stop countdown
-    # -----------------------------
     @client.on(
         events.NewMessage(from_users=my_id, pattern=r"^!countdown stop$"))
     async def stop(event):
@@ -143,17 +123,26 @@ def setup(client, my_id):
         if info:
             task = info.get("task")
             msg = info.get("msg")
+
+            # Try to edit the countdown message if it still exists
             if msg:
-                await msg.edit("❌ Countdown stopping...")
+                try:
+                    await msg.edit("❌ Countdown stopping...")
+                except Exception:
+                    # Message was deleted – ignore
+                    pass
+
+            # Cancel the task
             if task:
                 task.cancel()
                 try:
                     await task
                 except asyncio.CancelledError:
                     pass
+
             active_countdowns.pop(chat_id, None)
             await save_cd()
             await event.delete()
         else:
-            await event.reply(
+            await event.edit(
                 "❌ No countdown is currently running in this chat!")
