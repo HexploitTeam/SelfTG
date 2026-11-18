@@ -1,11 +1,11 @@
-# Com/f.py
+"""!f: random-reply lists and the interval task that sends them."""
 from telethon import events
 import os
 import json
 import asyncio
 import random
 
-from Com.storage import save_json
+from Com.core.storage import save_json
 
 __HELP__ = "!f → Manage and send random replies with IDs"
 __CATEGORY__ = "Utilities"
@@ -26,6 +26,10 @@ if not os.path.exists(ID_FILE):
 active_f_tasks = {}  # code_id: task
 
 
+#------------------------------
+#Command handlers
+#------------------------------
+
 def setup(client, my_id):
 
     def load_items():
@@ -43,7 +47,6 @@ def setup(client, my_id):
             f.write(str(next_id))
         return next_id
 
-    # ------------------------
     # Add text
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!f\s+add$"))
     async def f_add(event):
@@ -63,7 +66,6 @@ def setup(client, my_id):
         save_items(items)
         await event.edit(f"✅ Text saved. Code: {code_id}")
 
-    # ------------------------
     # Delete text
     @client.on(
         events.NewMessage(from_users=my_id, pattern=r"^!f\s+del\s+(\d+)$"))
@@ -82,7 +84,6 @@ def setup(client, my_id):
         else:
             await event.edit(f"❌ Code {del_id} not found!")
 
-    # ------------------------
     # Start sending randomly
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!f\s+start$"))
     async def f_start(event):
@@ -112,7 +113,6 @@ def setup(client, my_id):
         t = asyncio.create_task(task())
         active_f_tasks[code_id] = t
 
-    # ------------------------
     # Stop sending
     @client.on(
         events.NewMessage(from_users=my_id, pattern=r"^!f\s+stop\s+(\d+)$"))
@@ -127,7 +127,6 @@ def setup(client, my_id):
         else:
             await event.edit(f"❌ No active task with Code: {stop_id}")
 
-    # ------------------------
     # Fallback for wrong usage
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!f\b"))
     async def f_fallback(event):

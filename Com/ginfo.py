@@ -1,6 +1,6 @@
-# Com/ginfo.py
+"""!ginfo: group or channel metadata read live, without saving anything."""
 from telethon import events, functions, types
-import Com.tgsend as tgsend
+import Com.core.tgsend as tgsend
 from datetime import datetime
 import pytz
 
@@ -24,10 +24,8 @@ def setup(client, my_id):
 
             now = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
 
-            # Edit original command message
             await event.edit(f"Gathering {chat_id} (**{title}**) Info . . .")
 
-            # Send main profile picture (if exists)
             try:
                 photos = await client.get_profile_photos(chat)
                 if photos.total > 0:

@@ -1,4 +1,3 @@
-# Com/crypto.py
 """`!crypto` -- prices from free, keyless providers with a fallback chain.
 
 Old behaviour: one CoinPaprika call per invocation, a fresh TCP session each
@@ -16,7 +15,7 @@ import logging
 
 from telethon import events
 
-import Com.api as api
+import Com.core.api as api
 
 __HELP__ = "!crypto <coin> → Show crypto price and 24h changes (CoinGecko → CoinPaprika)"
 __CATEGORY__ = "Utilities"
@@ -83,6 +82,10 @@ def render(name, symbol, price, change_1h, change_24h, change_7d,
     return "\n".join(lines)
 
 
+#------------------------------
+#Providers
+#------------------------------
+
 async def _coingecko(coin_id, ticker):
     data = await api.fetch_json(
         COINGECKO_URL,
@@ -143,6 +146,10 @@ async def get_quote(ticker):
         ("coinpaprika", lambda: _coinpaprika(paprika_id, ticker)),
     ])
 
+
+#------------------------------
+#Command handlers
+#------------------------------
 
 def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!crypto\s+(\w+)"))

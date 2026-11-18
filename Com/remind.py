@@ -1,4 +1,3 @@
-# Com/remind.py
 """`!remind` -- durable reminders driven by the shared scheduler.
 
 Durability model
@@ -7,7 +6,7 @@ Every reminder is stored with an absolute UTC epoch (``due_at``) in
 ``mode/reminders.json``. Nothing is held in an ``asyncio.sleep`` task, so:
 
 * a Repl restart or sleep loses nothing;
-* the single scheduler tick (``Com/scheduler.py``) notices overdue items and
+* the single scheduler tick (``Com/core/scheduler.py``) notices overdue items and
   delivers them, prefixing anything that came due while the bot was offline
   with "missed while offline" instead of dropping it silently.
 
@@ -31,10 +30,10 @@ from datetime import datetime, timedelta
 import pytz
 from telethon import events
 
-import Com.registry as registry
-from Com import confirm, scheduler
-from Com.durations import format_duration, parse_duration
-from Com.storage import load_store, save_json
+import Com.core.registry as registry
+from Com.core import confirm, scheduler
+from Com.core.durations import format_duration, parse_duration
+from Com.core.storage import load_store, save_json
 
 log = logging.getLogger("selftg.remind")
 
@@ -68,9 +67,10 @@ __CATEGORY__ = "Utilities"
 ACTION_CLEAR = "!remind clear"
 
 
-# ------------------------------
-# State
-# ------------------------------
+#------------------------------
+#State
+#------------------------------
+
 def _default():
     return {"next_id": 1, "items": []}
 
@@ -158,9 +158,10 @@ def _fmt_due(ts, tz):
     return time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime(ts))
 
 
-# ------------------------------
-# Scheduler job
-# ------------------------------
+#------------------------------
+#Scheduler job
+#------------------------------
+
 async def tick(client):
     """Deliver every reminder whose due_at has passed."""
     state = load_state()
@@ -194,9 +195,10 @@ async def tick(client):
             )
 
 
-# ------------------------------
-# Parsing helpers
-# ------------------------------
+#------------------------------
+#Parsing helpers
+#------------------------------
+
 def parse_at_time(tokens, tz):
     """'18:30 [YYYY-MM-DD] rest…' -> (due_epoch, text). Raises ValueError."""
     if tz is None:

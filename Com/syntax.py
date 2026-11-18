@@ -1,9 +1,9 @@
-# Com/syntax.py
+"""!syntax: Pygments highlighting with line numbers."""
 import os
 import sys
 import re
 from telethon import events
-import Com.tgsend as tgsend
+import Com.core.tgsend as tgsend
 from pygments import highlight
 from pygments.lexers import get_lexer_by_name, guess_lexer, get_all_lexers
 from pygments.formatters import TerminalFormatter
@@ -20,6 +20,10 @@ __HELP__ = (
     "Use `!syntax --list` to see all languages."
 )
 __CATEGORY__ = "Utilities"
+
+#------------------------------
+#Detection
+#------------------------------
 
 def detect_language(code):
     """Try to guess the language using Pygments."""
@@ -65,16 +69,18 @@ def get_all_languages():
         names.add(lexer[0].lower())
     return sorted(names)
 
+#------------------------------
+#Command handlers
+#------------------------------
+
 def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!syntax(?:\s+(\S+))?$"))
     async def syntax_cmd(event):
         try:
             arg = event.pattern_match.group(1)
 
-            # Handle --list flag
             if arg and arg == "--list":
                 langs = get_all_languages()
-                # Send in chunks if too long
                 msg = "📚 **Supported languages:**\n" + ", ".join(langs[:100]) + "..."
                 if len(msg) > 4000:
                     import io
@@ -86,7 +92,6 @@ def setup(client, my_id):
                     await event.edit(msg)
                 return
 
-            # Determine input (reply or provided text)
             lang = arg
             code = None
 
@@ -102,15 +107,12 @@ def setup(client, my_id):
                 await event.edit("❌ No code found in the replied message.")
                 return
 
-            # Auto-detect language if not provided
             if not lang:
                 lang = detect_language(code)
             else:
-                # Validate that the language exists
                 try:
                     get_lexer_by_name(lang)
                 except ClassNotFound:
-                    # Try a fuzzy match
                     langs = get_all_languages()
                     suggestions = [l for l in langs if lang.lower() in l]
                     if suggestions:
@@ -122,7 +124,6 @@ def setup(client, my_id):
                                          "Use `!syntax --list` for all languages.")
                     return
 
-            # Build output
             code_with_lines = format_code_with_lines(code, lang)
             output = f"📝 **Language:** {lang}\n```{lang}\n{code_with_lines}\n```"
 

@@ -1,4 +1,4 @@
-# Com/stats.py
+"""!stats: per-chat and combined message statistics."""
 import os
 import json
 import re
@@ -6,8 +6,8 @@ from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 from telethon import events
 
-from Com.storage import save_json
-import Com.tgsend as tgsend
+from Com.core.storage import save_json
+import Com.core.tgsend as tgsend
 
 __HELP__ = (
     "!stats → Show detailed stats for this chat\n"
@@ -21,7 +21,10 @@ BASE_DIR = "mode"
 STATS_FILE = os.path.join(BASE_DIR, "stats.json")
 os.makedirs(BASE_DIR, exist_ok=True)
 
-# ---------- Helper functions ----------
+#------------------------------
+#Helpers
+#------------------------------
+
 def is_emoji(c):
     code = ord(c)
     return (0x1F600 <= code <= 0x1F64F or
@@ -38,7 +41,10 @@ def extract_words(text):
 def extract_mentions(text):
     return re.findall(r'@\w+', text)
 
-# ---------- Stats storage ----------
+#------------------------------
+#Stats storage
+#------------------------------
+
 # The document used to be parsed twice and rewritten (atomically, with fsync)
 # once per counted message, and !stats scan did that for up to 5000 messages in
 # a row. On Replit's shared CPU that write amplification is the most expensive
@@ -253,13 +259,13 @@ def format_stats(stats, title="📊 Stats"):
     return "\n".join(lines)
 
 def setup(client, my_id):
-    # ---------- Live counter ----------
+    # Live counter
     @client.on(events.NewMessage(from_users=my_id))
     async def counter(event):
         if event.sender_id == my_id:
             update_stats(event.chat_id, event.message)
 
-    # ---------- !stats (current chat) ----------
+    # !stats (current chat)
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!stats$"))
     async def show_stats_current(event):
         chat_id = event.chat_id
@@ -267,7 +273,7 @@ def setup(client, my_id):
         output = format_stats(stats, title="📊 Stats for this chat")
         await event.edit(output)
 
-    # ---------- !stats all ----------
+    # !stats all
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!stats all$"))
     async def show_stats_all(event):
         data = load_stats()
@@ -278,7 +284,7 @@ def setup(client, my_id):
         output = format_stats(combined, title="🌍 Total stats across all chats")
         await event.edit(output)
 
-    # ---------- !stats reset ----------
+    # !stats reset
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!stats reset$"))
     async def reset_stats(event):
         chat_id = event.chat_id
@@ -292,7 +298,7 @@ def setup(client, my_id):
             await event.edit("❌ No stats to reset for this chat.")
         await event.delete()
 
-    # ---------- !stats scan [limit] ----------
+    # !stats scan [limit]
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!stats scan(?:\s+(\d+))?$"))
     async def scan_stats(event):
         limit = event.pattern_match.group(1)

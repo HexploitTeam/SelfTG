@@ -1,4 +1,4 @@
-# ML/smart_markov.py
+"""Variable-order Markov chain used by the !aiml commands for local text generation."""
 import ast
 import os
 import json
@@ -20,20 +20,16 @@ class SmartMarkov:
     def train(self, texts):
         if not texts:
             return
-        # Tokenize each text into words (keep punctuation)
         for text in texts:
             words = text.split()
             if len(words) < self.order + 1:
                 continue
-            # Add to start words (first 2 words)
             if len(words) >= 2:
                 self.start_words.append(' '.join(words[:2]))
-            # Build transitions
             for i in range(len(words) - self.order):
                 state = tuple(words[i:i+self.order])
                 next_word = words[i+self.order]
                 self.transitions[state].append(next_word)
-            # Collect all words for fallback
             self.all_words.extend(words)
             for w in words:
                 self.word_counter[w] += 1
@@ -42,11 +38,9 @@ class SmartMarkov:
         if not self.transitions:
             return None
 
-        # If seed provided, try to start with it
         if seed:
             seed_words = seed.split()
-            # Try to find a state that starts with the seed
-            # Check if any state starts with the seed (or parts of it)
+            # Prefer a state that begins with the seed so generation stays on topic
             for i in range(len(seed_words), 0, -1):
                 prefix = tuple(seed_words[:i])
                 for state in self.transitions.keys():

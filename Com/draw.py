@@ -1,4 +1,3 @@
-# Com/draw.py
 """`!draw` -- text-to-image through Pollinations' keyless Classic API.
 
 Why this replaced Hugging Face
@@ -21,9 +20,9 @@ from io import BytesIO
 from urllib.parse import quote
 
 from telethon import events
-import Com.tgsend as tgsend
+import Com.core.tgsend as tgsend
 
-import Com.api as api
+import Com.core.api as api
 
 __HELP__ = (
     "!draw <prompt> → Generate an image from a text prompt (Pollinations, no key)\n"

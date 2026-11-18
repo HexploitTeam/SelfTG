@@ -1,22 +1,20 @@
-# Com/cauto.py
+"""Auto-solve the maths challenge messages some groups use as a join gate."""
 from telethon import events
-import Com.tgsend as tgsend
+import Com.core.tgsend as tgsend
 from datetime import datetime
 import re
 import os
 import json
 
-from Com.safe_eval import evaluate as safe_evaluate
-from Com.storage import save_json
+from Com.core.safe_eval import evaluate as safe_evaluate
+from Com.core.storage import save_json
 
 __HELP__ = "!cauto ON/OFF → Auto solve math challenges in groups/DMs"
 
-# Store state
 AUTO_SOLVE = False
 LOG_FILE = "mods/cauto_log.json"
 os.makedirs("mods", exist_ok=True)
 
-# Ensure log file exists
 if not os.path.exists(LOG_FILE):
     with open(LOG_FILE, "w", encoding="utf-8") as f:
         json.dump([], f, indent=2)
@@ -25,7 +23,6 @@ if not os.path.exists(LOG_FILE):
 def setup(client, my_id):
     global AUTO_SOLVE
 
-    # Toggle ON/OFF
     @client.on(
         events.NewMessage(from_users=my_id, pattern=r"^!cauto\s+(on|off)$"))
     async def toggle_cauto(event):
@@ -39,7 +36,6 @@ def setup(client, my_id):
             AUTO_SOLVE = False
             await event.edit("❌ Auto Challenge Solver: OFF")
 
-    # Logging helper
     async def log_challenge(chat_id, msg_id, challenge_type, equation, result):
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         log_entry = {
@@ -65,7 +61,6 @@ def setup(client, my_id):
             data = data[-1000:]
         save_json(LOG_FILE, data)
 
-    # Auto-solver
     @client.on(events.NewMessage())
     async def auto_solver(event):
         global AUTO_SOLVE
@@ -76,9 +71,7 @@ def setup(client, my_id):
         if not text:
             return
 
-        # --------------------------
         # Old style: "چالش ریاضی"
-        # --------------------------
         if "چالش ریاضی" in text and "=" in text:
             match = re.search(r"([\d\s\+\-\×\*/÷]+)= ?", text)
             if not match:
@@ -99,9 +92,7 @@ def setup(client, my_id):
             except Exception:
                 pass
 
-        # --------------------------
         # New style: "برای باز کردن جعبه حماسی"
-        # --------------------------
         elif "برای باز کردن جعبه حماسی" in text:
             match = re.search(r"(\d+)\s*([\+\-\*/×÷])\s*(\d+)", text)
             if not match:

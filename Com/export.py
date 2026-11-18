@@ -1,4 +1,4 @@
-# Com/export.py
+"""!export and !import: zip the state directory and restore it after a restart."""
 import os
 import sys
 import json
@@ -7,7 +7,7 @@ import tempfile
 import shutil
 from datetime import datetime
 from telethon import events
-import Com.tgsend as tgsend
+import Com.core.tgsend as tgsend
 
 __HELP__ = (
     "!export → Export all settings (enemies, warns, mutes, lists, reactions, monitor) to a zip file.\n"
@@ -33,7 +33,6 @@ EXCLUDE_FILES = [
 
 def should_include(path):
     """Return True if the file/dir should be included in export."""
-    # Include only specific folders
     for folder in EXPORT_FOLDERS:
         if path.startswith(folder + os.sep) or path == folder:
             return True
@@ -52,20 +51,17 @@ def create_export_zip():
     tmp.close()
 
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
-        # Walk the current directory
         for root, dirs, files in os.walk("."):
             for file in files:
                 full_path = os.path.join(root, file)
-                # Skip hidden files like .git, __pycache__, etc.
+                # Skip the interpreter cache and this repository's own history
                 if "__pycache__" in full_path or ".git" in full_path:
                     continue
-                # Normalise path relative to current dir
                 rel_path = os.path.relpath(full_path, ".")
                 if not should_include(rel_path):
                     continue
                 if should_exclude_file(file):
                     continue
-                # Add to zip
                 zf.write(full_path, rel_path)
 
     return zip_path
@@ -98,27 +94,23 @@ def setup(client, my_id):
             await event.edit("❌ The replied message does not contain a file.")
             return
 
-        # Check if it's a zip
         if not reply.file.name or not reply.file.name.endswith(".zip"):
             await event.edit("❌ The file must be a .zip archive.")
             return
 
         await event.edit("📥 Downloading and importing settings...")
 
-        # Download zip to temp file
         tmp = tempfile.NamedTemporaryFile(suffix=".zip", delete=False)
         zip_path = tmp.name
         tmp.close()
 
         await reply.download_media(file=zip_path)
 
-        # Validate zip
         if not zipfile.is_zipfile(zip_path):
             os.remove(zip_path)
             await event.edit("❌ The file is not a valid zip archive.")
             return
 
-        # Extract
         try:
             extract_zip(zip_path)
         except Exception as e:
@@ -130,5 +122,4 @@ def setup(client, my_id):
 
         # Send success and restart
         await event.edit("✅ Settings restored. Restarting...")
-        # Restart the bot
         os.execv(sys.executable, [sys.executable] + sys.argv)

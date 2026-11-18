@@ -1,4 +1,3 @@
-# Com/registry.py
 """Single source of truth for the v3 owner commands and their subcommands.
 
 Each command module declares its subcommands once, as data::

@@ -1,4 +1,4 @@
-# Com/reverseimg.py
+"""!reverseimg: upload a replied image to catbox and link a reverse image search."""
 from telethon import events
 import aiohttp
 import os
@@ -42,14 +42,12 @@ def setup(client, my_id):
                 await event.reply("❌ That’s not an image or file.")
                 return
 
-            # Download file temporarily
             file_path = await client.download_media(reply_msg,
                                                     file="temp_reverseimg")
             if not file_path:
                 await event.reply("❌ Failed to download media.")
                 return
 
-            # Upload to catbox
             url = await upload_to_catbox(file_path)
             os.remove(file_path)
 
@@ -59,7 +57,6 @@ def setup(client, my_id):
                     "Try a smaller image or use a different service.")
                 return
 
-            # Generate search link
             if service == "google":
                 link = f"https://lens.google.com/uploadbyurl?url={url}"
                 service_name = "Google Lens"

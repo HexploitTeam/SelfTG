@@ -1,13 +1,13 @@
-# Com/summarize.py
+"""!summarize: extractive local summary with an optional Gemini pass."""
 import logging
 import os
 import re
 from collections import Counter
 
 from telethon import events
-import Com.tgsend as tgsend
+import Com.core.tgsend as tgsend
 
-import Com.api as api
+import Com.core.api as api
 
 # Free-tier Gemini (Google AI Studio, no credit card). The old code called
 # `v1beta2/models/text-bison-001:generate`, an endpoint Google retired, with a
@@ -40,22 +40,22 @@ __HELP__ = (
 __CATEGORY__ = "Utilities"
 
 
-# ---------- Improved local summarization ----------
+#------------------------------
+#Local summarization
+#------------------------------
+
 def summarize_locally(text, max_sentences=5, max_chars=2000):
     """Extract key sentences using word frequency (works for Persian & English)."""
     if not text:
         return "No text to summarize."
 
-    # If text is short, return it as-is
     if len(text) < 200:
         return text
 
-    # Step 1: Split into paragraphs (by double newlines)
     paragraphs = [p.strip() for p in re.split(r'\n\s*\n', text.strip()) if p.strip()]
     if not paragraphs:
         paragraphs = [text]
 
-    # Step 2: Split each paragraph into sentences
     # Persian/English sentence boundaries: ., !, ?, ؟, …, ...
     sentence_splitter = re.compile(r'(?<=[.!?…؟])\s+')
     all_sentences = []
@@ -82,7 +82,7 @@ def summarize_locally(text, max_sentences=5, max_chars=2000):
             return summary[:max_chars] + "..."
         return summary
 
-    # Step 3: Compute word frequencies (exclude stopwords)
+    # Score sentences by summed word frequency, ignoring stopwords
     # Persian and English stopwords (common)
     stopwords = {
         "the", "be", "to", "of", "and", "a", "in", "that", "have", "i",
@@ -111,7 +111,6 @@ def summarize_locally(text, max_sentences=5, max_chars=2000):
             if w not in stopwords and len(w) > 1:
                 word_freq[w] += 1
 
-    # Step 4: Score each sentence by sum of word frequencies
     scored = []
     for sent in all_sentences:
         words = re.findall(r'[\w\u0600-\u06FF]+', sent.lower())
@@ -120,11 +119,9 @@ def summarize_locally(text, max_sentences=5, max_chars=2000):
         score = score / (len(words) + 1)
         scored.append((sent, score))
 
-    # Step 5: Pick top sentences (but we want to keep variety)
     scored.sort(key=lambda x: x[1], reverse=True)
     top_sentences = [s for s, _ in scored[:max_sentences]]
 
-    # Step 6: Reconstruct in original order
     ordered = []
     for sent in all_sentences:
         if sent in top_sentences:
@@ -132,18 +129,20 @@ def summarize_locally(text, max_sentences=5, max_chars=2000):
 
     summary = " ".join(ordered)
 
-    # Step 7: Trim if too long
     if len(summary) > max_chars:
         summary = summary[:max_chars] + "..."
 
-    # If summary is still as long as original, it means we failed – return first 500 chars
+    # Fall back to a truncation when scoring produced no shorter text
     if len(summary) >= len(text) * 0.8:
         return text[:500] + "..." if len(text) > 500 else text
 
     return summary if summary else text[:500] + "..."
 
 
-# ---------- Gemini summarization (free tier, best effort) ----------
+#------------------------------
+#Gemini summarization
+#------------------------------
+
 GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
     "{model}:generateContent?key={key}"
@@ -211,7 +210,10 @@ async def summarize_with_gemini(text):
     return None
 
 
-# ---------- Main command ----------
+#------------------------------
+#Command
+#------------------------------
+
 def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!summarize(?:\s+(.*))?$"))
     async def summarize_cmd(event):
@@ -221,7 +223,7 @@ def setup(client, my_id):
                 await event.edit("📖 **Summarize Help**\n" + __HELP__)
                 return
 
-            # ---------- Chat summarization ----------
+            # Chat summarization
             if arg_str and arg_str.startswith("chat"):
                 parts = arg_str.split()
                 limit = 50
@@ -275,7 +277,7 @@ def setup(client, my_id):
                     await event.edit(output)
                 return
 
-            # ---------- Text summarization ----------
+            # Text summarization
             text = arg_str
             if not text and event.is_reply:
                 reply = await event.get_reply_message()

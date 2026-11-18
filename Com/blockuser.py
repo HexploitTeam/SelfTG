@@ -1,4 +1,4 @@
-# Com/blockuser.py
+"""!block and !unblock, targeting the argument or the replied-to user."""
 from telethon import events
 from telethon import functions
 
@@ -13,7 +13,6 @@ def setup(client, my_id):
     async def block_user(event):
         try:
             target = event.pattern_match.group(1)
-            # Determine target user
             if event.is_reply:
                 reply_msg = await event.get_reply_message()
                 user = await reply_msg.get_sender()
@@ -36,7 +35,6 @@ def setup(client, my_id):
     async def unblock_user(event):
         try:
             target = event.pattern_match.group(1)
-            # Determine target user
             if event.is_reply:
                 reply_msg = await event.get_reply_message()
                 user = await reply_msg.get_sender()

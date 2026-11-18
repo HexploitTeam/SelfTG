@@ -1,59 +1,56 @@
-# Com/panel.py
-import asyncio
-from telethon import events
-from telethon.tl.types import ReplyInlineMarkup, KeyboardButtonCallback, KeyboardButtonRow
-import Com.tgsend as tgsend
+"""!panel: put the bot's control panel into the current chat.
 
-from Com.bot import bot_client, BOT_ENABLED, get_bot_status
+The panel is the same screen the bot's /start sends, posted by the bot account so
+its buttons are live. Telegram only lets a bot attach an inline keyboard to its
+own messages, which is why this has to go through the bot client rather than
+`event.reply`.
+"""
+from telethon import events
+
+import Com.bot as bot_module
+import Com.core.tgsend as tgsend
+from Com.bot import ui as botui
+from Com.bot.kit import markup
 
 __HELP__ = (
-    "!panel → Send the bot's inline panel (owner menu) in this chat.\n"
-    "The panel is sent by the bot account, so buttons are interactive.\n"
+    "!panel → Send the bot's control panel into this chat.\n"
+    "The panel is sent by the bot account, so its buttons work.\n"
     "!botstatus → Check if the bot is running and connected."
 )
 __CATEGORY__ = "Utilities"
 
+
 def get_owner_panel():
-    return ReplyInlineMarkup([
-        KeyboardButtonRow([KeyboardButtonCallback("📊 Stats", b"stats")]),
-        KeyboardButtonRow([KeyboardButtonCallback("👿 Enemies", b"enemies")]),
-        KeyboardButtonRow([KeyboardButtonCallback("⚠️ Warns", b"warns")]),
-        KeyboardButtonRow([KeyboardButtonCallback("🔇 Mutes", b"mutes")]),
-        KeyboardButtonRow([KeyboardButtonCallback("📝 Texts", b"texts")]),
-        KeyboardButtonRow([KeyboardButtonCallback("⚙️ Admin Panel", b"admin")]),
-    ])
+    """The inline keyboard of the main menu, for callers that only need buttons."""
+    return markup(botui.home_screen().rows)
+
 
 def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!panel$"))
     async def panel_cmd(event):
-        status = get_bot_status()
-        if "❌" in status or "⏳" in status:
-            await event.edit(f"⚠️ Bot not ready: {status}\nTry again in a moment.")
+        # Read the module attribute live: `from Com.bot import bot_client`
+        # captured None at import time, before start_bot had run, so !panel
+        # always waited ten seconds and then reported "still not ready".
+        status = bot_module.get_bot_status()
+        if bot_module.bot_client is None:
+            await event.edit(f"⚠️ Bot not ready: {status}")
             return
 
-        if bot_client is None:
-            await event.edit("⏳ Bot client is starting, please wait...")
-            for _ in range(10):
-                await asyncio.sleep(1)
-                if bot_client is not None:
-                    break
-            if bot_client is None:
-                await event.edit("⏳ Bot still not ready. Check token or try restarting.")
-                return
-
+        screen = botui.home_screen()
         try:
-            await bot_client.send_message(await tgsend.peer(event),
-                "🤖 **Owner Menu**\nUse the buttons below.",
+            await bot_module.bot_client.send_message(
+                await tgsend.peer(event),
+                screen.text,
                 buttons=get_owner_panel(),
-                reply_to=event.id
+                parse_mode="html",
+                reply_to=event.id,
             )
-        except Exception as e:
-            await event.edit(f"❌ Failed to send panel: {e}")
+        except Exception as exc:  # noqa: BLE001 - report, do not delete the command
+            await event.edit(f"❌ Failed to send panel: {exc}")
             return
         await event.delete()
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!botstatus$"))
     async def botstatus_cmd(event):
-        status = get_bot_status()
-        await event.edit(f"**Bot Status**\n{status}")
+        await event.edit(f"Bot status\n{bot_module.get_bot_status()}")
         await event.delete()

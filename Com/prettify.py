@@ -1,11 +1,11 @@
-# Com/prettify.py
+"""!prettify: re-indent JSON, XML and HTML."""
 import json
 import re
 import shlex
 import textwrap
 from xml.dom import minidom
 from telethon import events
-import Com.tgsend as tgsend
+import Com.core.tgsend as tgsend
 
 try:
     from bs4 import BeautifulSoup
@@ -27,26 +27,28 @@ __HELP__ = (
 )
 __CATEGORY__ = "Utilities"
 
+#------------------------------
+#Detection
+#------------------------------
+
 def detect_type(text):
     """Detect if text is JSON, XML, or plain text."""
     text_stripped = text.strip()
-    # Try JSON
     try:
         json.loads(text_stripped)
         return "json"
     except:
         pass
-    # Try XML (starts with <)
     if text_stripped.startswith("<") and text_stripped.endswith(">"):
-        # It could be XML or HTML
-        # Check if it has a root element with <...> and </...>
         if re.search(r'<[^>]+>[^<]*</[^>]+>', text_stripped) or text_stripped.startswith("<?xml"):
             return "xml"
-        # Could be HTML (has <html> or <body> etc.)
         if re.search(r'<html|<body|<div|<span|<p|<a', text_stripped, re.IGNORECASE):
             return "html"
-    # Default to plain text
     return "text"
+
+#------------------------------
+#Formatters
+#------------------------------
 
 def prettify_json(text, indent=2):
     try:
@@ -73,7 +75,7 @@ def prettify_html(text, indent=2):
         except Exception as e:
             return f"❌ HTML prettify failed: {e}"
     else:
-        # Fallback: try using XML parser (may fail for non‑well‑formed HTML)
+        # Fallback: try using XML parser (may fail for non-well-formed HTML)
         # We'll give a warning and try anyway
         try:
             dom = minidom.parseString(text)
@@ -84,7 +86,6 @@ def prettify_html(text, indent=2):
             return "❌ BeautifulSoup not installed.\nInstall: pip install beautifulsoup4"
 
 def prettify_text(text, width=80):
-    # Simple text wrapping
     wrapper = textwrap.TextWrapper(width=width, replace_whitespace=False, break_long_words=False)
     wrapped = wrapper.wrap(text)
     return "\n".join(wrapped)
@@ -130,6 +131,10 @@ def parse_flags(args):
             i += 1
     return flags, remaining
 
+#------------------------------
+#Command handlers
+#------------------------------
+
 def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r'^!prettify(?:\s+(.*))?$'))
     async def prettify_cmd(event):
@@ -139,7 +144,6 @@ def setup(client, my_id):
                 await event.edit("📖 **Prettify Help**\n" + __HELP__)
                 return
 
-            # Parse flags and text
             text = None
             flags = {'type': None, 'indent': 2, 'width': 80}
             remaining = []
@@ -149,7 +153,6 @@ def setup(client, my_id):
                 if remaining:
                     text = ' '.join(remaining)
 
-            # If no text, try reply
             if not text and event.is_reply:
                 reply = await event.get_reply_message()
                 text = reply.text or reply.raw_text
@@ -157,13 +160,11 @@ def setup(client, my_id):
                 await event.edit("❌ No text provided. Reply to a message or pass text in the command.")
                 return
 
-            # Detect type if not forced
             if flags['type'] is None:
                 detected = detect_type(text)
             else:
                 detected = flags['type']
 
-            # Prettify
             output = ""
             if detected == "json":
                 output = prettify_json(text, flags['indent'])
@@ -174,12 +175,10 @@ def setup(client, my_id):
             else:
                 output = prettify_text(text, flags['width'])
 
-            # If output is error message, just edit with that
             if output.startswith("❌"):
                 await event.edit(output)
                 return
 
-            # Build final message
             final = f"**{detected.upper()}** prettified:\n```\n{output}\n```"
             if len(final) > 4000:
                 import io

@@ -1,6 +1,6 @@
-# Com/subenum.py
+"""!subenum: certificate-transparency subdomain enumeration with DNS checks."""
 from telethon import events
-import Com.tgsend as tgsend
+import Com.core.tgsend as tgsend
 import asyncio
 import json
 import logging
@@ -8,8 +8,8 @@ import os
 from datetime import datetime
 import socket
 
-import Com.api as api
-from Com.storage import save_json
+import Com.core.api as api
+from Com.core.storage import save_json
 
 log = logging.getLogger("selftg.subenum")
 
@@ -88,10 +88,8 @@ def setup(client, my_id):
                     "❌ Provide a domain or reply to a message containing one.")
                 return
 
-            # Delete command
             await event.delete()
 
-            # Handle delete command
             if arg.startswith("del"):
                 parts = arg.split()
                 if len(parts) != 2 or not parts[1].isdigit():
@@ -113,7 +111,6 @@ def setup(client, my_id):
             domain = arg
             active_data = load_active()
 
-            # Check if already scanned
             for task_id, info in active_data.items():
                 if info.get("domain") == domain and os.path.exists(
                         info.get("file", "")):
@@ -146,14 +143,12 @@ def setup(client, my_id):
                     f"❌ No active subdomains found for **{domain}**")
                 return
 
-            # Save to TXT file
             now = datetime.now().strftime("%Y%m%d%H%M%S")
             task_id = int(now)
             file_path = os.path.join(LOG_DIR, f"{domain}_{task_id}.txt")
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write("\n".join(active_subs))
 
-            # Save active data
             active_data[task_id] = {
                 "domain": domain,
                 "file": file_path,

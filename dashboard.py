@@ -1,10 +1,10 @@
-# dashboard.py
+"""Standalone Flask dashboard over the bot's JSON state; main.py never starts it."""
 import os
 import json
 import datetime
 from flask import Flask, render_template_string, request, redirect, url_for, flash
 
-from Com.storage import save_json as _atomic_save_json
+from Com.core.storage import save_json as _atomic_save_json
 
 app = Flask(__name__)
 # Signs flash-message cookies only. The previous hardcoded value is in the git
@@ -20,7 +20,10 @@ WARN_FILE = "mode/warn.json"
 MUTE_FILE = "mode/mute.json"
 SETTINGS_FILE = "mode/settings.json"
 
-# ---------- Helpers ----------
+#------------------------------
+#Helpers
+#------------------------------
+
 def load_json(fpath):
     if not os.path.exists(fpath):
         return {}
@@ -48,7 +51,6 @@ def get_default_settings():
 def load_settings():
     settings = load_json(SETTINGS_FILE)
     defaults = get_default_settings()
-    # merge missing keys
     for k, v in defaults.items():
         if k not in settings:
             settings[k] = v
@@ -127,7 +129,10 @@ def get_all_users(stats_data):
             u["chats"].append(chat_id)
     return users
 
-# ---------- Routes ----------
+#------------------------------
+#Routes
+#------------------------------
+
 @app.route('/')
 def overview():
     stats = load_json(STATS_FILE)
@@ -198,7 +203,6 @@ def enemies():
             enemies = load_json(ENEMY_FILE)
             if chat_id not in enemies:
                 enemies[chat_id] = []
-            # check if user already exists
             if not any(u.get('user_id') == int(user_id) for u in enemies[chat_id]):
                 enemies[chat_id].append({"user_id": int(user_id), "category": category, "custom_text": custom_text})
                 save_json(ENEMY_FILE, enemies)
@@ -214,7 +218,6 @@ def enemies():
         return redirect(url_for('enemies'))
 
     enemies = load_json(ENEMY_FILE)
-    # flatten
     enemy_list = []
     for cid, users in enemies.items():
         for u in users:
@@ -313,7 +316,6 @@ def mutes():
 def settings():
     if request.method == 'POST':
         settings = load_settings()
-        # toggle keys
         for key in settings.keys():
             if key in request.form:
                 settings[key] = request.form.get(key) == 'on'
@@ -324,7 +326,10 @@ def settings():
     settings = load_settings()
     return render_template_string(HTML_SETTINGS, settings=settings)
 
-# ---------- HTML Templates (inline) ----------
+#------------------------------
+#Templates
+#------------------------------
+
 HTML_OVERVIEW = '''
 <!DOCTYPE html>
 <html>

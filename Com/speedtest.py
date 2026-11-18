@@ -1,4 +1,4 @@
-# Com/speedtest.py
+"""!speedtest: bandwidth test driven by speedtest-cli."""
 import asyncio
 import shlex
 from telethon import events
@@ -21,6 +21,10 @@ __HELP__ = (
     "  !speedtest list"
 )
 __CATEGORY__ = "Utilities"
+
+#------------------------------
+#Helpers
+#------------------------------
 
 def format_speed(bits_per_sec):
     mbps = bits_per_sec / 1_000_000
@@ -111,6 +115,10 @@ def format_output(result, detailed=False):
         lines.append(f"  • Server ID: `{server['id']}`")
 
     return "\n".join(lines)
+
+#------------------------------
+#Command handlers
+#------------------------------
 
 def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!speedtest(?:\s+(.*))?$"))

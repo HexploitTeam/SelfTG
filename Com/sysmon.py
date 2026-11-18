@@ -1,4 +1,4 @@
-# Com/sysmon.py
+"""!sysmon: periodic system samples kept in a bounded history file."""
 import time
 import psutil
 import platform
@@ -6,9 +6,9 @@ import os
 import asyncio
 import json
 from telethon import events
-import Com.tgsend as tgsend
+import Com.core.tgsend as tgsend
 
-from Com.storage import save_json as _save_json
+from Com.core.storage import save_json as _save_json
 
 __HELP__ = "!sysmon start/stop/export → Live system monitor that updates every 5s, logs stats, and can export logs."
 __CATEGORY__ = "Utilities"
@@ -26,6 +26,10 @@ MAX_LOG_ENTRIES = 500
 # Prime psutil so interval=None has a baseline to compare against.
 psutil.cpu_percent(interval=None)
 
+
+#------------------------------
+#Helpers
+#------------------------------
 
 def format_stats():
     uptime_seconds = int(time.time() - START_TIME)
@@ -120,6 +124,10 @@ def pretty_stats(stats):
         f"⚙️ **Processes:** `{stats['processes']}`\n"
         f"🕒 **Logged at:** `{stats['timestamp']}`")
 
+
+#------------------------------
+#Command handlers
+#------------------------------
 
 def setup(client, my_id):
 

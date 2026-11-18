@@ -1,3 +1,5 @@
+"""Entry point: build the client, load every command module and run the loop."""
+
 import asyncio
 import importlib
 import logging
@@ -8,8 +10,8 @@ import sys
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 
-from Com import scheduler
-from Com.net import ReplitConnection
+from Com.core import scheduler
+from Com.core.net import ReplitConnection
 
 logging.basicConfig(
     level=logging.INFO,
@@ -31,9 +33,10 @@ my_id = None
 _background_tasks = []
 
 
-# ------------------------------
-# Configuration
-# ------------------------------
+#------------------------------
+#Configuration
+#------------------------------
+
 def _require_env(name):
     value = (os.environ.get(name) or "").strip()
     if not value:
@@ -75,7 +78,7 @@ def build_client():
         session,
         api_id,
         api_hash,
-        # Replit-compatible transport (port 5222, see Com/net.py).
+        # Replit-compatible transport (port 5222, see Com/core/net.py).
         connection=ReplitConnection,
         # Telethon retries short drops itself; the loop below only handles the
         # cases it gives up on, so keep this small and bounded.
@@ -86,10 +89,13 @@ def build_client():
     )
 
 
-# ------------------------------
-# Load commands
-# ------------------------------
+#------------------------------
+#Load commands
+#------------------------------
+
 def load_commands():
+    # Only files directly inside Com/ are commands; shared plumbing lives in
+    # Com/core and the bot in Com/bot, so neither is scanned as a command.
     total_loaded = 0
     failures = []
     # Sorted so handler registration order is deterministic between restarts.
@@ -115,9 +121,10 @@ def load_commands():
     return failures
 
 
-# ------------------------------
-# Connection lifecycle
-# ------------------------------
+#------------------------------
+#Connection lifecycle
+#------------------------------
+
 async def _on_ready():
     """Runs once, after the first successful (authorized) connection."""
     global my_id
@@ -132,17 +139,27 @@ async def _on_ready():
 
     load_commands()
 
-    # Start the separate bot as a background task. Keep a reference: a bare
-    # create_task() result can be garbage collected mid-flight.
+    # The bridge used to rely on main's command scan calling its setup(); it is
+    # not a command, so main now wires it explicitly: heartbeat scheduler job,
+    # outbox worker and crash recovery of interrupted actions.
     try:
-        from Com import bot as bot_module
+        from Com.bot import interop as interop_module
 
-        if bot_module.BOT_ENABLED:
-            task = asyncio.create_task(bot_module.start_bot(my_id), name="selftg-bot")
-            _background_tasks.append(task)
-            log.info("[BOT] Bot starting.")
-        else:
-            log.info("[BOT] BOT_TOKEN not set, bot disabled.")
+        interop_module.setup(client, my_id)
+    except Exception:
+        log.exception("Interop bridge failed to start; the bot will fall back "
+                      "to the scheduler-free path and queue actions will wait")
+
+    # Start the separate bot as a background task. Keep a reference: a bare
+    # create_task() result can be garbage collected mid-flight. start_bot()
+    # returns by itself when BOT_TOKEN is missing (after logging what to add),
+    # so a misconfigured bot never takes the self-bot down with it.
+    try:
+        from Com.bot import client as bot_module
+
+        task = asyncio.create_task(bot_module.start_bot(my_id), name="selftg-bot")
+        _background_tasks.append(task)
+        log.info("[BOT] Bot supervisor starting.")
     except Exception:
         log.exception("[BOT] Failed to start")
 
@@ -263,9 +280,10 @@ async def main():
                 raise result
 
 
-# ------------------------------
-# Run
-# ------------------------------
+#------------------------------
+#Run
+#------------------------------
+
 if __name__ == "__main__":
     # asyncio.run() creates and closes the loop itself; the previous
     # loop = asyncio.get_event_loop() pattern is deprecated on 3.10+.

@@ -1,4 +1,3 @@
-# Com/weather.py
 """`!weather` -- current conditions and a short forecast from free, keyless APIs.
 
 Providers (both free, no API key, no credit card):
@@ -13,7 +12,7 @@ import logging
 
 from telethon import events
 
-import Com.api as api
+import Com.core.api as api
 
 __HELP__ = (
     "!weather <city> → Current weather and a 3-day outlook (Open-Meteo, no key)\n"
@@ -26,6 +25,10 @@ log = logging.getLogger("selftg.weather")
 GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 WTTR_URL = "https://wttr.in/{city}?format=j1"
+
+#------------------------------
+#Data
+#------------------------------
 
 # WMO weather interpretation codes used by Open-Meteo.
 WMO = {
@@ -63,6 +66,10 @@ WMO = {
 def describe_code(code):
     return WMO.get(int(code), ("🌡️", f"weather code {code}"))
 
+
+#------------------------------
+#Providers
+#------------------------------
 
 async def _geocode(city):
     data = await api.fetch_json(
@@ -165,6 +172,10 @@ async def get_weather(city):
         log.info("weather: Open-Meteo crashed (%s), trying wttr.in", type(exc).__name__)
     return await _wttr(city)
 
+
+#------------------------------
+#Command handlers
+#------------------------------
 
 def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!weather(?:\s+([\s\S]+))?$"))

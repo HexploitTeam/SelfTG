@@ -1,4 +1,4 @@
-# Com/uptime.py
+"""!uptime: bot runtime plus a resource snapshot."""
 import time
 import psutil
 from telethon import events
@@ -19,7 +19,6 @@ def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!uptime$"))
     async def uptime_handler(event):
         try:
-            # Calculate uptime
             uptime_seconds = int(time.time() - START_TIME)
             days, remainder = divmod(uptime_seconds, 86400)
             hours, remainder = divmod(remainder, 3600)
@@ -59,7 +58,6 @@ def setup(client, my_id):
             # System info
             sys_info = f"{platform.system()} {platform.release()} ({platform.machine()})"
 
-            # Reply
             msg = (f"⏱ **Bot Uptime:** `{uptime_str}`\n\n"
                    f"💻 **System:** `{sys_info}`\n"
                    f"🧮 **CPU:** `{cpu_usage}%` of {cpu_count} cores\n"

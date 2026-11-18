@@ -1,4 +1,3 @@
-# Com/confirm.py
 """The one confirmation-token helper for destructive subcommands.
 
 `!note clear`, `!todo clear all` and `!remind clear` all have to be impossible to
@@ -16,7 +15,7 @@ import os
 import secrets
 import time
 
-from Com.storage import load_json, save_json
+from Com.core.storage import load_json, save_json
 
 CONFIRM_FILE = "mode/confirm.json"
 TOKEN_TTL = 300  # seconds the prompt stays valid

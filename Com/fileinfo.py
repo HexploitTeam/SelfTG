@@ -1,4 +1,4 @@
-# Com/fileinfo.py
+"""!fileinfo: size, MIME type and hashes for a replied document."""
 from telethon import events
 import hashlib
 import os
@@ -27,7 +27,6 @@ def setup(client, my_id):
                 await event.reply("❌ No file information found.")
                 return
 
-            # Download file temporarily to calculate hashes
             path = await reply_msg.download_media(file="./temp_fileinfo")
             md5_hash = sha1_hash = sha256_hash = "N/A"
             if path and os.path.exists(path):
@@ -38,7 +37,6 @@ def setup(client, my_id):
                     sha256_hash = hashlib.sha256(data).hexdigest()
                 os.remove(path)
 
-            # Human-readable size
             def human_size(size):
                 if size is None:
                     return "Unknown"
@@ -48,7 +46,6 @@ def setup(client, my_id):
                     size /= 1024
                 return f"{size:.2f} PB"
 
-            # Format message
             msg = "📂 **File Information**\n\n"
             if file.name:
                 msg += f"**Name:** `{file.name}`\n"

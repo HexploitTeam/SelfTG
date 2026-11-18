@@ -1,8 +1,8 @@
-# Com/calc.py
+"""!calc: arithmetic on a replied message, evaluated through Com.core.safe_eval."""
 from telethon import events
-import Com.tgsend as tgsend
+import Com.core.tgsend as tgsend
 
-from Com.safe_eval import evaluate as safe_evaluate
+from Com.core.safe_eval import evaluate as safe_evaluate
 
 __HELP__ = "!calc <num1> <op> <num2> → Calculate (supports + - × /). Must be used as reply."
 __CATEGORY__ = "Utilities"
@@ -18,16 +18,16 @@ def setup(client, my_id):
                 return
 
             expression = event.pattern_match.group(1).strip()
-            # Normalize × to *
+            # Persian keyboards send × where the parser expects *
             expression = expression.replace("×", "*").replace("÷", "/")
 
-            # Only allow digits, operators, dots, and spaces
+            # Reject anything else here; Com/core/safe_eval.py is the real guard
             allowed = set("0123456789+-*/. ")
             if not all(c in allowed for c in expression):
                 await event.edit("❌ Invalid expression")
                 return
 
-            # Evaluate without eval(): the AST whitelist in Com/safe_eval.py only
+            # Evaluate without eval(): the AST whitelist in Com/core/safe_eval.py only
             # accepts numbers and arithmetic operators.
             try:
                 result = safe_evaluate(expression)
@@ -35,10 +35,8 @@ def setup(client, my_id):
                 await event.edit("❌ Calculation error")
                 return
 
-            # Delete command
             await event.delete()
 
-            # Reply with result
             reply_msg = await event.get_reply_message()
             await client.send_message(await tgsend.peer(event),
                                       f"{result}",

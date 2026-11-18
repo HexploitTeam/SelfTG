@@ -1,11 +1,11 @@
-# Com/encode.py
+"""!encode: text encoders that mirror the decoders in Com/decodecheck.py."""
 import base64
 import urllib.parse
 import codecs
 import html
 import re
 from telethon import events
-import Com.tgsend as tgsend
+import Com.core.tgsend as tgsend
 
 __HELP__ = (
     "!encode <method> <text> → Encode text using a specific method.\n"
@@ -18,7 +18,9 @@ __HELP__ = (
 __CATEGORY__ = "Utilities"
 
 
-# ---------- Encoder functions ----------
+#------------------------------
+#Encoder functions
+#------------------------------
 
 def encode_base64(text):
     return base64.b64encode(text.encode('utf-8')).decode('utf-8')
@@ -97,7 +99,6 @@ def encode_uuencode(text):
 def encode_xxencode(text):
     # XXencode alphabet
     alphabet = "+-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-    # Convert bytes
     data = text.encode('utf-8')
     out = []
     for i in range(0, len(data), 3):
@@ -111,13 +112,10 @@ def encode_xxencode(text):
         out.append(alphabet[((a << 4) | (b >> 4)) & 0x3f])
         out.append(alphabet[((b << 2) | (c >> 6)) & 0x3f])
         out.append(alphabet[c & 0x3f])
-    # Remove padding if any (we use 4 chars per 3 bytes; if original length not multiple of 3, we have extra)
-    # Since we used padding, we should trim trailing chars? Actually, standard XXencode uses ' ' as padding,
-    # but we'll just output the encoded string; it can be decoded by our decoder.
+    # Zero padding is kept; Com/decodecheck.py strips it before decoding
     return ''.join(out)
 
 def encode_base36(text):
-    # Convert bytes to int, then to base36
     import binascii
     n = int.from_bytes(text.encode('utf-8'), 'big')
     alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -184,7 +182,10 @@ def encode_base91(text):
     return ''.join(out)
 
 
-# ---------- All encoders dictionary ----------
+#------------------------------
+#Encoder registry
+#------------------------------
+
 ENCODERS = {
     "base64": encode_base64,
     "base32": encode_base32,
@@ -209,7 +210,7 @@ ENCODERS = {
     "xxencode": encode_xxencode,
 }
 
-# Emoji for each method (optional)
+# Display emoji for each encoder
 EMOJIS = {
     "base64": "🔐",
     "base32": "🔐",
@@ -249,7 +250,6 @@ def setup(client, my_id):
                 for name, func in sorted(ENCODERS.items()):
                     try:
                         encoded = func(text)
-                        # Skip if error message
                         if encoded.startswith("⚠️"):
                             output += f"{EMOJIS.get(name, '🔹')} **{name.upper()}:** `{encoded}`\n"
                         else:

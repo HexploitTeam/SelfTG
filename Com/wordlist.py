@@ -1,4 +1,4 @@
-# Com/wordlist.py
+"""!wordlist: fetch rockyou.txt and report on the generated wordlists."""
 import os
 import gzip
 import urllib.request
@@ -77,17 +77,13 @@ def setup(client, my_id):
             await event.edit("❌ rockyou.txt not found. Use `!wordlist download` first.")
             return
         await event.edit("🔄 Merging rockyou.txt with built‑in words...")
-        # Read rockyou and built-in words
         try:
             with open(ROCKYOU_FILE, 'r', encoding='utf-8', errors='ignore') as f:
                 rockyou_words = set(line.strip() for line in f if line.strip())
         except:
             await event.edit("❌ Failed to read rockyou.txt")
             return
-        # Add some extra generated words (optional)
-        # We'll just save the rockyou words (already 14M) – that's enough.
-        # But we can also add the built‑in words from generate, but not needed.
-        # For simplicity, we'll just copy rockyou to wordlist.txt
+        # rockyou is already large enough that merging the generated list adds nothing
         shutil.copy2(ROCKYOU_FILE, WORDLIST_FILE)
         count = await count_lines_async(WORDLIST_FILE)
         await event.edit(f"✅ Merged! `wordlist.txt` now has {count:,} entries.")

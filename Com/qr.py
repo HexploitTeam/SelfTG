@@ -1,4 +1,4 @@
-# Com/qr.py
+"""!qr: generate a QR code image from text."""
 from telethon import events
 import qrcode
 from io import BytesIO

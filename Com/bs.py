@@ -1,6 +1,6 @@
-# Com/bs.py
+"""!botstatus: report whether the helper bot account is connected."""
 from telethon import events
-from Com import bot as bot_module
+from Com.bot import client as bot_module
 
 __HELP__ = "!botstatus → Check if the bot is running and connected."
 __CATEGORY__ = "Utilities"

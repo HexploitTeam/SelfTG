@@ -1,4 +1,4 @@
-# Com/decodecheck.py
+"""!decodecheck: identify and decode text written in common encodings."""
 import base64
 import binascii
 import urllib.parse
@@ -38,12 +38,13 @@ def is_printable(text):
     """Return True if >= 85% of characters are printable (Unicode-aware)."""
     if not text:
         return False
-    # Count characters that are printable (including Unicode letters, numbers, punctuation, emoji, etc.)
     printable_count = sum(1 for c in text if c.isprintable())
     return printable_count / len(text) >= 0.85
 
 
-# ---------- Decoder functions ----------
+#------------------------------
+#Decoder functions
+#------------------------------
 
 def try_base64(text):
     """Standard and URL-safe base64, with padding handling."""
@@ -132,7 +133,9 @@ def try_unicode_escape(text):
     except Exception:
         return None
 
-# ---------- NEW DECODERS ----------
+#------------------------------
+#New decoders
+#------------------------------
 
 def try_base36(text):
     """Base36 decode (alphabet 0-9A-Z)."""
@@ -239,7 +242,6 @@ def try_xx(text):
     # XXencode alphabet: +-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
     alphabet = "+-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
     try:
-        # Remove line breaks and trailing whitespace
         clean = ''.join(text.split())
         # Each 4 chars -> 3 bytes
         out = []
@@ -260,7 +262,7 @@ def try_xx(text):
 
 def try_binhex(text):
     try:
-        # BinHex requires file header, we'll try to decode the data part
+        # BinHex needs a file header; this rebuilds the data section and gives up quietly
         # Simpler: use binhex module to decode from a string.
         # We'll create a fake file with header.
         # Not robust; we'll skip if not a proper .hqx
@@ -280,7 +282,6 @@ def try_html_unescape(text):
 def try_json_literal(text):
     """Try to parse as JSON string literal."""
     try:
-        # Wrap in quotes if not already
         if not text.startswith('"'):
             text = '"' + text + '"'
         decoded = json.loads(text)
@@ -293,7 +294,7 @@ def try_json_literal(text):
 def try_python_literal(text):
     """Try to evaluate as Python string literal."""
     try:
-        # Try to eval as a literal
+        # ast.literal_eval accepts literals only; unlike eval() it cannot execute code
         decoded = ast.literal_eval(f'"{text}"') if not text.startswith('"') else ast.literal_eval(text)
         if isinstance(decoded, str) and is_printable(decoded):
             return decoded
@@ -341,7 +342,6 @@ def try_reverse(text):
 def try_octal_escapes(text):
     """Decode octal escapes like \\123\\456."""
     try:
-        # Replace \ooo with actual byte
         pattern = re.compile(r'\\([0-7]{1,3})')
         def repl(m):
             return chr(int(m.group(1), 8))
@@ -432,7 +432,10 @@ def try_morse(text):
     except Exception:
         return None
 
-# ---------- List of decoders (in priority order) ----------
+#------------------------------
+#Decoder list
+#------------------------------
+
 DECODERS = [
     # More specific / unambiguous first
     ("Hex", try_hex),

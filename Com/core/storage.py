@@ -1,4 +1,3 @@
-# Com/storage.py
 """Crash-safe JSON persistence helpers shared by the command modules.
 
 Every state file in this project used to be written with
@@ -61,9 +60,10 @@ def ensure_json_file(path, initial):
         save_json(path, initial)
 
 
-# ------------------------------
-# Schemas / migrations
-# ------------------------------
+#------------------------------
+#Schemas and migrations
+#------------------------------
+
 # The v3 owner commands all keep their state in JSON documents written by
 # `save_json`. Each document carries a `_version` key so a schema change is a
 # deliberate migration step instead of "whatever shape the old file had".

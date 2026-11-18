@@ -1,9 +1,9 @@
-# Com/aiml.py
+"""!aiml commands: train a Markov model on chat history and generate replies from it."""
 import os
 import sys
 import random
 from telethon import events
-import Com.tgsend as tgsend
+import Com.core.tgsend as tgsend
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from ML.smart_markov import SmartMarkov

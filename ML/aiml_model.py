@@ -1,4 +1,4 @@
-# ML/aiml_model.py
+"""Standalone GRU text model; nothing under Com/ imports it."""
 import os
 import json
 import numpy as np
@@ -46,6 +46,10 @@ def save_tokenizer(tokenizer):
             'document_count': tokenizer.document_count
         }, f)
 
+#------------------------------
+#Model
+#------------------------------
+
 def build_model(vocab_size, embedding_dim=32, gru_units=32):
     model = Sequential([
         Embedding(vocab_size, embedding_dim, input_length=None),
@@ -78,10 +82,14 @@ def sequence_generator(texts, tokenizer, vocab_size, max_len, batch_size=8):
         y = np.eye(vocab_size)[targets]
         yield X, y
 
+#------------------------------
+#Training
+#------------------------------
+
 def train_model(texts, epochs=15, batch_size=8, max_sequences=1000, progress_callback=None, verbose=1):
     if not texts:
         raise ValueError("No texts to train on.")
-    # Limit number of texts to avoid memory blow
+    # Cap the corpus before tokenizing; full histories exceed the Repl's memory
     if len(texts) > max_sequences:
         texts = texts[:max_sequences]
 
@@ -124,6 +132,10 @@ def train_model(texts, epochs=15, batch_size=8, max_sequences=1000, progress_cal
 
     return model, tokenizer, max_len
 
+#------------------------------
+#Generation
+#------------------------------
+
 def generate_text(seed, model, tokenizer, max_len, num_words=20, temperature=0.9, repetition_penalty=1.3):
     seq = tokenizer.texts_to_sequences([seed])[0]
     for _ in range(num_words):
@@ -141,7 +153,6 @@ def generate_text(seed, model, tokenizer, max_len, num_words=20, temperature=0.9
         if next_word_idx == 0:
             break
         seq.append(next_word_idx)
-    # Convert indices to words
     result_words = []
     for idx in seq:
         for word, i in tokenizer.word_index.items():

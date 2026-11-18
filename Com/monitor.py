@@ -1,10 +1,10 @@
-# Com/monitor.py
+"""!monitor: keyword watching with per-chat and global scopes."""
 import os
 import json
 import re
 from telethon import events
 
-from Com.storage import save_json
+from Com.core.storage import save_json
 
 __HELP__ = (
     "!monitor add <keyword> → Add keyword to watch (in current chat or global)\n"
@@ -22,6 +22,10 @@ DATA_FILE = "mode/monitor.json"
 LOG_FILE = "mode/monitor_log.txt"
 
 os.makedirs("mode", exist_ok=True)
+
+#------------------------------
+#State
+#------------------------------
 
 # Default structure
 DEFAULT_SCOPE = {
@@ -71,14 +75,15 @@ def log_match(chat_id, user_id, keyword, text):
     with open(LOG_FILE, "a", encoding="utf-8") as f:
         f.write(f"[{chat_id}] User {user_id} matched '{keyword}': {text}\n")
 
+#------------------------------
+#Command handlers
+#------------------------------
+
 def setup(client, my_id):
 
-    # -------------------------
     # Keyword matching handler
-    # -------------------------
     @client.on(events.NewMessage)
     async def monitor_handler(event):
-        # Ignore self messages
         if event.sender_id == my_id:
             return
         text = event.raw_text or ""
@@ -89,13 +94,11 @@ def setup(client, my_id):
         chat_id_str = str(event.chat_id)
         global_enabled = data["__settings"].get("global_enabled", False)
 
-        # Collect all keywords to check (global + per-chat)
         all_keywords = []
         matched_keyword = None
         scope_reply = None
         scope_silent = False
 
-        # Check per-chat scope
         if chat_id_str in data:
             scope = data[chat_id_str]
             all_keywords.extend(scope.get("keywords", []))
@@ -104,7 +107,6 @@ def setup(client, my_id):
             if scope.get("silent"):
                 scope_silent = True
 
-        # Check global scope if enabled
         if global_enabled:
             gscope = data["__global"]
             all_keywords.extend(gscope.get("keywords", []))
@@ -116,10 +118,7 @@ def setup(client, my_id):
         if not all_keywords:
             return
 
-        # Determine match mode (per-chat overrides global)
-        # We'll check both but we can simply use per-chat or global flags
-        # We'll assume if per-chat has regex/case, use that; else global settings.
-        # For simplicity, we'll check per-chat first, then global if not set.
+        # A chat that has an entry uses its own flags; otherwise the global ones apply
         case_sensitive = False
         regex_mode = False
         if chat_id_str in data:
@@ -129,7 +128,6 @@ def setup(client, my_id):
             case_sensitive = data["__global"].get("case_sensitive", False)
             regex_mode = data["__global"].get("regex", False)
 
-        # Check each keyword
         for kw in all_keywords:
             if regex_mode:
                 flags = 0 if case_sensitive else re.IGNORECASE
@@ -149,10 +147,9 @@ def setup(client, my_id):
         if not matched_keyword:
             return
 
-        # Log always (unless silent? No, we log always for audit)
+        # Every hit is logged; silent mode only suppresses the alert and the reply
         log_match(event.chat_id, event.sender_id, matched_keyword, text)
 
-        # Send DM alert unless silent
         if not scope_silent:
             try:
                 chat_name = getattr(event.chat, "title", "Private")
@@ -169,16 +166,13 @@ def setup(client, my_id):
             except Exception as e:
                 print(f"[monitor] Failed to send DM: {e}")
 
-        # Send reply in chat if reply_text is set
         if scope_reply:
             try:
                 await event.reply(scope_reply)
             except Exception as e:
                 print(f"[monitor] Failed to send reply: {e}")
 
-    # -------------------------
     # !monitor add <keyword>
-    # -------------------------
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!monitor add (.+)"))
     async def monitor_add(event):
         keyword = event.pattern_match.group(1).strip()
@@ -191,9 +185,7 @@ def setup(client, my_id):
         save_data(data)
         await event.reply(f"✅ Added '{keyword}' to watchlist.")
 
-    # -------------------------
     # !monitor remove <keyword>
-    # -------------------------
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!monitor remove (.+)"))
     async def monitor_remove(event):
         keyword = event.pattern_match.group(1).strip()
@@ -206,9 +198,7 @@ def setup(client, my_id):
         save_data(data)
         await event.reply(f"✅ Removed '{keyword}' from watchlist.")
 
-    # -------------------------
     # !monitor list
-    # -------------------------
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!monitor list$"))
     async def monitor_list(event):
         data = load_data()
@@ -235,9 +225,7 @@ def setup(client, my_id):
 
         await event.edit(msg)
 
-    # -------------------------
     # !monitor global
-    # -------------------------
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!monitor global$"))
     async def monitor_global(event):
         data = load_data()
@@ -247,9 +235,7 @@ def setup(client, my_id):
         status = "ON" if not current else "OFF"
         await event.reply(f"🌍 Global watch mode: {status}")
 
-    # -------------------------
     # !monitor reply <text> or off
-    # -------------------------
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!monitor reply (.+)"))
     async def monitor_reply(event):
         text = event.pattern_match.group(1).strip()
@@ -263,9 +249,7 @@ def setup(client, my_id):
             await event.reply(f"✅ Reply text set to: {text}")
         save_data(data)
 
-    # -------------------------
     # !monitor regex
-    # -------------------------
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!monitor regex$"))
     async def monitor_regex(event):
         data = load_data()
@@ -275,9 +259,7 @@ def setup(client, my_id):
         status = "ON" if scope["regex"] else "OFF"
         await event.reply(f"🔍 Regex mode: {status}")
 
-    # -------------------------
     # !monitor case
-    # -------------------------
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!monitor case$"))
     async def monitor_case(event):
         data = load_data()
@@ -287,9 +269,7 @@ def setup(client, my_id):
         status = "ON" if scope["case_sensitive"] else "OFF"
         await event.reply(f"🔤 Case sensitivity: {status}")
 
-    # -------------------------
     # !monitor silent
-    # -------------------------
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!monitor silent$"))
     async def monitor_silent(event):
         data = load_data()
@@ -299,9 +279,7 @@ def setup(client, my_id):
         status = "ON" if scope["silent"] else "OFF"
         await event.reply(f"🔇 Silent mode: {status}")
 
-    # -------------------------
     # Fallback help
-    # -------------------------
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!monitor$"))
     async def monitor_help(event):
         await event.edit(

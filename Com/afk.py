@@ -1,4 +1,3 @@
-# Com/afk.py
 """`!afk` -- away status with auto-replies to incoming private messages.
 
 Scope model
@@ -22,11 +21,11 @@ import logging
 import time
 
 from telethon import errors, events
-import Com.tgsend as tgsend
+import Com.core.tgsend as tgsend
 
-import Com.registry as registry
-from Com import scheduler
-from Com.storage import load_store, save_json
+import Com.core.registry as registry
+from Com.core import scheduler
+from Com.core.storage import load_store, save_json
 
 log = logging.getLogger("selftg.afk")
 
@@ -52,9 +51,10 @@ __HELP__ = registry.command(
 __CATEGORY__ = "Utilities"
 
 
-# ------------------------------
-# State
-# ------------------------------
+#------------------------------
+#State
+#------------------------------
+
 def _default():
     return {"global": None, "chats": {}, "cooldowns": {}, "pause_until": 0}
 
@@ -129,9 +129,10 @@ def _human_ago(seconds):
     return f"{seconds // 86400}d ago"
 
 
-# ------------------------------
-# Scheduler job
-# ------------------------------
+#------------------------------
+#Scheduler job
+#------------------------------
+
 async def tick(client=None):
     """Expire old cooldowns and lift an automatic pause after a flood wait."""
     state = load_state()
@@ -159,7 +160,7 @@ def setup(client, my_id):
             f"_Set {_human_ago(time.time() - since)}._"
         )
 
-    # ---------- commands ----------
+    # commands
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!afk(?:\s+([\s\S]*))?$"))
     async def afk_cmd(event):
         if not event.out or event.sender_id != my_id:
@@ -242,7 +243,7 @@ def setup(client, my_id):
             log.exception("afk: command failed")
             await _say(event, "❌ AFK command failed; see the Replit log.")
 
-    # ---------- auto-reply to incoming DMs ----------
+    # auto-reply to incoming DMs
     @client.on(events.NewMessage(incoming=True))
     async def auto_reply(event):
         try:
@@ -279,7 +280,7 @@ def setup(client, my_id):
         except Exception:  # noqa: BLE001
             log.exception("afk: auto-reply failed")
 
-    # ---------- auto-clear when the owner answers ----------
+    # auto-clear when the owner answers
     @client.on(events.NewMessage(outgoing=True))
     async def auto_clear(event):
         try:

@@ -1,4 +1,3 @@
-# Com/durations.py
 """The one duration parser for the whole project.
 
 `!ban temp` and `!remind` both need to read strings like ``30m``, ``2h``, ``7d``,

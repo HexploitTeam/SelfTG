@@ -1,9 +1,9 @@
-# Com/mute.py
+"""!mute: the mute ledger and the admin actions behind it."""
 import os
 import json
 from telethon import events
 
-from Com.storage import save_json
+from Com.core.storage import save_json
 
 __HELP__ = (
     "!mute add <user> (or reply) → Mute (admin mode: tries to delete)\n"
@@ -21,6 +21,10 @@ os.makedirs(BASE_DIR, exist_ok=True)
 if not os.path.exists(MUTE_FILE):
     with open(MUTE_FILE, "w", encoding="utf-8") as f:
         json.dump({}, f, indent=2)
+
+#------------------------------
+#State
+#------------------------------
 
 def load_mutes():
     with open(MUTE_FILE, "r", encoding="utf-8") as f:
@@ -57,6 +61,10 @@ def set_muted_users(chat_id, users):
     data[str(chat_id)] = users
     save_mutes(data)
 
+#------------------------------
+#Helpers
+#------------------------------
+
 async def get_username(client, user_id):
     # See Com/warn.py: run_until_complete() inside a running loop always failed.
     try:
@@ -64,6 +72,10 @@ async def get_username(client, user_id):
         return f"@{user.username}" if user.username else f"ID:{user_id}"
     except Exception:
         return f"ID:{user_id}"
+
+#------------------------------
+#Command handlers
+#------------------------------
 
 def setup(client, my_id):
     @client.on(events.NewMessage)

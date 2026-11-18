@@ -1,4 +1,3 @@
-# Com/poll.py
 """`!poll` -- native Telegram polls via ``InputMediaPoll`` (no external service).
 
 This replaces the previous reaction/text-based fake poll: a real poll is created
@@ -39,10 +38,10 @@ from telethon.tl.functions.messages import (
 )
 from telethon.tl.types import InputMediaPoll, MessageMediaPoll, Poll, PollAnswer
 
-import Com.tgsend as tgsend
+import Com.core.tgsend as tgsend
 
-import Com.registry as registry
-from Com.storage import load_store, save_json
+import Com.core.registry as registry
+from Com.core.storage import load_store, save_json
 
 log = logging.getLogger("selftg.poll")
 
@@ -70,9 +69,10 @@ __HELP__ = registry.command(
 __CATEGORY__ = "Utilities"
 
 
-# ------------------------------
-# Parsing
-# ------------------------------
+#------------------------------
+#Parsing
+#------------------------------
+
 def split_options(raw):
     """Split on '|' while keeping quoted segments (which may contain '|')."""
     parts, buffer, quote = [], [], None
@@ -142,9 +142,10 @@ def render_results(question, options, results, total, chosen=None):
     return "\n".join(lines)
 
 
-# ------------------------------
-# State (last poll per chat)
-# ------------------------------
+#------------------------------
+#State
+#------------------------------
+
 def _default():
     return {"chats": {}}
 

@@ -1,4 +1,3 @@
-# Com/shorturl.py
 """`!shorturl` -- keyless link shortening with a fallback.
 
 Previously: TinyURL only, and Bitly behind an account-bound token that was the
@@ -16,8 +15,8 @@ from urllib.parse import quote
 
 from telethon import events
 
-import Com.api as api
-from Com.storage import load_json, save_json
+import Com.core.api as api
+from Com.core.storage import load_json, save_json
 
 __HELP__ = (
     "!shorturl <link> or reply → Shorten a URL (TinyURL → is.gd, both keyless)\n"
@@ -35,6 +34,10 @@ TINYURL_API = "https://tinyurl.com/api-create.php"
 ISGD_API = "https://is.gd/create.php"
 BITLY_API = "https://api-ssl.bitly.com/v4/shorten"
 
+
+#------------------------------
+#Providers
+#------------------------------
 
 async def tinyurl(url):
     text = await api.fetch_text(
@@ -94,6 +97,10 @@ def log_url(original, short, service):
     except Exception:  # noqa: BLE001 - logging must never break the command
         log.info("shorturl: could not write log entry")
 
+
+#------------------------------
+#Command handlers
+#------------------------------
 
 def setup(client, my_id):
     @client.on(

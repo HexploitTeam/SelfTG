@@ -1,4 +1,3 @@
-# Com/trivia.py
 """`!trivia` -- a group-friendly quiz question from the free Open Trivia DB.
 
 Open Trivia DB needs no account, no key and no payment. Its published limits are
@@ -15,8 +14,8 @@ from urllib.parse import unquote
 
 from telethon import events
 
-import Com.api as api
-from Com.storage import load_json, save_json
+import Com.core.api as api
+from Com.core.storage import load_json, save_json
 
 __HELP__ = (
     "!trivia → Ask a random multiple-choice question in this chat\n"
@@ -49,6 +48,10 @@ _last_call = 0.0
 def _decode(value):
     return html.unescape(unquote(value or ""))
 
+
+#------------------------------
+#Client helpers
+#------------------------------
 
 async def _get_token(force_new=False):
     """Return a session token, requesting one only when needed."""
@@ -129,6 +132,10 @@ async def fetch_question(category=None):
     }
 
 
+#------------------------------
+#Rendering
+#------------------------------
+
 def render(question, revealed=False):
     letters = "ABCD"
     lines = [
@@ -147,6 +154,10 @@ def render(question, revealed=False):
         lines.append(f"_Answer in {REVEAL_DELAY}s…_")
     return "\n".join(lines)
 
+
+#------------------------------
+#Command handlers
+#------------------------------
 
 def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!trivia(?:\s+([\w-]+))?$"))

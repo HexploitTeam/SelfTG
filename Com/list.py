@@ -1,11 +1,11 @@
-# Com/list.py
+"""!list: named user lists stored as JSON under mode/lists."""
 import os
 import json
 import asyncio
 from datetime import datetime
 from telethon import events
 from telethon.tl.types import User
-import Com.tgsend as tgsend
+import Com.core.tgsend as tgsend
 
 __HELP__ = (
     "!list create <name> → Create a new empty list\n"
@@ -19,6 +19,10 @@ __CATEGORY__ = "Utilities"
 
 BASE_DIR = "mode/lists"
 os.makedirs(BASE_DIR, exist_ok=True)
+
+#------------------------------
+#Storage
+#------------------------------
 
 def get_list_path(name):
     # Sanitize name to avoid path traversal
@@ -44,6 +48,10 @@ def get_all_lists():
     files = os.listdir(BASE_DIR)
     return [f[:-5] for f in files if f.endswith(".json")]
 
+#------------------------------
+#Helpers
+#------------------------------
+
 async def get_user_info(client, user_id):
     try:
         user = await client.get_entity(user_id)
@@ -56,7 +64,6 @@ async def get_user_info(client, user_id):
             "is_bot": getattr(user, "bot", False),
             "added": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
-        # Build full name
         if info["first_name"] and info["last_name"]:
             info["name"] = f"{info['first_name']} {info['last_name']}"
         else:
@@ -71,6 +78,10 @@ def format_entry(info):
     uid = info.get("id", "N/A")
     added = info.get("added", "Unknown")
     return f"{name} ({username}) – ID: {uid} (added: {added})"
+
+#------------------------------
+#Command handlers
+#------------------------------
 
 def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!list create\s+(\S+)$"))
@@ -95,18 +106,15 @@ def setup(client, my_id):
             await event.edit("❌ Could not determine user.")
             return
 
-        # Load list
         data = load_list(name)
         if data is None:
             await event.edit(f"❌ List '{name}' does not exist. Create it first with `!list create {name}`.")
             return
 
-        # Check if user already exists
         if any(entry.get("id") == user_id for entry in data):
             await event.edit("❌ User already in this list.")
             return
 
-        # Fetch user info
         info = await get_user_info(client, user_id)
         if not info:
             await event.edit("❌ Failed to get user info.")
@@ -134,7 +142,6 @@ def setup(client, my_id):
 
         msg = f"📋 **List: {name}** ({len(data)} entries)\n" + "\n".join(lines)
         if len(msg) > 4000:
-            # Send as file
             import io
             bio = io.BytesIO(msg.encode("utf-8"))
             bio.name = f"{name}.txt"

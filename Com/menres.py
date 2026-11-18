@@ -1,4 +1,4 @@
-# Com/menres.py
+"""!menres: auto-reply when the owner's account is mentioned."""
 from telethon import events
 import os
 import json

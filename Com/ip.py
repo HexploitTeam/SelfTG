@@ -1,4 +1,4 @@
-# Com/ip.py
+"""!ip: geolocation, DNS, reverse lookup, port and ping checks."""
 import socket
 import re
 import shlex
@@ -7,9 +7,9 @@ import subprocess
 import ipaddress
 from telethon import events
 
-import Com.api as api
+import Com.core.api as api
 
-# Optional imports – handle missing gracefully
+# dnspython is optional; socket-based lookups still work without it
 try:
     import dns.resolver
     HAS_DNS = True
@@ -47,7 +47,10 @@ def is_valid_domain(domain):
     pattern = re.compile(r'^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z0-9-]{1,63}(?<!-))*\.[A-Za-z]{2,}$')
     return pattern.match(domain) is not None
 
-# ---------- Subcommands ----------
+#------------------------------
+#Subcommands
+#------------------------------
+
 IP_API_URL = "http://ip-api.com/json/{ip}"          # keyless, HTTP-only free tier
 IPWHO_URL = "https://ipwho.is/{ip}"                 # keyless HTTPS fallback
 GEO_CACHE_TTL = 24 * 3600                           # geo data barely changes

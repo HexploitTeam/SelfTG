@@ -1,4 +1,4 @@
-# Com/finduser.py
+"""!finduser: scan the exported group logs for one user's messages."""
 from telethon import events
 import os
 from datetime import datetime
@@ -21,9 +21,6 @@ def setup(client, my_id):
             send_here = False
             target_user_id = None
 
-            # -------------------------------
-            # Reply case
-            # -------------------------------
             if event.is_reply:
                 reply_msg = await event.get_reply_message()
                 sender = await reply_msg.get_sender()
@@ -34,9 +31,6 @@ def setup(client, my_id):
                 else:
                     send_here = False  # send in Saved Messages
 
-            # -------------------------------
-            # Mention/ID case
-            # -------------------------------
             elif args:
                 parts = args.split()
                 if parts[0].lower() == "here":
@@ -76,9 +70,6 @@ def setup(client, my_id):
                 return
 
             log_lines = []
-            # -------------------------------
-            # Iterate all group files
-            # -------------------------------
             for filename in os.listdir(GROUP_FOLDER):
                 if not filename.endswith(".txt"):
                     continue
@@ -113,17 +104,11 @@ def setup(client, my_id):
                     f"❌ No messages found for **{target_user_id}**")
                 return
 
-            # -------------------------------
-            # Create temp file
-            # -------------------------------
             now = datetime.now(tz).strftime("%Y-%m-%d_%H-%M-%S")
             temp_file = f"{target_user_id}_{now}.txt"
             with open(temp_file, "w", encoding="utf-8") as f:
                 f.writelines("\n".join(log_lines))
 
-            # -------------------------------
-            # Send file to proper chat
-            # -------------------------------
             target_chat = event.chat_id if send_here else "me"
             await event.client.send_file(
                 target_chat,

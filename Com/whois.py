@@ -1,4 +1,4 @@
-# Com/whois.py
+"""!whois: relay a user lookup through an owner-configured info bot."""
 from telethon import events
 import os
 import json
@@ -15,7 +15,7 @@ __CATEGORY__ = "Information"
 WHOIS_FILE = "mode/whois.txt"
 tz = pytz.timezone("Asia/Tehran")
 
-# Mapping of fancy/bullshit characters to normal ones
+# Fancy Unicode letters mapped to their ASCII lookalikes
 FONT_MAP = str.maketrans({
     "γ": "y",
     "τ": "t",
@@ -40,9 +40,7 @@ FONT_MAP = str.maketrans({
 
 def setup(client, my_id):
 
-    # ---------------------------
     # Set the bot
-    # ---------------------------
     @client.on(
         events.NewMessage(from_users=my_id, pattern=r"^!whois set\s+@(\w+)$"))
     async def set_bot(event):
@@ -52,15 +50,12 @@ def setup(client, my_id):
             f.write(bot_username)
         await event.edit(f"✅ Whois bot set to @{bot_username}")
 
-    # ---------------------------
     # Fetch info
-    # ---------------------------
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!whois\s*(.*)$"))
     async def whois(event):
         target = event.pattern_match.group(1).strip()
         await event.delete()  # Delete command
 
-        # Load bot username
         if not os.path.exists(WHOIS_FILE):
             await event.respond(
                 "❌ Please set the bot first with !whois set @BotUsername")
@@ -70,7 +65,6 @@ def setup(client, my_id):
 
         bot_entity = await client.get_entity(bot_username)
 
-        # Determine user to query
         reply = await event.get_reply_message()
         if target.lower() == "here" and reply:
             user_to_query = reply.sender_id
@@ -88,7 +82,6 @@ def setup(client, my_id):
             await event.respond("❌ Usage: !whois (reply to a message) OR !whois @Username/ID OR !whois here (reply)")
             return
 
-        # Send the user ID to the bot
         await client.send_message(bot_entity, str(user_to_query))
 
         # Get the ID of the latest message from the bot BEFORE the reply arrives
@@ -98,7 +91,6 @@ def setup(client, my_id):
         # Wait 7 seconds for the bot to process
         await asyncio.sleep(7)
 
-        # Fetch messages from the bot that are newer than old_id
         new_msgs = await client.get_messages(bot_entity, min_id=old_id, limit=1)
         if not new_msgs:
             await event.respond("❌ Bot did not respond.")
@@ -107,21 +99,17 @@ def setup(client, my_id):
         raw_text = new_msgs[0].message
 
 
-        # Remove Stickersets line
         lines = raw_text.splitlines()
         lines = [
             line for line in lines
             if not line.strip().startswith("Stickersets")
         ]
 
-        # Replace fancy fonts
         clean_lines = [line.translate(FONT_MAP) for line in lines]
 
-        # Parse and create default form
         final_lines = []
         final_lines.append("📊 Whois Information:\n")
         for line in clean_lines:
-            # fix spacing and bullets
             if line.strip():
                 final_lines.append(line)
 

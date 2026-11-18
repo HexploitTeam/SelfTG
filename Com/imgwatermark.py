@@ -1,6 +1,6 @@
-# Com/imgwatermark.py
+"""!imgwatermark: stamp text onto a replied image with Pillow."""
 from telethon import events
-import Com.tgsend as tgsend
+import Com.core.tgsend as tgsend
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 import os
@@ -17,7 +17,6 @@ def setup(client, my_id):
                           pattern=r"^!imgwatermark(?:\s+(.+))?"))
     async def imgwatermark(event):
         try:
-            # Get watermark text
             text = event.pattern_match.group(1)
             if not text and event.is_reply:
                 reply_msg = await event.get_reply_message()
@@ -28,7 +27,6 @@ def setup(client, my_id):
                 )
                 return
 
-            # Check if the command is a reply to an image
             if not event.is_reply:
                 await event.reply("❌ Reply to an image to add a watermark.")
                 return
@@ -38,15 +36,12 @@ def setup(client, my_id):
                 await event.reply("❌ Replied message has no media.")
                 return
 
-            # Download image to memory
             bio = BytesIO()
             await reply_msg.download_media(file=bio)
             bio.seek(0)
 
-            # Open image
             img = Image.open(bio).convert("RGBA")
 
-            # Create watermark layer
             txt_layer = Image.new("RGBA", img.size, (255, 255, 255, 0))
             draw = ImageDraw.Draw(txt_layer)
             font_size = max(20, img.width // 15)
@@ -54,28 +49,22 @@ def setup(client, my_id):
                 "arial.ttf", font_size) if os.path.exists(
                     "arial.ttf") else ImageFont.load_default()
 
-            # Calculate text size using textbbox()
             bbox = draw.textbbox((0, 0), text, font=font)
             text_width = bbox[2] - bbox[0]
             text_height = bbox[3] - bbox[1]
 
-            # Position: bottom-right corner
             x = img.width - text_width - 10
             y = img.height - text_height - 10
 
-            # Draw text
             draw.text((x, y), text, font=font,
                       fill=(255, 255, 255, 128))  # semi-transparent white
 
-            # Combine original image with watermark
             watermarked = Image.alpha_composite(img, txt_layer)
 
-            # Save to BytesIO
             out_bio = BytesIO()
             watermarked.convert("RGB").save(out_bio, "JPEG")
             out_bio.seek(0)
 
-            # Send watermarked image
             await client.send_file(await tgsend.peer(event),
                 out_bio,
                 caption=f"💧 Watermarked Image with text: {text}",

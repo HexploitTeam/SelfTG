@@ -1,4 +1,4 @@
-# Com/reaction.py
+"""!reaction: react to every future message from a user, persisted across restarts."""
 from telethon import events
 from telethon.tl.functions.messages import SendReactionRequest
 from telethon.tl.types import ReactionEmoji
@@ -7,8 +7,8 @@ import json
 import asyncio
 from datetime import datetime
 
-from Com.storage import save_json
-import Com.tgsend as tgsend
+from Com.core.storage import save_json
+import Com.core.tgsend as tgsend
 
 __HELP__ = (
     "!reaction <@Username/ID> <Emoji/alias> → React with emoji to all future messages from the user\n"
@@ -29,7 +29,10 @@ __CATEGORY__ = "Setup"
 os.makedirs("mode", exist_ok=True)
 REACTION_FILE = "mode/reactions.json"
 
-# Emoji alias mapping (text → actual emoji)
+#------------------------------
+#Alias map
+#------------------------------
+
 SUPPORTED_REACTIONS = {
     "👍", "👎", "❤️", "🔥", "🥰", "👏", "🎉", "🤔", "🤯", "🤩",
     "😱", "🙏", "👀", "💯", "💪", "😡", "😄", "😢", "🤡", "💔",
@@ -37,81 +40,56 @@ SUPPORTED_REACTIONS = {
 }
 
 REACTION_ALIASES = {
-    # thumbs
     "like": "👍",
     "thumbsup": "👍",
     "dislike": "👎",
     "thumbsdown": "👎",
-    # heart
     "heart": "❤️",
     "love": "❤️",
     "redheart": "❤️",
-    # fire
     "fire": "🔥",
-    # adore
     "adore": "🥰",
     "lovey": "🥰",
-    # clap
     "clap": "👏",
     "applause": "👏",
-    # party
     "party": "🎉",
     "celebrate": "🎉",
-    # think
     "think": "🤔",
     "hmm": "🤔",
-    # mindblown
     "mindblown": "🤯",
     "mind": "🤯",
-    # starstruck
     "starstruck": "🤩",
     "stars": "🤩",
-    # scream
     "scream": "😱",
     "scared": "😱",
-    # pray
     "pray": "🙏",
     "please": "🙏",
-    # eyes
     "eyes": "👀",
     "look": "👀",
-    # 100
     "100": "💯",
     "perfect": "💯",
-    # muscle
     "muscle": "💪",
     "strong": "💪",
-    # angry
     "angry": "😡",
     "mad": "😡",
-    # smile
     "smile": "😄",
     "happy": "😄",
-    # cry
     "cry": "😢",
     "sad": "😢",
-    # clown
     "clown": "🤡",
     "joker": "🤡",
-    # brokenheart
     "brokenheart": "💔",
     "heartbreak": "💔",
-    # swear
     "swear": "🤬",
     "curse": "🤬",
-    # sigh
     "sigh": "😮‍💨",
     "relief": "😮‍💨",
-    # salute
     "salute": "🫡",
     "respect": "🫡",
-    # handshake
     "handshake": "🤝",
     "deal": "🤝",
-    # lovehand
     "lovehand": "🫶",
     "heartsp": "🫶",
-    # laugh
     "laugh": "🤣",
     "lol": "🤣",
 }
@@ -122,6 +100,10 @@ if not os.path.exists(REACTION_FILE):
 
 active_reactions = {}
 
+
+#------------------------------
+#Command handlers
+#------------------------------
 
 def setup(client, my_id):
 

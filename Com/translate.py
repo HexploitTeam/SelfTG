@@ -1,4 +1,3 @@
-# Com/translate.py
 """`!translate` -- keyless translation with a real fallback chain.
 
 What was wrong before
@@ -25,7 +24,7 @@ from urllib.parse import quote
 
 from telethon import events
 
-import Com.api as api
+import Com.core.api as api
 
 __HELP__ = (
     "!translate <lang_code> <text> → Translate text (e.g. !translate en سلام)\n"

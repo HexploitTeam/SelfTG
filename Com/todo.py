@@ -1,4 +1,3 @@
-# Com/todo.py
 """`!todo` -- a per-chat todo list with stable ids.
 
 Ids are allocated from a per-chat counter and stored with each item, so deleting
@@ -13,9 +12,9 @@ import time
 
 from telethon import events
 
-import Com.registry as registry
-from Com import confirm
-from Com.storage import load_store, save_json
+import Com.core.registry as registry
+from Com.core import confirm
+from Com.core.storage import load_store, save_json
 
 log = logging.getLogger("selftg.todo")
 
@@ -44,9 +43,10 @@ __CATEGORY__ = "Utilities"
 ACTION_CLEAR_ALL = "!todo clear all"
 
 
-# ------------------------------
-# State
-# ------------------------------
+#------------------------------
+#State
+#------------------------------
+
 def _default():
     return {"chats": {}}
 
@@ -101,6 +101,10 @@ def _render(bucket, show_done):
     lines.append(f"\n_{len(bucket['items'])} total · {done} done · {len(bucket['items']) - done} pending_")
     return "\n".join(lines)
 
+
+#------------------------------
+#Command handlers
+#------------------------------
 
 def setup(client, my_id):
 

@@ -1,10 +1,10 @@
-# Com/warn.py
+"""!warn: the warning ledger, its limits and the actions they trigger."""
 import os
 import json
 from telethon import events
-import Com.tgsend as tgsend
+import Com.core.tgsend as tgsend
 
-from Com.storage import save_json
+from Com.core.storage import save_json
 
 __HELP__ = (
     "!warn add <user> [reason] (or reply) → Add a warning to a user\n"
@@ -19,6 +19,10 @@ __CATEGORY__ = "Utilities"
 BASE_DIR = "mode"
 WARN_FILE = os.path.join(BASE_DIR, "warn.json")
 os.makedirs(BASE_DIR, exist_ok=True)
+
+#------------------------------
+#State
+#------------------------------
 
 # Default structure
 DEFAULT_DATA = {
@@ -53,6 +57,10 @@ def save_chat_data(chat_id, chat_data):
     data[str(chat_id)] = chat_data
     save_warns(data)
 
+#------------------------------
+#Helpers
+#------------------------------
+
 async def get_username(client, user_id):
     # Was a synchronous helper calling client.loop.run_until_complete() from
     # inside the running loop, which always raised and silently degraded every
@@ -63,22 +71,23 @@ async def get_username(client, user_id):
     except Exception:
         return f"ID:{user_id}"
 
+#------------------------------
+#Command handlers
+#------------------------------
+
 def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!warn add(?:\s+(.+))?$"))
     async def warn_add(event):
         try:
-            # Determine target user and reason
             reason = ""
             target_user_id = None
 
             # If argument provided: "!warn add @user reason" or "!warn add reason" (if replying)
             arg = event.pattern_match.group(1)
             if arg:
-                # Try to parse target
                 parts = arg.split(maxsplit=1)
                 target_str = parts[0]
                 reason = parts[1] if len(parts) > 1 else "No reason"
-                # Check if target is a mention or ID
                 if target_str.isdigit():
                     target_user_id = int(target_str)
                 else:
@@ -89,7 +98,6 @@ def setup(client, my_id):
                         await event.edit(f"❌ Could not find user: {target_str}")
                         return
             else:
-                # No argument: must be a reply
                 if not event.is_reply:
                     await event.edit("❌ Reply to a user or provide a username/ID.")
                     return
@@ -106,14 +114,12 @@ def setup(client, my_id):
             limit = chat_data.get("limit", 3)
             warnings = chat_data.get("warnings", {})
 
-            # Add warning
             user_warnings = warnings.get(str(target_user_id), [])
             user_warnings.append(reason)
             warnings[str(target_user_id)] = user_warnings
             chat_data["warnings"] = warnings
             save_chat_data(chat_id, chat_data)
 
-            # Check if limit reached
             username = await get_username(client, target_user_id)
             count = len(user_warnings)
             response = f"⚠️ Warning added to {username} (now {count}/{limit}): {reason}"
@@ -177,7 +183,6 @@ def setup(client, my_id):
             target_user_id = None
             arg = event.pattern_match.group(1)
             if arg:
-                # parse user
                 if arg.isdigit():
                     target_user_id = int(arg)
                 else:
@@ -224,7 +229,6 @@ def setup(client, my_id):
                 await event.edit("❌ Index must be >= 1.")
                 return
 
-            # resolve target
             if target_str.isdigit():
                 target_user_id = int(target_str)
             else:
@@ -261,7 +265,7 @@ def setup(client, my_id):
         except Exception as e:
             await event.edit(f"❌ Error: {str(e)}")
 
-    # Catch‑all help
+    # Catch-all help
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!warn$"))
     async def warn_help(event):
         await event.edit(

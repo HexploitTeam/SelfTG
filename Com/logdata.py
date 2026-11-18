@@ -1,4 +1,4 @@
-# Com/logdata.py
+"""!logdata: count the exported log files and the disk space they use."""
 from telethon import events
 import os
 
@@ -22,7 +22,6 @@ def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!logdata$"))
     async def logdata(event):
         try:
-            # Edit the command to show "Calculating..."
             await event.edit("📊 Calculating log data...")
 
             total_files = 0
@@ -39,7 +38,6 @@ def setup(client, my_id):
 
             readable_size = human_readable_size(total_size)
 
-            # Edit the command message with the final result
             await event.edit(
                 f"📁 There are {total_files} log files saved in '{LOG_FOLDER}'.\n💾 Storage used: {readable_size}"
             )

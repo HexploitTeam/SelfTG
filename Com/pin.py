@@ -1,4 +1,3 @@
-# Com/pin.py
 """`!pin` / `!unpin` -- pin, unpin and inspect the pinned message.
 
 Verified against the resolved Telethon 1.33.1:
@@ -17,8 +16,8 @@ import logging
 from telethon import errors, events
 from telethon.tl.types import InputMessagesFilterPinned, User
 
-import Com.registry as registry
-import Com.tgsend as tgsend
+import Com.core.registry as registry
+import Com.core.tgsend as tgsend
 
 log = logging.getLogger("selftg.pin")
 
@@ -37,6 +36,10 @@ __HELP__ = registry.command(
 __CATEGORY__ = "Utilities"
 
 
+#------------------------------
+#Helpers
+#------------------------------
+
 def _preview(message, limit=160):
     text = (message.raw_text or "").strip() if message else ""
     if not text:
@@ -44,6 +47,10 @@ def _preview(message, limit=160):
     text = " ".join(text.split())
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
+
+#------------------------------
+#Command handlers
+#------------------------------
 
 def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!(pin|unpin)(?:\s+([\s\S]*))?$"))

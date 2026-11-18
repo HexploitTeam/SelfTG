@@ -1,8 +1,8 @@
-# Com/mock.py
+"""!mock: fake identities and data through Faker, with a Persian profile."""
 import shlex
 import random
 from telethon import events
-import Com.tgsend as tgsend
+import Com.core.tgsend as tgsend
 from faker import Faker
 
 __HELP__ = (
@@ -22,6 +22,10 @@ __HELP__ = (
     "Without arguments, shows this help."
 )
 __CATEGORY__ = "Utilities"
+
+#------------------------------
+#Data tables
+#------------------------------
 
 # Persian cities and provinces for fa_IR locale
 CITIES_IRAN = [
@@ -69,6 +73,10 @@ TYPE_MAP = {
 }
 
 SPECIAL_TYPES = {"all", "profile"}
+
+#------------------------------
+#Helpers
+#------------------------------
 
 def parse_args(args):
     flags = {'locale': 'en_US', 'count': 1}
@@ -140,6 +148,10 @@ def generate_profile(fake, locale):
             "Date of Birth": fake.date_of_birth().strftime("%Y-%m-%d"),
         }
 
+#------------------------------
+#Command handlers
+#------------------------------
+
 def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r'^!mock(?:\s+(.*))?$'))
     async def mock_cmd(event):
@@ -175,7 +187,7 @@ def setup(client, my_id):
                                  "Try: en_US, fa_IR, de_DE, fr_FR, es_ES, it_IT, ...")
                 return
 
-            # ---- Special type: "all" or "profile" ----
+            # Special type: "all" or "profile"
             if mock_type in SPECIAL_TYPES:
                 data = []
                 for _ in range(count):
@@ -201,7 +213,7 @@ def setup(client, my_id):
                     await event.edit(output)
                 return
 
-            # ---- Normal types ----
+            # Normal types
             if mock_type not in TYPE_MAP:
                 await event.edit(f"❌ Unknown type: {mock_type}\n"
                                  f"Available types: {', '.join(sorted(TYPE_MAP.keys()))}")

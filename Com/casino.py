@@ -1,8 +1,8 @@
-# Com/casino.py
+"""Animated dice, football, basketball, dart and slot commands."""
 import asyncio
 from telethon import events
 from telethon.tl.types import InputMediaDice
-import Com.tgsend as tgsend
+import Com.core.tgsend as tgsend
 
 __HELP__ = (
     "!dice              → Random animated dice.\n"
@@ -19,7 +19,7 @@ __HELP__ = (
 )
 __CATEGORY__ = "Utilities"
 
-# Correct slot mapping based on Telegram values
+# Raw values Telegram reports for each slot face; 22 covers both grape spellings
 SLOT_MAP = {
     "bar": 1,
     "grape": 22,
@@ -29,10 +29,14 @@ SLOT_MAP = {
 }
 REVERSE_SLOT = {v: k for k, v in SLOT_MAP.items()}
 
+#------------------------------
+#Dice helper
+#------------------------------
+
 async def force_dice(client, peer, emoji, target_value, reply_to):
     """Reroll until we get the target value (fast deletion).
 
-    `peer` must be an input peer (see Com/tgsend.py): the game message, the
+    `peer` must be an input peer (see Com/core/tgsend.py): the game message, the
     lookup of its rolled value and the cleanup all address the same chat, and a
     bare id is not resolvable on a fresh StringSession.
     """
@@ -42,7 +46,7 @@ async def force_dice(client, peer, emoji, target_value, reply_to):
             file=InputMediaDice(emoticon=emoji),
             reply_to=reply_to
         )
-        # Try to read value without sleeping
+        # The rolled value is usually on the sent message; refetch only when it is missing
         value = None
         if msg.media:
             value = getattr(msg.media, 'value', None)
@@ -60,8 +64,12 @@ async def force_dice(client, peer, emoji, target_value, reply_to):
     # Fallback (should never happen)
     await client.send_message(peer, f"{emoji} **{target_value}**", reply_to=reply_to)
 
+#------------------------------
+#Command handlers
+#------------------------------
+
 def setup(client, my_id):
-    # ---------- !dice ----------
+    # !dice
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!dice(?:\s+([1-6]))?$"))
     async def dice_cmd(event):
         try:
@@ -92,7 +100,7 @@ def setup(client, my_id):
             except Exception:
                 pass
 
-    # ---------- !football ----------
+    # !football
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!football$"))
     async def football_cmd(event):
         reply_to = None
@@ -102,7 +110,7 @@ def setup(client, my_id):
         await event.delete()
         await force_dice(client, await tgsend.peer(event), "⚽", 5, reply_to)
 
-    # ---------- !basketball ----------
+    # !basketball
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!basketball$"))
     async def basketball_cmd(event):
         reply_to = None
@@ -112,7 +120,7 @@ def setup(client, my_id):
         await event.delete()
         await force_dice(client, await tgsend.peer(event), "🏀", 5, reply_to)
 
-    # ---------- !dart ----------
+    # !dart
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!dart$"))
     async def dart_cmd(event):
         reply_to = None
@@ -122,7 +130,7 @@ def setup(client, my_id):
         await event.delete()
         await force_dice(client, await tgsend.peer(event), "🎯", 6, reply_to)
 
-    # ---------- !slot ----------
+    # !slot
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!slot(?:\s+(\d+|[a-zA-Z]+))?$"))
     async def slot_cmd(event):
         try:

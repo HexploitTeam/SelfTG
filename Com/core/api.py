@@ -1,4 +1,3 @@
-# Com/api.py
 """One shared, cached, rate-limit-aware HTTP layer for every command module.
 
 Why this module exists
@@ -46,9 +45,10 @@ _session_lock = None
 _cache = {}  # key -> (expires_at, value)
 
 
-# ------------------------------
-# Errors
-# ------------------------------
+#------------------------------
+#Errors
+#------------------------------
+
 class APIError(Exception):
     """A failed upstream call. Always safe to show to the user."""
 
@@ -71,9 +71,10 @@ class RateLimited(APIError):
     """HTTP 429 or a provider-specific quota code."""
 
 
-# ------------------------------
-# Session / cache plumbing
-# ------------------------------
+#------------------------------
+#Session and cache
+#------------------------------
+
 def _get_lock():
     global _session_lock
     if _session_lock is None:
@@ -201,9 +202,10 @@ def _decode_json(body, provider):
         raise APIError("returned something that is not JSON", provider=provider) from None
 
 
-# ------------------------------
-# Public helpers
-# ------------------------------
+#------------------------------
+#Public helpers
+#------------------------------
+
 async def fetch_json(url, *, params=None, provider="unknown", cache_ttl=0,
                      timeout=None, retries=1, headers=None):
     """GET `url` and return parsed JSON, optionally cached for `cache_ttl` s."""

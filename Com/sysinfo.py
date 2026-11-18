@@ -1,4 +1,4 @@
-# Com/sysinfo.py
+"""!sysinfo: CPU, memory, disk, network, GPU and uptime snapshot."""
 import psutil
 import platform
 import asyncio
@@ -8,7 +8,7 @@ from datetime import datetime
 import pytz
 from telethon import events
 
-from Com.storage import save_json as _save_json
+from Com.core.storage import save_json as _save_json
 
 try:
     import GPUtil
@@ -193,9 +193,7 @@ def setup(client, my_id):
         await event.reply(msg)
         await event.delete()
 
-    # -----------------------------
     # Optional background snapshot log
-    # -----------------------------
     # Opt-in (SYSINFO_AUTOLOG=1), was unconditional every 5s. Nothing reads the
     # snapshot except this module, and on Replit's small CPU quota a permanent
     # 5s wakeup that rewrites a file is pure overhead. !sysinfo collects on

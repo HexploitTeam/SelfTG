@@ -1,4 +1,3 @@
-# Com/ban.py
 """`!ban` family: permanent bans, temporary bans, kicks, unbans and lookups.
 
 Design notes
@@ -33,9 +32,9 @@ from datetime import datetime, timedelta, timezone
 from telethon import errors, events
 from telethon.tl.types import Channel, Chat
 
-from Com.durations import format_duration, looks_like_duration
-from Com.durations import parse_duration as shared_parse_duration
-from Com.storage import load_json, save_json
+from Com.core.durations import format_duration, looks_like_duration
+from Com.core.durations import parse_duration as shared_parse_duration
+from Com.core.storage import load_json, save_json
 
 __HELP__ = (
     "!ban <user> [reason] → Permanently ban a user (reply or @username/ID)\n"
@@ -62,10 +61,11 @@ class BanUnsupported(Exception):
     """The chat type or the account's rights make this action impossible."""
 
 
-# ------------------------------
-# Durations
-# ------------------------------
-# The grammar lives in Com/durations.py and is shared with !remind: one parser,
+#------------------------------
+#Durations
+#------------------------------
+
+# The grammar lives in Com/core/durations.py and is shared with !remind: one parser,
 # one set of error messages, no duplicated regex. Only the bounds differ, because
 # Telegram turns a ban shorter than 30s (or longer than 366 days) into a
 # permanent one.
@@ -90,9 +90,10 @@ def _utc(ts):
     return datetime.fromtimestamp(ts, timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
 
-# ------------------------------
-# Ledger
-# ------------------------------
+#------------------------------
+#Ledger
+#------------------------------
+
 def _load_all():
     data = load_json(BAN_FILE, {})
     return data if isinstance(data, dict) else {}
@@ -149,9 +150,10 @@ def drop_ban(chat_id, user_id):
     return entry
 
 
-# ------------------------------
-# Error text
-# ------------------------------
+#------------------------------
+#Error text
+#------------------------------
+
 def describe_error(exc):
     """Turn a Telethon/OS error into one actionable line."""
     if isinstance(exc, BanUnsupported):
@@ -185,9 +187,10 @@ def describe_error(exc):
     return f"{type(exc).__name__}: {exc}"
 
 
-# ------------------------------
-# Command
-# ------------------------------
+#------------------------------
+#Command
+#------------------------------
+
 HELP_TEXT = (
     "🛑 **Ban commands**\n"
     "• `!ban <user> [reason]` — permanent ban\n"
@@ -269,7 +272,7 @@ def setup(client, my_id):
             return None, "Telegram did not report view_messages"
         return (view_messages is False), "banned" if view_messages is False else "not banned"
 
-    # ---------- subcommands ----------
+    # subcommands
     async def cmd_ban(event, token, rest, kind="ban"):
         chat = await _chat(event)
         entity, user_id = await _resolve(event, token)
@@ -380,7 +383,7 @@ def setup(client, my_id):
             lines.append("⚠️ Not currently restricted; `!ban list` will drop this entry.")
         await _say(event, "\n".join(lines))
 
-    # ---------- router ----------
+    # router
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!ban(?:\s+([\s\S]*))?$"))
     async def ban_router(event):
         # Second owner check: `from_users` is per-client state, this is per-event.

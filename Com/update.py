@@ -1,18 +1,19 @@
-# Com/update.py
+"""!update: restart in place and report which commands changed."""
 import os
 import sys
 import json
 import hashlib
 import asyncio
 from telethon import events
-import Com.tgsend as tgsend
+import Com.core.tgsend as tgsend
 
 __HELP__ = "!update → Restart the session and show command changes after restart"
 __CATEGORY__ = "Setup"
 
-# -------------------------
-# File paths
-# -------------------------
+#------------------------------
+#File paths
+#------------------------------
+
 HASH_FILE = "mode/file_hashes.json"
 RESTART_FILE = "mode/restart.json"
 os.makedirs("mode", exist_ok=True)
@@ -62,9 +63,7 @@ def get_changes(old, new):
 
 
 def setup(client, my_id):
-    # -------------------------
     # Startup: handle pending restart
-    # -------------------------
     async def handle_restart():
         if not os.path.exists(RESTART_FILE):
             return
@@ -78,7 +77,6 @@ def setup(client, my_id):
         msg_id = data.get("msg_id")
         old_hashes = data.get("old_hashes", {})
 
-        # Delete the restart message if possible
         peer = await tgsend.resolve(client, chat_id) if chat_id else None
         if peer and msg_id:
             try:
@@ -89,7 +87,6 @@ def setup(client, my_id):
         # Remove restart marker (do this early)
         os.remove(RESTART_FILE)
 
-        # Compute new hashes and compare
         new_hashes = collect_current_hashes()
         changes = get_changes(old_hashes, new_hashes)
 
@@ -107,19 +104,14 @@ def setup(client, my_id):
             except:
                 pass
 
-        # Update the stored hashes to the new state
         with open(HASH_FILE, "w", encoding="utf-8") as f:
             json.dump(new_hashes, f, indent=2)
 
-    # Run the startup handler after client is ready
     asyncio.create_task(handle_restart())
 
-    # -------------------------
     # !update command
-    # -------------------------
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!update$"))
     async def update_cmd(event):
-        # Load current (old) hashes if they exist
         old_hashes = {}
         if os.path.exists(HASH_FILE):
             try:
@@ -128,7 +120,6 @@ def setup(client, my_id):
             except:
                 pass
 
-        # Compute new hashes (current state)
         new_hashes = collect_current_hashes()
 
         # Save restart info (including old_hashes for comparison after restart)
@@ -144,10 +135,8 @@ def setup(client, my_id):
         with open(HASH_FILE, "w", encoding="utf-8") as f:
             json.dump(new_hashes, f, indent=2)
 
-        # Edit the command message to indicate restart
         await event.edit("🔄 Restarting session...")
 
-        # Restart the process
         try:
             os.execv(sys.executable, [sys.executable] + sys.argv)
         except Exception as e:

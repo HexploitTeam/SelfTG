@@ -1,3 +1,5 @@
+"""!logfile: send the exported transcript for one chat as a document."""
+
 from telethon import events
 import os
 

@@ -1,10 +1,10 @@
-# Com/tts.py
+"""!tts: text to speech with gTTS, sent as a voice note or an audio file."""
 import asyncio
 import os
 import shlex
 import tempfile
 from telethon import events
-import Com.tgsend as tgsend
+import Com.core.tgsend as tgsend
 from gtts import gTTS
 from gtts.tts import gTTSError
 
@@ -23,6 +23,10 @@ __CATEGORY__ = "Utilities"
 
 TTS_FOLDER = "mode/tts"
 os.makedirs(TTS_FOLDER, exist_ok=True)
+
+#------------------------------
+#Helpers
+#------------------------------
 
 def _render_tts(text, lang, tld):
     """Blocking: build the MP3 with gTTS and return the temp path."""
@@ -60,6 +64,10 @@ def parse_args(args):
             i += 1
     return options, ' '.join(text_parts)
 
+#------------------------------
+#Command handlers
+#------------------------------
+
 def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r'^!tts(?:\s+(.*))?$'))
     async def tts_cmd(event):
@@ -68,17 +76,14 @@ def setup(client, my_id):
             text = None
             options = {'lang': 'en', 'tld': 'com', 'voice_note': False}
 
-            # If no arguments and not a reply, show help
             if not arg_str and not event.is_reply:
                 await event.edit("📖 **TTS Help**\n" + __HELP__)
                 return
 
-            # Parse arguments if provided
             if arg_str:
                 args = shlex.split(arg_str)
                 options, text = parse_args(args)
 
-            # If no text, try reply
             if not text and event.is_reply:
                 reply = await event.get_reply_message()
                 text = reply.text or reply.raw_text
@@ -86,10 +91,8 @@ def setup(client, my_id):
                 await event.edit("❌ No text to convert. Provide text or reply to a message.")
                 return
 
-            # Validate language
             lang = options['lang']
             tld = options['tld']
-            # gTTS supports many langs; we'll just try
 
             await event.edit(f"🔊 Generating TTS (lang: {lang}, tld: {tld})...")
 
@@ -111,9 +114,7 @@ def setup(client, my_id):
                 await event.edit(f"❌ Error: {e}")
                 return
 
-            # Determine send method
             if options['voice_note']:
-                # Send as voice note (Telegram voice message)
                 try:
                     await client.send_file(await tgsend.peer(event),
                         tmp_path,
@@ -125,7 +126,6 @@ def setup(client, my_id):
                     os.remove(tmp_path)
                     return
             else:
-                # Send as audio file
                 try:
                     await client.send_file(await tgsend.peer(event),
                         tmp_path,
@@ -137,7 +137,6 @@ def setup(client, my_id):
                     os.remove(tmp_path)
                     return
 
-            # Cleanup and delete command
             os.remove(tmp_path)
             await event.delete()
 

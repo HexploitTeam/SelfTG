@@ -1,4 +1,3 @@
-# Com/wiki.py
 """`!wiki` -- Wikipedia summaries with a DuckDuckGo Instant Answer fallback.
 
 Both providers are free and keyless:
@@ -12,7 +11,7 @@ from urllib.parse import quote
 
 from telethon import events
 
-import Com.api as api
+import Com.core.api as api
 
 __HELP__ = (
     "!wiki <term> → Wikipedia summary (optional language first: !wiki fa تهران)\n"

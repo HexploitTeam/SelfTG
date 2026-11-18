@@ -1,4 +1,3 @@
-# Com/scheduler.py
 """One background loop for every periodic job.
 
 Why a single loop: one ``asyncio.sleep`` task per reminder (or per AFK cooldown)

@@ -1,4 +1,4 @@
-# ML/lstm_model.py
+"""Standalone LSTM text model, an alternative to ML/aiml_model.py; not imported by Com/."""
 import os
 import json
 import numpy as np
@@ -48,6 +48,10 @@ def save_tokenizer(tokenizer):
             'document_count': tokenizer.document_count
         }, f)
 
+#------------------------------
+#Model
+#------------------------------
+
 def build_model(vocab_size, embedding_dim=48, lstm_units=48):
     model = Sequential([
         Embedding(vocab_size, embedding_dim, input_length=None),
@@ -78,6 +82,10 @@ def sequence_generator(texts, tokenizer, vocab_size, max_len, batch_size=16):
         X = pad_sequences(sequences, maxlen=max_len)
         y = np.eye(vocab_size)[targets]
         yield X, y
+
+#------------------------------
+#Training
+#------------------------------
 
 def train_model(texts, epochs=12, batch_size=16, max_sequences=2000, progress_callback=None, verbose=1):
     if not texts:
@@ -125,6 +133,10 @@ def sample_with_temperature(preds, temperature=0.8):
     preds = exp_preds / np.sum(exp_preds)
     probas = np.random.multinomial(1, preds, 1)
     return np.argmax(probas)
+
+#------------------------------
+#Generation
+#------------------------------
 
 def generate_text(seed, model, tokenizer, max_len, num_words=20, temperature=0.9, repetition_penalty=1.3):
     seq = tokenizer.texts_to_sequences([seed])[0]

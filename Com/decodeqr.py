@@ -1,4 +1,3 @@
-# Com/decodeqr.py
 """`!decodeqr` -- decode a QR code from a replied image.
 
 Uses api.qrserver.com, which is free and needs no key. The endpoint is small and
@@ -12,7 +11,7 @@ from io import BytesIO
 import aiohttp
 from telethon import events
 
-import Com.api as api
+import Com.core.api as api
 
 __HELP__ = "!decodeqr → Decode a QR code from a replied image (free, keyless API)"
 __CATEGORY__ = "Utilities"

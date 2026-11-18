@@ -1,9 +1,9 @@
-# Com/reply.py
+"""!reply: mirror the owner's messages as replies to one target message."""
 import os
 import json
 from telethon import events
 
-from Com.storage import save_json
+from Com.core.storage import save_json
 
 __HELP__ = (
     "!reply on (reply to a message) → Mirror everything you say in this chat as a "
@@ -70,7 +70,6 @@ async def copy_message(client, event, target_chat, target_msg):
 def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id))
     async def auto_reply(event):
-        # Ignore commands
         if event.raw_text and event.raw_text.startswith("!"):
             return
 
@@ -83,17 +82,15 @@ def setup(client, my_id):
         if not target_chat or not target_msg:
             return
 
-        # IGNORE messages that are already replies to the target (prevents loop)
+        # Ignore copies that are already replies to the target; this is what stops a loop
         if event.message.reply_to_msg_id == target_msg:
             return
 
-        # Delete the original message
         try:
             await event.delete()
         except Exception:
             pass
 
-        # Send a copy as a reply to the target
         try:
             await copy_message(client, event, target_chat, target_msg)
         except Exception:

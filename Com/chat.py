@@ -1,4 +1,3 @@
-# Com/chat.py
 """`!chat` family: format the owner's own messages in place.
 
 How it works
@@ -46,7 +45,7 @@ from telethon.tl.types import (
     MessageEntityUnderline,
 )
 
-from Com.storage import load_json, save_json
+from Com.core.storage import load_json, save_json
 
 __HELP__ = (
     "!chat bold|italic|underline|strike|spoiler|code|mono|quote|plain <text> → "
@@ -64,6 +63,10 @@ log = logging.getLogger("selftg.chat")
 BASE_DIR = "mode"
 FORMAT_FILE = os.path.join(BASE_DIR, "chat_format.json")
 os.makedirs(BASE_DIR, exist_ok=True)
+
+#------------------------------
+#Configuration
+#------------------------------
 
 # style -> (entity class, needs language argument?)
 STYLES = {
@@ -87,6 +90,10 @@ _EDITED_TTL = 120
 _EDITED_MAX = 512
 _recently_edited = OrderedDict()
 
+
+#------------------------------
+#Helpers
+#------------------------------
 
 def _remember(chat_id, msg_id):
     now = time.monotonic()
@@ -160,6 +167,10 @@ def set_chat_style(chat_id, style):
 def _truncate(text, limit=3800):
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
+
+#------------------------------
+#Command handlers
+#------------------------------
 
 def setup(client, my_id):
 

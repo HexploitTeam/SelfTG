@@ -1,10 +1,10 @@
-# Com/inline.py
+"""!inline: send a message with inline buttons through the helper bot."""
 import asyncio
 import re
 from telethon import events
 from telethon.tl.types import KeyboardButtonCallback, KeyboardButtonUrl
-import Com.tgsend as tgsend
-from Com import bot as bot_module
+import Com.core.tgsend as tgsend
+from Com.bot import client as bot_module
 
 __HELP__ = (
     "!inline <text> | button:label:action:value ... → Send a message with inline buttons (via bot).\n"
@@ -67,14 +67,12 @@ def setup(client, my_id):
                 await event.edit("📖 **Inline Help**\n" + __HELP__)
                 return
 
-            # Parse text and button definitions.
-            # We'll look for quoted text first, else assume text is until first '|' or '||'
+            # Quoted text wins; otherwise the message text runs to the first | separator
             quoted = re.match(r'^"([^"]*)"', arg_str)
             if quoted:
                 text = quoted.group(1)
                 remaining = arg_str[len(quoted.group(0)):].strip()
             else:
-                # find first '|' or '||'
                 first_sep = re.search(r'(\||\|\|)', arg_str)
                 if first_sep:
                     text = arg_str[:first_sep.start()].strip()
@@ -83,20 +81,17 @@ def setup(client, my_id):
                     text = arg_str.strip()
                     remaining = ""
 
-            # Parse remaining into buttons
             if remaining:
                 rows = parse_button_definitions(remaining)
                 telethon_rows = build_telethon_buttons(rows)
             else:
                 telethon_rows = []
 
-            # Determine reply target
             reply_to = None
             if event.is_reply:
                 reply_msg = await event.get_reply_message()
                 reply_to = reply_msg.id
 
-            # If bot is available, send inline message via bot
             sent = False
             if bot_module.BOT_ENABLED and telethon_rows and bot_module.bot_client:
                 sent = await bot_module.send_inline(
@@ -107,7 +102,7 @@ def setup(client, my_id):
                 await event.delete()
                 return
 
-            # Fallback: send plain text (no buttons) using selfbot
+            # Without BOT_TOKEN there is no way to attach buttons, so send the text alone
             if telethon_rows:
                 await event.edit("⚠️ Bot not available. Sending as plain text without buttons.")
                 await asyncio.sleep(1)

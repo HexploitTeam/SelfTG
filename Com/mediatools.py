@@ -1,7 +1,7 @@
-# Com/mediatools.py
+"""Media metadata commands and the image/PDF manipulation commands."""
 from telethon import events
 from telethon.tl.types import MessageMediaDocument, MessageMediaPhoto
-import Com.tgsend as tgsend
+import Com.core.tgsend as tgsend
 from io import BytesIO
 from PIL import Image
 import asyncio
@@ -39,6 +39,10 @@ def probe_video(path):
         clip.close()
 
 
+#------------------------------
+#Command handlers
+#------------------------------
+
 def setup(client, my_id):
 
     async def download_reply(event):
@@ -54,9 +58,7 @@ def setup(client, my_id):
         bio.seek(0)
         return bio, reply
 
-    # -----------------------------
     # Audio metadata
-    # -----------------------------
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!audiometa$"))
     async def audiometa(event):
         try:
@@ -78,9 +80,7 @@ def setup(client, my_id):
         except Exception as e:
             await event.reply(f"❌ Error: {str(e)}")
 
-    # -----------------------------
     # Video metadata
-    # -----------------------------
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!videometa$"))
     async def videometa(event):
         try:
@@ -107,9 +107,7 @@ def setup(client, my_id):
         except Exception as e:
             await event.reply(f"❌ Error: {str(e)}")
 
-    # -----------------------------
     # PDF conversion (dummy, just re-save)
-    # -----------------------------
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!convertpdf$"))
     async def convertpdf(event):
         try:
@@ -125,7 +123,7 @@ def setup(client, my_id):
             temp_out = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
             temp_out.close()
 
-            # Simple re-save using PyPDF2 if already PDF
+            # Rebuild page by page; anything PyPDF2 cannot read falls to the blank-page path
             try:
                 reader = PyPDF2.PdfReader(temp_in.name)
                 writer = PyPDF2.PdfWriter()
@@ -134,7 +132,6 @@ def setup(client, my_id):
                 with open(temp_out.name, "wb") as f:
                     writer.write(f)
             except:
-                # If not PDF, just wrap in blank PDF page (dummy)
                 writer = PyPDF2.PdfWriter()
                 writer.add_blank_page(width=595, height=842)
                 with open(temp_out.name, "wb") as f:
@@ -150,9 +147,7 @@ def setup(client, my_id):
         except Exception as e:
             await event.reply(f"❌ Error: {str(e)}")
 
-    # -----------------------------
     # PDF info
-    # -----------------------------
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!pdfinfo$"))
     async def pdfinfo(event):
         try:
@@ -178,9 +173,7 @@ def setup(client, my_id):
         except Exception as e:
             await event.reply(f"❌ Error: {str(e)}")
 
-    # -----------------------------
     # Image resize
-    # -----------------------------
     @client.on(
         events.NewMessage(from_users=my_id,
                           pattern=r"^!imgresize\s+(\d+)x(\d+)$"))
@@ -206,9 +199,7 @@ def setup(client, my_id):
         except Exception as e:
             await event.reply(f"❌ Error: {str(e)}")
 
-    # -----------------------------
     # Image rotate
-    # -----------------------------
     @client.on(
         events.NewMessage(from_users=my_id, pattern=r"^!imgrotate\s+(\d+)$"))
     async def imgrotate(event):
@@ -232,9 +223,7 @@ def setup(client, my_id):
         except Exception as e:
             await event.reply(f"❌ Error: {str(e)}")
 
-    # -----------------------------
     # Image compress
-    # -----------------------------
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!imgcompress$"))
     async def imgcompress(event):
         try:
@@ -255,9 +244,7 @@ def setup(client, my_id):
         except Exception as e:
             await event.reply(f"❌ Error: {str(e)}")
 
-    # -----------------------------
     # Image format conversion
-    # -----------------------------
     @client.on(
         events.NewMessage(from_users=my_id, pattern=r"^!imgformat\s+(\w+)$"))
     async def imgformat(event):

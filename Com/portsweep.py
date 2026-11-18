@@ -1,4 +1,4 @@
-# Com/portsweep.py
+"""!portsweep: bounded TCP port scan with progress messages."""
 from telethon import events
 import asyncio
 import socket
@@ -51,10 +51,8 @@ def setup(client, my_id):
     async def portsweep_cmd(event):
         args = event.pattern_match.group(1).strip()
         try:
-            # Delete command
             await event.delete()
 
-            # Delete existing scan
             if args.startswith("del"):
                 del_id = args.split()[1]
                 info = active_scans.get(del_id)
@@ -72,7 +70,6 @@ def setup(client, my_id):
                     await event.reply(f"❌ Scan ID {del_id} not found")
                     return
 
-            # Parse host and ports
             parts = args.split()
             host = parts[0]
             if len(parts) > 1:

@@ -1,4 +1,3 @@
-# Com/note.py
 """`!note` -- persistent notes, per chat by default with an optional global scope.
 
 Scope model
@@ -24,9 +23,9 @@ import time
 
 from telethon import events
 
-import Com.registry as registry
-from Com import confirm
-from Com.storage import load_store, save_json
+import Com.core.registry as registry
+from Com.core import confirm
+from Com.core.storage import load_store, save_json
 
 log = logging.getLogger("selftg.note")
 
@@ -53,9 +52,10 @@ __CATEGORY__ = "Utilities"
 ACTION_CLEAR = "!note clear"
 
 
-# ------------------------------
-# State
-# ------------------------------
+#------------------------------
+#State
+#------------------------------
+
 def _default():
     return {"global": {}, "chats": {}}
 
@@ -122,6 +122,10 @@ def _all_names(state):
         names.update(notes)
     return names
 
+
+#------------------------------
+#Command handlers
+#------------------------------
 
 def setup(client, my_id):
 

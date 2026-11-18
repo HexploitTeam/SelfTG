@@ -1,4 +1,3 @@
-# Com/net.py
 """Telegram transport settings for Replit.
 
 Replit does not allow arbitrary outbound TCP; non-HTTP traffic has to use port

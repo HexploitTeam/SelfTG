@@ -1,9 +1,9 @@
-# Com/timezone.py
+"""!timezone: list zones, show the current time and convert between zones."""
 import shlex
 from datetime import datetime
 import re
 from telethon import events
-import Com.tgsend as tgsend
+import Com.core.tgsend as tgsend
 
 try:
     import zoneinfo
@@ -30,6 +30,10 @@ __HELP__ = (
 )
 __CATEGORY__ = "Utilities"
 
+#------------------------------
+#Helpers
+#------------------------------
+
 def get_timezone(tz_name):
     if TIMEZONE_MODULE == "zoneinfo":
         return ZoneInfo(tz_name)
@@ -49,6 +53,10 @@ def get_all_timezones():
 def format_datetime(dt, tz_name):
     return dt.strftime("%Y-%m-%d %H:%M:%S") + f" ({tz_name})"
 
+#------------------------------
+#Command handlers
+#------------------------------
+
 def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r'^!timezone(?:\s+(.*))?$'))
     async def timezone_cmd(event):
@@ -65,7 +73,7 @@ def setup(client, my_id):
             args = shlex.split(arg)
             cmd = args[0].lower()
 
-            # ---- !timezone list ----
+            # !timezone list
             if cmd == "list":
                 tz_list = sorted(get_all_timezones())
                 # Send as file if too many
@@ -79,7 +87,7 @@ def setup(client, my_id):
                     await event.edit("📋 **Available timezones:**\n" + "\n".join(tz_list))
                 return
 
-            # ---- !timezone now <timezone> ----
+            # !timezone now <timezone>
             if cmd == "now":
                 if len(args) < 2:
                     await event.edit("❌ Usage: !timezone now <timezone>")
@@ -94,7 +102,7 @@ def setup(client, my_id):
                 await event.edit(f"🕐 Current time in **{tz_name}**:\n`{format_datetime(now, tz_name)}`")
                 return
 
-            # ---- !timezone convert <datetime> <from_tz> <to_tz> ----
+            # !timezone convert <datetime> <from_tz> <to_tz>
             if cmd == "convert":
                 if len(args) < 4:
                     await event.edit("❌ Usage: !timezone convert '<datetime>' <from_tz> <to_tz>")
@@ -139,7 +147,7 @@ def setup(client, my_id):
                 await event.edit(output)
                 return
 
-            # ---- !timezone <timezone> (shortcut for current time) ----
+            # !timezone <timezone> (shortcut for current time)
             # If it's a valid timezone, show current time
             tz_name = cmd  # treat first arg as timezone name
             try:

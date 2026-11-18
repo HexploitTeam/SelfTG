@@ -1,4 +1,3 @@
-# Com/safe_eval.py
 """Dependency-free arithmetic evaluator used instead of `eval()`.
 
 `eval(expr, {"__builtins__": {}})` is **not** a sandbox: any expression that can

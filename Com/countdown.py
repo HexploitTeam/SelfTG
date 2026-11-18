@@ -1,10 +1,12 @@
+"""!countdown: a live-updating countdown message that survives a restart."""
+
 from telethon import events
 import asyncio
 import os
 import json
 
-from Com.storage import save_json
-import Com.tgsend as tgsend
+from Com.core.storage import save_json
+import Com.core.tgsend as tgsend
 
 __HELP__ = (
     "!countdown <number><s/m/h> <reason> → Start a countdown in this chat\n"
@@ -127,15 +129,12 @@ def setup(client, my_id):
             task = info.get("task")
             msg = info.get("msg")
 
-            # Try to edit the countdown message if it still exists
             if msg:
                 try:
                     await msg.edit("❌ Countdown stopping...")
                 except Exception:
-                    # Message was deleted – ignore
                     pass
 
-            # Cancel the task
             if task:
                 task.cancel()
                 try:

@@ -1,6 +1,6 @@
-# Com/dnsprobe.py
+"""!dnsprobe: bulk DNS enumeration, written to a per-run text file."""
 from telethon import events
-import Com.tgsend as tgsend
+import Com.core.tgsend as tgsend
 import os
 import json
 import asyncio
@@ -52,7 +52,6 @@ def setup(client, my_id):
             parts = args.split()
             if parts[0].lower() == "del":
                 del_id = int(parts[1])
-                # Delete previous file
                 for filename in os.listdir(MODE_FOLDER):
                     if filename.startswith(f"{del_id}_dnsprobe_"):
                         os.remove(os.path.join(MODE_FOLDER, filename))

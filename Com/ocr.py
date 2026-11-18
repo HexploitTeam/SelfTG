@@ -1,22 +1,20 @@
-# Com/ocr.py
+"""!ocr: image text extraction, local Tesseract first and the OCR.space API second."""
 import asyncio
 import base64
 import os
 import shutil
 from io import BytesIO
 from telethon import events
-import Com.tgsend as tgsend
+import Com.core.tgsend as tgsend
 
-import Com.api as api
+import Com.core.api as api
 
 __HELP__ = "!ocr (reply to image) → Extract text from an image using local Tesseract (if installed) or OCR.space API."
 __CATEGORY__ = "Utilities"
 
-# Check if Tesseract is installed
 def has_tesseract():
     return shutil.which("tesseract") is not None
 
-# Try to import pytesseract if available
 try:
     import pytesseract
     from PIL import Image
@@ -28,6 +26,10 @@ OCR_API_URL = "https://api.ocr.space/parse/image"
 # OCR.space's documented free key for light use is "helloworld" (25k calls/month,
 # no card). Set OCR_SPACE_API_KEY in Secrets to use your own free key instead.
 OCR_API_KEY = (os.getenv("OCR_SPACE_API_KEY") or "helloworld").strip()
+
+#------------------------------
+#Backends
+#------------------------------
 
 async def ocr_local(image_data):
     """Extract text using local Tesseract."""
@@ -88,6 +90,10 @@ async def ocr_api(image_data, language="eng"):
     text = (parsed[0].get("ParsedText") or "").strip()
     return text, None
 
+#------------------------------
+#Command handlers
+#------------------------------
+
 def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!ocr$"))
     async def ocr_handler(event):
@@ -100,7 +106,6 @@ def setup(client, my_id):
             await event.reply("❌ The replied message has no media.")
             return
 
-        # Download image
         try:
             bio = BytesIO()
             await reply_msg.download_media(file=bio)
@@ -112,7 +117,6 @@ def setup(client, my_id):
 
         await event.edit("🔍 OCR in progress...")
 
-        # Try local first
         text, error = await ocr_local(image_data)
         if text:
             await output_result(event, client, text)
@@ -120,7 +124,6 @@ def setup(client, my_id):
         else:
             print(f"[OCR] Local failed: {error}")
 
-        # Fallback to API
         text, error = await ocr_api(image_data)
         if text:
             await output_result(event, client, text)

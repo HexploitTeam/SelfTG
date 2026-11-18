@@ -1,4 +1,3 @@
-# Com/tgsend.py
 """Resolve an event's chat the way Telethon itself does.
 
 Why this exists

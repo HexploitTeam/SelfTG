@@ -1,3 +1,5 @@
+"""!ping: measure the round trip to Telegram."""
+
 from telethon import events
 import time
 

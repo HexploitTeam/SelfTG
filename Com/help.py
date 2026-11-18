@@ -1,11 +1,10 @@
-# Com/help.py
 """`!help` -- categories, one command, and searching by name.
 
 Lookup order for `!help <word>`:
 
 1. `all`            -- every command, grouped by category (as before);
 2. a category       -- `!help utilities`;
-3. a command family -- `!help afk` (rendered from `Com/registry.py`);
+3. a command family -- `!help afk` (rendered from `Com/core/registry.py`);
 4. an exact command -- `!help ping` shows that command's usage and notes;
 5. a name search    -- `!help pin` / a typo like `!help pign` lists every
    command whose name contains the word, or is close to it, as
@@ -23,8 +22,8 @@ import logging
 import os
 from io import BytesIO
 
-import Com.tgsend as tgsend
-from Com import registry
+import Com.core.tgsend as tgsend
+from Com.core import registry
 
 log = logging.getLogger("selftg.help")
 CHUNK = 3500  # Telegram's hard limit is 4096; leave room for the prefix
@@ -49,9 +48,10 @@ CATEGORY_MAP = {
 MAX_MATCHES = 20
 
 
-# ------------------------------
-# Building the index
-# ------------------------------
+#------------------------------
+#Command index
+#------------------------------
+
 def _category_for(modulename):
     if any(k in modulename for k in
            ["block", "finduser", "ginfo", "whois", "info", "log"]):
@@ -128,7 +128,7 @@ def collect_commands():
                 # Continuation lines ("Subcommands:", "  geo <IP> ...").
                 current["notes"].append(line)
 
-    # The v3 families render their `__HELP__` from Com/registry.py, so those
+    # The v3 families render their `__HELP__` from Com/core/registry.py, so those
     # lines are markdown ("**!afk** — …") and never start with "!". Merge their
     # declared subcommands into the index so `!help unpin` or `!help here`
     # resolve like any other command name.
@@ -148,9 +148,10 @@ def collect_commands():
     return commands_by_cat, index
 
 
-# ------------------------------
-# Searching
-# ------------------------------
+#------------------------------
+#Search
+#------------------------------
+
 def search(index, query):
     """Return (names, kind). kind is 'exact', 'partial', 'similar' or 'none'."""
     q = query.strip().lower().lstrip("!")
@@ -209,9 +210,10 @@ def render_matches(index, names, kind, query):
     return "\n".join(lines)
 
 
-# ------------------------------
-# Command
-# ------------------------------
+#------------------------------
+#Command
+#------------------------------
+
 def setup(client, my_id):
 
     async def send_text_file(event, content, name="help.txt"):
@@ -257,7 +259,7 @@ def setup(client, my_id):
             arg = (event.pattern_match.group(1) or "").strip()
             commands_by_cat, index = collect_commands()
 
-            # ---------- no argument: category overview ----------
+            # no argument: category overview
             if not arg:
                 text = "📖 **Available Command Categories**\n\n"
                 for cat, title in CATEGORY_MAP.items():
@@ -268,7 +270,7 @@ def setup(client, my_id):
                 await deliver(event, text)
                 return
 
-            # ---------- `!help all` ----------
+            # `!help all`
             if arg.lower() == "all":
                 text = "📖 **All Commands**\n\n"
                 for cat, title in CATEGORY_MAP.items():
@@ -278,12 +280,12 @@ def setup(client, my_id):
                 await deliver(event, text, "all_commands.txt")
                 return
 
-            # ---------- a command family from the registry ----------
+            # a command family from the registry
             if registry.get(arg):
                 await deliver(event, "📖 " + registry.render(arg))
                 return
 
-            # ---------- a category ----------
+            # a category
             for cat, title in CATEGORY_MAP.items():
                 if arg.lower() == cat.lower():
                     text = render_listing(title, commands_by_cat[cat])
@@ -291,7 +293,7 @@ def setup(client, my_id):
                     await deliver(event, text)
                     return
 
-            # ---------- exact command or name search ----------
+            # exact command or name search
             names, kind = search(index, arg)
             if kind == "exact":
                 await deliver(event, render_command(index, names[0]))

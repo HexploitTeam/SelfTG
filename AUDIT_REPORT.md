@@ -22,7 +22,7 @@ small owner-only menu.
 3. After the client authorizes, `load_commands()` walks `Com/*.py`, imports each
    module, and calls `module.setup(client, my_id)`. Each module registers its own
    `events.NewMessage` handler(s) at that moment — there is no central router.
-4. `Com/bot.py:start_bot()` is launched as a background task if `BOT_TOKEN` is
+4. `Com/bot/client.py:start_bot()` is launched as a background task if `BOT_TOKEN` is
    set; otherwise the bot half is disabled.
 5. `client.run_until_disconnected()` keeps the process alive.
 
@@ -58,7 +58,7 @@ people's group messages** with `eval(expr, {"__builtins__": {}})`. That is not a
 sandbox: `().__class__.__base__.__subclasses__()` reaches `subprocess`/`os`.
 `Com/calc.py:29` had the same pattern (owner input, lower risk, same defect), and
 `ML/smart_markov.py:105` ran `eval()` over keys read from a model JSON file.
-*Fix:* new `Com/safe_eval.py` — an AST whitelist accepting only numeric literals,
+*Fix:* new `Com/core/safe_eval.py` — an AST whitelist accepting only numeric literals,
 `+ - * / // % **`, unary signs and parentheses, with a length cap and an
 exponent cap (so `9**9**9` cannot hang the loop). `calc`/`cauto` now call it;
 `smart_markov` uses `ast.literal_eval` per key and skips unparsable ones.
@@ -76,7 +76,7 @@ no authentication whatsoever, exposing enemies/warns/mutes/user IDs.
 ### High
 
 **H1. Split-brain state files: the bot's own commands read/wrote different files.**
-`Com/bot.py:17-18` used `mode/Warn.json` / `mode/Mute.json`; `Com/warn.py:17`,
+`Com/bot/client.py:17-18` used `mode/Warn.json` / `mode/Mute.json`; `Com/warn.py:17`,
 `Com/mute.py:16` and `dashboard.py:14-15` use `mode/warn.json` / `mode/mute.json`.
 On Replit's case-sensitive filesystem those are different files, so `/warns`,
 `/mutes`, `/set_warn`, `/add_mute` silently managed state that `!warn`, `!mute`
@@ -87,11 +87,11 @@ copies `Warn.json`/`Mute.json` into the new files **only if the target does not
 already exist**, so `!warn` data can never be clobbered.
 
 **H2. `!inline` never loaded at all.** `Com/inline.py:6` did
-`from Com.bot import send_inline, BOT_ENABLED`, but `Com/bot.py` defines no
+`from Com.bot import send_inline, BOT_ENABLED`, but `Com/bot/client.py` defines no
 `send_inline`. The ImportError was swallowed by `main.py`'s per-module
 `try/except`, so the module vanished with one log line. `Com/inline.py:107` also
 used `asyncio.sleep` without importing `asyncio`.
-*Fix:* implemented `send_inline()` in `Com/bot.py` (returns `False` when the bot
+*Fix:* implemented `send_inline()` in `Com/bot/client.py` (returns `False` when the bot
 client is not connected), switched `Com/inline.py` to `from Com import bot as
 bot_module`, added the missing `import asyncio`, and made the fallback path
 honest: if the bot is unavailable it edits the message, waits, and sends plain
@@ -157,7 +157,7 @@ blocking `socket.getaddrinfo` / `gethostbyaddr`; `Com/wordlist.py` counted up to
 `open(path, "w")` + `json.dump`, which truncates before writing; a Replit restart
 or crash in that window leaves an empty/half file and the next load silently
 falls back to `{}` — losing enemies, warns, mutes or stats for that file.
-*Fix:* new `Com/storage.py` (`save_json` = temp file + `fsync` + `os.replace`,
+*Fix:* new `Com/core/storage.py` (`save_json` = temp file + `fsync` + `os.replace`,
 `load_json` = tolerant read, `ensure_json_file`). Adopted in `bot.py`, `warn.py`,
 `mute.py`, `enemy.py`, `stats.py`, `monitor.py`, `setkill.py`, `countdown.py`,
 `reaction.py`, `reply.py`, `f.py`, `cauto.py`, `subenum.py`, `dashboard.py`.
@@ -218,10 +218,10 @@ M file reads per message, synchronously, inside the loop. Not changed — see §
 |---|---|---|---|
 | `.gitignore` (**new**) | Ignore sessions, env files, caches, `.pythonlibs` | none | none |
 | `bot.session`, `bot_session.session`, `pyro_session.session` | `git rm --cached` (files kept on disk) | low | Bot recreates its file session from `BOT_TOKEN`; the self-bot uses `SESSION_STRING`, unaffected |
-| `Com/safe_eval.py` (**new**) | AST-whitelist arithmetic evaluator | low | pure stdlib |
-| `Com/storage.py` (**new**) | Atomic JSON write / tolerant read helpers | low | pure stdlib |
+| `Com/core/safe_eval.py` (**new**) | AST-whitelist arithmetic evaluator | low | pure stdlib |
+| `Com/core/storage.py` (**new**) | Atomic JSON write / tolerant read helpers | low | pure stdlib |
 | `main.py` | `asyncio.run()`; explicit authorization check; sorted, deterministic module load; failure summary; removed dead `global bot_client/BOT_ENABLED` block; bot started via live module ref | medium | Startup now exits with a clear message on an invalid `SESSION_STRING` instead of hanging on stdin |
-| `Com/bot.py` | Lowercase state paths + legacy migration; atomic writes; **new** `send_inline()` | low | One-time copy of `Warn.json`/`Mute.json` if present |
+| `Com/bot/client.py` | Lowercase state paths + legacy migration; atomic writes; **new** `send_inline()` | low | One-time copy of `Warn.json`/`Mute.json` if present |
 | `Com/bs.py` | Read bot module attributes live | none | none |
 | `Com/inline.py` | Missing `asyncio` import; use `bot_module.send_inline`; honest fallback | low | `!inline` works now |
 | `Com/warn.py`, `Com/mute.py`, `Com/enemy.py` | Async `get_username` + awaited call sites; atomic writes in warn/mute/enemy | low | Listings show `@username` instead of `ID:…` where resolvable |
@@ -252,14 +252,14 @@ Key structural diffs:
   `client.start()` → `connect()` + `is_user_authorized()` fast-fail; module scan
   sorted and failure-reporting; dead `global bot_client, BOT_ENABLED` assignment
   removed.
-- `Com/bot.py` — two path constants changed to lowercase; `migrate_legacy_state()`
+- `Com/bot/client.py` — two path constants changed to lowercase; `migrate_legacy_state()`
   added and called from `start_bot`; `send_inline()` added; `load_json`/`save_json`
-  delegated to `Com/storage.py`.
+  delegated to `Com/core/storage.py`.
 - `Com/{warn,mute,enemy}.py` — `def get_username` → `async def`, 7 call sites
   awaited, `run_until_complete` removed.
 - `Com/{calc,cauto}.py` — two/one `eval(...)` replaced by `safe_evaluate(...)`.
 - `ML/smart_markov.py` — `{eval(k): v ...}` replaced by a `literal_eval` loop.
-- `Com/storage.py`, `Com/safe_eval.py` — new, dependency-free.
+- `Com/core/storage.py`, `Com/core/safe_eval.py` — new, dependency-free.
 
 ---
 
@@ -274,7 +274,7 @@ Key structural diffs:
 | Import + `setup()` smoke test for all 65 command modules, with stubbed `telethon`/`aiohttp`/`psutil`/etc. | **65/65 loaded, 155 handlers registered, 0 failures** (before fixes: `decodecheck`, `inline` and others failed to import) |
 | `safe_eval` behaviour: 6 valid expressions match `eval` results; 7 hostile/unsupported expressions blocked | pass |
 | `SmartMarkov` save→load round-trip; model containing `__import__('os').system(...)` as a key | round-trip works; hostile key ignored, 4 valid states kept |
-| `Com/storage.py`: write/read, corrupt-file fallback, missing-file default, no `.tmp-` leftovers, UTF-8 round-trip | pass |
+| `Com/core/storage.py`: write/read, corrupt-file fallback, missing-file default, no `.tmp-` leftovers, UTF-8 round-trip | pass |
 | Wiring assertions (`send_inline` defined, lowercase paths, migration present, `inline` no longer imports a missing name) | pass |
 
 **Not executed — do not treat as verified:**
@@ -325,7 +325,7 @@ Key structural diffs:
    put it behind Replit's private deployment or add a login; `DASHBOARD_DEBUG=1`
    re-enables the RCE-capable debugger and should never be set publicly.
 6. **Per-message JSON reads** (M7) are the main remaining performance issue. A
-   scoped fix would be an in-memory cache in `Com/storage.py` (load once, write
+   scoped fix would be an in-memory cache in `Com/core/storage.py` (load once, write
    through) plus a single shared catch-all dispatcher instead of one
    `events.NewMessage()` handler per feature. That is an architectural change and
    was deliberately left out of this pass.
@@ -403,7 +403,7 @@ Key structural diffs:
 
 **Review before deploying:** the four behaviour-changing fixes are
 `Com/warn.py` + `Com/mute.py` + `Com/enemy.py` (names instead of IDs — H4),
-`Com/bot.py` (unified warn/mute state + one-time migration — H1), `main.py`
+`Com/bot/client.py` (unified warn/mute state + one-time migration — H1), `main.py`
 (exit instead of interactive auth; sorted load order), and
 `Com/portsweep.py`/`Com/reply.py` (single-port support; 20 MB attachment cap).
 Everything else is intended to be behaviour-neutral.

@@ -1,4 +1,4 @@
-# Com/log.py
+"""!log: mirror messages, edits and deletions into text files under Logs/."""
 
 from telethon import events
 from datetime import datetime
@@ -17,7 +17,6 @@ MODE_FILE = os.path.join(MODE_FOLDER, "com.txt")
 for folder in [LOG_FOLDER, GROUP_FOLDER, CHANNEL_FOLDER, MODE_FOLDER]:
     os.makedirs(folder, exist_ok=True)
 
-# Load mode
 if os.path.exists(MODE_FILE):
     with open(MODE_FILE, "r", encoding="utf-8") as f:
         line = f.readline().strip()
@@ -29,6 +28,10 @@ else:
 
 TZ = pytz.timezone("Asia/Tehran")
 
+
+#------------------------------
+#Command handlers
+#------------------------------
 
 def setup(client, my_id):
 
@@ -48,9 +51,7 @@ def setup(client, my_id):
             return os.path.join(GROUP_FOLDER, f"{event.chat_id}.txt"), getattr(
                 chat, "title", "Group")
 
-    # -----------------------
     # !log ON/OFF command
-    # -----------------------
     @client.on(
         events.NewMessage(from_users=my_id, pattern=r"^!log\s+(DISABLED|OFF)$"))
     async def log_mode(event):
@@ -61,9 +62,7 @@ def setup(client, my_id):
             f.write(f"!log: {LOG_MODE}")
         await event.edit(f"✅ Logging mode set to: {LOG_MODE}")
 
-    # -----------------------
     # Log new messages
-    # -----------------------
     @client.on(events.NewMessage())
     async def log_message(event):
         global LOG_MODE
@@ -93,9 +92,7 @@ def setup(client, my_id):
             )
             f.write(".\n")
 
-    # -----------------------
     # Log edited messages
-    # -----------------------
     @client.on(events.MessageEdited())
     async def log_edit(event):
         global LOG_MODE
@@ -120,9 +117,7 @@ def setup(client, my_id):
         with open(file_path, "w", encoding="utf-8") as f:
             f.writelines(lines)
 
-    # -----------------------
     # Log deleted messages
-    # -----------------------
     @client.on(events.MessageDeleted())
     async def log_deleted(event):
         global LOG_MODE

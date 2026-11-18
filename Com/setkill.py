@@ -1,12 +1,12 @@
-# Com/setkill.py
+"""!setkill: send a message every N seconds until stopped, resumed after a restart."""
 import os
 import json
 import asyncio
 import random
 from telethon import events
 
-from Com.storage import save_json
-import Com.tgsend as tgsend
+from Com.core.storage import save_json
+import Com.core.tgsend as tgsend
 
 __HELP__ = (
     "!setkill start <interval_seconds> [text] (reply optional) → Send a message every X seconds.\n"
@@ -29,6 +29,10 @@ os.makedirs(BASE_DIR, exist_ok=True)
 active_timers = {}  # id -> asyncio.Task
 timer_data = {}     # id -> settings
 
+#------------------------------
+#State
+#------------------------------
+
 def load_list():
     if not os.path.exists(ELIST_FILE):
         return []
@@ -50,6 +54,10 @@ def load_timers():
 def save_timers(data):
     save_json(SETKILL_FILE, data)
 
+#------------------------------
+#Timer job
+#------------------------------
+
 async def run_timer(client, timer_id, chat_id, interval, text, reply_to):
     """Scheduled task that sends a message every `interval` seconds."""
     while True:
@@ -68,7 +76,7 @@ async def run_timer(client, timer_id, chat_id, interval, text, reply_to):
                 msg_text = "(no texts available)"
         try:
             # Stored id: no event here, so resolve it once per send (see
-            # Com/tgsend.py). A raw id fails after a restart on StringSession.
+            # Com/core/tgsend.py). A raw id fails after a restart on StringSession.
             await client.send_message(await tgsend.resolve(client, chat_id),
                                       msg_text, reply_to=reply_to)
         except Exception as e:
@@ -92,8 +100,12 @@ async def stop_timer(timer_id):
     if timer_id in timer_data:
         del timer_data[timer_id]
 
+#------------------------------
+#Command handlers
+#------------------------------
+
 def setup(client, my_id):
-    # ----- Resume timers on startup -----
+    # Resume timers on startup
     async def resume_timers():
         data = load_timers()
         for t in data["timers"]:
