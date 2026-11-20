@@ -19,6 +19,8 @@ mode/reminders.json
 mode/polls.json
 mode/confirm.json
 mode/settings.json
+# !cauto's on/off switch: one Repl's runtime choice, not source.
+mode/cauto.json
 
 # --- bot UI state: flows, confirmations and the self-bot outbox ---
 # Rewritten constantly and full of chat ids; never source.
