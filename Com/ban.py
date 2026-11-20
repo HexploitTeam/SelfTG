@@ -34,6 +34,7 @@ from telethon.tl.types import Channel, Chat
 
 from Com.core.durations import format_duration, looks_like_duration
 from Com.core.durations import parse_duration as shared_parse_duration
+from Com.core.reply import say
 from Com.core.storage import load_json, save_json
 
 __HELP__ = (
@@ -124,6 +125,12 @@ def load_bans(chat_id):
 
 
 def save_ban(chat_id, user_id, *, kind, reason, until=None):
+    """Record a ban in the ledger. Returns False when it could not be written.
+
+    The ledger is bookkeeping, not the ban: Telegram has already applied the
+    restriction by the time this runs. A failed write must not turn a successful
+    ban into an error message, so it is reported separately.
+    """
     data = _load_all()
     chat_key = str(chat_id)
     entries = data.get(chat_key)
@@ -136,7 +143,12 @@ def save_ban(chat_id, user_id, *, kind, reason, until=None):
         "until": until,
     }
     data[chat_key] = entries
-    save_json(BAN_FILE, data)
+    try:
+        save_json(BAN_FILE, data)
+        return True
+    except Exception:  # noqa: BLE001 - the restriction is already applied
+        log.exception("ban: could not write the ledger for chat %s", chat_id)
+        return False
 
 
 def drop_ban(chat_id, user_id):
@@ -146,8 +158,19 @@ def drop_ban(chat_id, user_id):
     entries = data.get(chat_key) or {}
     entry = entries.pop(str(user_id), None)
     data[chat_key] = entries
-    save_json(BAN_FILE, data)
+    try:
+        save_json(BAN_FILE, data)
+    except Exception:  # noqa: BLE001
+        log.exception("ban: could not write the ledger for chat %s", chat_id)
     return entry
+
+
+def _ledger_note(written):
+    """One line for the command reply when the ledger write failed."""
+    if written:
+        return ""
+    return ("\n⚠️ The ledger could not be written (storage error), so `!ban list` "
+            "may not show this. Telegram's own state is unaffected.")
 
 
 #------------------------------
@@ -206,14 +229,8 @@ HELP_TEXT = (
 def setup(client, my_id):
 
     async def _say(event, text):
-        """Edit the command message in place, falling back to a reply."""
-        try:
-            await event.edit(text)
-        except Exception:
-            try:
-                await event.reply(text)
-            except Exception:
-                log.info("could not deliver ban response: %s", text.splitlines()[0])
+        # Edit-then-reply is shared: see Com/core/reply.py.
+        await say(event, text, name="ban")
 
     async def _chat(event):
         chat = await event.get_chat()
@@ -288,22 +305,24 @@ def setup(client, my_id):
                 chat, entity, until_date=timedelta(seconds=seconds),
                 view_messages=False,
             )
-            save_ban(chat.id, user_id, kind="tempban", reason=reason, until=until)
+            written = save_ban(chat.id, user_id, kind="tempban", reason=reason,
+                               until=until)
             await _say(
                 event,
                 f"⏳ **Temporary ban** — {name}\n"
                 f"Duration: {format_duration(seconds)}\n"
                 f"Expires: {_utc(until)}\n"
                 f"Reason: {reason}\n"
-                "Telegram enforces the expiry itself, so it survives restarts.",
+                "Telegram enforces the expiry itself, so it survives restarts."
+                + _ledger_note(written),
             )
             return
 
         await client.edit_permissions(chat, entity, view_messages=False)
-        save_ban(chat.id, user_id, kind="ban", reason=reason)
+        written = save_ban(chat.id, user_id, kind="ban", reason=reason)
         await _say(
             event,
-            f"🛑 **Banned** — {name}\nReason: {reason}",
+            f"🛑 **Banned** — {name}\nReason: {reason}" + _ledger_note(written),
         )
 
     async def cmd_unban(event, token, rest):
@@ -311,8 +330,11 @@ def setup(client, my_id):
         entity, user_id = await _resolve(event, token)
         name = await _label(entity, user_id)
 
-        tracked = drop_ban(chat.id, user_id)
+        # Telegram first, ledger second: if the RPC is refused the tracked record
+        # has to stay, or a ban that is still in force would vanish from
+        # `!ban list` / `!ban info` and look lifted when it is not.
         await client.edit_permissions(chat, entity)  # all rights back to default
+        tracked = drop_ban(chat.id, user_id)
         reason = rest.strip() or (tracked or {}).get("reason")
         suffix = f"\n(was: {reason})" if reason else ""
         await _say(event, f"✅ **Unbanned** — {name}{suffix}")
@@ -327,7 +349,21 @@ def setup(client, my_id):
         # member on the first call and the second restores their rights, so they
         # can be re-invited (but are not auto-rejoined).
         await client.edit_permissions(chat, entity, view_messages=False)
-        await client.edit_permissions(chat, entity)
+        try:
+            await client.edit_permissions(chat, entity)
+        except Exception as exc:  # noqa: BLE001 - the ban leg already succeeded
+            # The member is banned, not kicked. Say exactly that: reporting a
+            # generic failure here would leave them restricted with no record of
+            # why, and the owner would assume they can rejoin.
+            save_ban(chat.id, user_id, kind="ban", reason=reason)
+            log.warning("ban: kick left %s banned (%s)", user_id, type(exc).__name__)
+            await _say(
+                event,
+                f"⚠️ **Kick failed halfway** — {name} is still banned.\n"
+                f"Telegram: {describe_error(exc)}\n"
+                f"Lift it with `!ban unban {user_id}`.",
+            )
+            return
         drop_ban(chat.id, user_id)
         await _say(event, f"👢 **Kicked** — {name}\nReason: {reason}")
 
