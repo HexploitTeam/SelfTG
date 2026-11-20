@@ -1,13 +1,12 @@
 """!f: random-reply lists and the interval task that sends them."""
 from telethon import errors, events
 import os
-import json
 import asyncio
 import logging
 import random
 
 from Com.core import flood
-from Com.core.storage import save_json
+from Com.core.storage import cached_json, ensure_json_file, save_json
 
 log = logging.getLogger("selftg.f")
 
@@ -18,10 +17,9 @@ F_FILE = "mode/f.json"
 ID_FILE = "mode/f_id.txt"
 os.makedirs("mode", exist_ok=True)
 
-# Initialize JSON and ID file
-if not os.path.exists(F_FILE):
-    with open(F_FILE, "w", encoding="utf-8") as f:
-        json.dump([], f, indent=2)
+# Initialize JSON and ID file. The JSON goes through the shared atomic writer so
+# an interrupted first run cannot leave a truncated list behind.
+ensure_json_file(F_FILE, [])
 
 if not os.path.exists(ID_FILE):
     with open(ID_FILE, "w", encoding="utf-8") as f:
@@ -37,8 +35,9 @@ active_f_tasks = {}  # code_id: task
 def setup(client, my_id):
 
     def load_items():
-        with open(F_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+        # The send loop re-reads this list for every message of a series; the
+        # mtime-validated cache in Com/core/storage.py keeps that off the disk.
+        return cached_json(F_FILE, [])
 
     def save_items(items):
         save_json(F_FILE, items)

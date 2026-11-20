@@ -1,11 +1,12 @@
 """!list: named user lists stored as JSON under mode/lists."""
 import os
-import json
 import asyncio
 from datetime import datetime
 from telethon import events
 from telethon.tl.types import User
 import Com.core.tgsend as tgsend
+
+from Com.core.storage import load_json, save_json
 
 __HELP__ = (
     "!list create <name> → Create a new empty list\n"
@@ -33,16 +34,12 @@ def load_list(name):
     path = get_list_path(name)
     if not os.path.exists(path):
         return None
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except:
-        return []
+    data = load_json(path, [])
+    return data if isinstance(data, list) else []
 
 def save_list(name, data):
-    path = get_list_path(name)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    # Atomic: a crash mid-write used to leave an empty list, i.e. lose the list.
+    save_json(get_list_path(name), data)
 
 def get_all_lists():
     files = os.listdir(BASE_DIR)

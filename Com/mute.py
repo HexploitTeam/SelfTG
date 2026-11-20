@@ -1,9 +1,8 @@
 """!mute: the mute ledger and the admin actions behind it."""
 import os
-import json
 from telethon import events
 
-from Com.core.storage import save_json
+from Com.core.storage import ensure_json_file, load_json, save_json
 
 __HELP__ = (
     "!mute add <user> (or reply) → Mute (admin mode: tries to delete)\n"
@@ -18,17 +17,15 @@ BASE_DIR = "mode"
 MUTE_FILE = os.path.join(BASE_DIR, "mute.json")
 os.makedirs(BASE_DIR, exist_ok=True)
 
-if not os.path.exists(MUTE_FILE):
-    with open(MUTE_FILE, "w", encoding="utf-8") as f:
-        json.dump({}, f, indent=2)
+ensure_json_file(MUTE_FILE, {})
 
 #------------------------------
 #State
 #------------------------------
 
 def load_mutes():
-    with open(MUTE_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+    data = load_json(MUTE_FILE, {})
+    return data if isinstance(data, dict) else {}
 
 def save_mutes(data):
     save_json(MUTE_FILE, data)

@@ -1,7 +1,8 @@
 """!menres: auto-reply when the owner's account is mentioned."""
 from telethon import events
 import os
-import json
+
+from Com.core.storage import ensure_json_file, load_json, save_json
 
 __HELP__ = ("!menres on/off → Enable or disable mention auto-response\n"
             "!menres set <text> → Set the response text for mentions")
@@ -9,20 +10,18 @@ __CATEGORY__ = "Utilities"
 MODE_FILE = "mode/menres.json"
 os.makedirs("mode", exist_ok=True)
 
-if not os.path.exists(MODE_FILE):
-    with open(MODE_FILE, "w", encoding="utf-8") as f:
-        json.dump({"enabled": False, "text": ""}, f, indent=2)
+DEFAULT_CONFIG = {"enabled": False, "text": ""}
+ensure_json_file(MODE_FILE, DEFAULT_CONFIG)
 
 
 def setup(client, my_id):
 
     def load_config():
-        with open(MODE_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+        config = load_json(MODE_FILE, dict(DEFAULT_CONFIG))
+        return config if isinstance(config, dict) else dict(DEFAULT_CONFIG)
 
     def save_config(cfg):
-        with open(MODE_FILE, "w", encoding="utf-8") as f:
-            json.dump(cfg, f, indent=2)
+        save_json(MODE_FILE, cfg)
 
     @client.on(
         events.NewMessage(from_users=my_id, pattern=r"^!menres\s+(on|off)$"))

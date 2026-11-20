@@ -1,11 +1,11 @@
 """!enemy: the auto-reply target list, its message pools and round-robin selection."""
 import os
-import json
 import re
 from telethon import events
 import Com.core.tgsend as tgsend
 
 from Com.core.storage import cached_json as _storage_cached
+from Com.core.storage import ensure_json_file
 from Com.core.storage import save_json as _storage_save
 
 #------------------------------
@@ -101,19 +101,12 @@ STATE_FILE = os.path.join(BASE_DIR, "enemy_state.json")
 
 os.makedirs(BASE_DIR, exist_ok=True)
 
-# Initialize empty files if missing
-if not os.path.exists(ENEMY_FILE):
-    with open(ENEMY_FILE, "w", encoding="utf-8") as f:
-        json.dump({}, f, indent=2)
-
+# Create the missing state files through the shared writer, so a first run that
+# is killed mid-write leaves nothing behind instead of a truncated document.
+ensure_json_file(ENEMY_FILE, {})
 for fpath in [ELIST_FILE, ELISTNO_FILE]:
-    if not os.path.exists(fpath):
-        with open(fpath, "w", encoding="utf-8") as f:
-            json.dump([], f, indent=2)
-
-if not os.path.exists(STATE_FILE):
-    with open(STATE_FILE, "w", encoding="utf-8") as f:
-        json.dump({}, f, indent=2)
+    ensure_json_file(fpath, [])
+ensure_json_file(STATE_FILE, {})
 
 #------------------------------
 #Helpers

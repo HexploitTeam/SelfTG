@@ -1,11 +1,15 @@
 """!update: restart in place and report which commands changed."""
 import os
 import sys
-import json
 import hashlib
 import asyncio
+import logging
 from telethon import events
 import Com.core.tgsend as tgsend
+
+from Com.core.storage import load_json, save_json
+
+log = logging.getLogger("selftg.update")
 
 __HELP__ = "!update → Restart the session and show command changes after restart"
 __CATEGORY__ = "Setup"
@@ -33,7 +37,7 @@ def get_commands_in_file(file_path):
         with open(file_path, "r", encoding="utf-8") as f:
             code = f.read()
         return "__HELP__" in code
-    except:
+    except OSError:
         return False
 
 
@@ -67,10 +71,8 @@ def setup(client, my_id):
     async def handle_restart():
         if not os.path.exists(RESTART_FILE):
             return
-        try:
-            with open(RESTART_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-        except:
+        data = load_json(RESTART_FILE, None)
+        if not isinstance(data, dict):
             return
 
         chat_id = data.get("chat_id")
@@ -101,24 +103,19 @@ def setup(client, my_id):
         except Exception:
             try:
                 await client.send_message("me", report)
-            except:
-                pass
+            except Exception:  # noqa: BLE001 - the report is informational
+                log.info("update: post-restart report could not be delivered")
 
-        with open(HASH_FILE, "w", encoding="utf-8") as f:
-            json.dump(new_hashes, f, indent=2)
+        save_json(HASH_FILE, new_hashes)
 
     asyncio.create_task(handle_restart())
 
     # !update command
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!update$"))
     async def update_cmd(event):
-        old_hashes = {}
-        if os.path.exists(HASH_FILE):
-            try:
-                with open(HASH_FILE, "r", encoding="utf-8") as f:
-                    old_hashes = json.load(f)
-            except:
-                pass
+        old_hashes = load_json(HASH_FILE, {})
+        if not isinstance(old_hashes, dict):
+            old_hashes = {}
 
         new_hashes = collect_current_hashes()
 
@@ -128,12 +125,10 @@ def setup(client, my_id):
             "msg_id": event.id,
             "old_hashes": old_hashes   # <-- backup of old hashes
         }
-        with open(RESTART_FILE, "w", encoding="utf-8") as f:
-            json.dump(restart_data, f)
-
-        # Also store the new hashes now (so they are current after restart)
-        with open(HASH_FILE, "w", encoding="utf-8") as f:
-            json.dump(new_hashes, f, indent=2)
+        # Both writes are atomic: a half-written restart marker would fire a
+        # report against corrupt hashes on the next boot, or none at all.
+        save_json(RESTART_FILE, restart_data)
+        save_json(HASH_FILE, new_hashes)
 
         await event.edit("🔄 Restarting session...")
 
