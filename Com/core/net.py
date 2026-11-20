@@ -4,10 +4,10 @@ Replit does not allow arbitrary outbound TCP; non-HTTP traffic has to use port
 5222. Telegram's data centres answer on 5222 as well as 443, so the fix is to
 connect to 5222 instead of Telethon's default 443.
 
-`requirements.txt` installs `Telethon-repl`, which does this by hardcoding the
-port inside `Connection.__init__`. We additionally pass the port explicitly so
-the behaviour is visible in this repository and keeps working if that pin is
-ever swapped back to upstream `telethon`.
+Upstream `telethon` (1.44.0) connects to 443 by default; the old Telethon-repl
+fork forced 5222 by hardcoding it in `Connection.__init__`. This module keeps
+that behaviour without the fork: every connection is built through
+`ReplitConnection`, which ignores the port the client asks for.
 
 This module has no `setup()` and no `__HELP__`, so main.py's command loader
 imports it and registers nothing.

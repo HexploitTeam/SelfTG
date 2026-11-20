@@ -5,14 +5,11 @@
 # versions instead of whatever is newest that day.
 #
 # --- Telegram transport -----------------------------------------------------
-# Telethon-repl is Lonami Exo's Telethon 1.33.1 rebuilt for Replit: it replaces
-# the hardcoded MTProto port 443 with 5222, which is what Replit allows for
-# non-HTTP outbound connections. The distribution is named Telethon-repl but it
-# still provides the `telethon` module, so plain `telethon` must NOT be
-# installed alongside it or imports become non-deterministic.
-# If 5222 ever stops working, swap this line for `telethon==1.41.2` and set
-# TELEGRAM_DC_PORT=443 - see REUpgrade notes in the report.
-Telethon-repl==1.33.1
+# Upstream Telethon. The Replit fork (Telethon-repl, frozen at 1.33.1) is gone:
+# the 5222 port it forced is pinned in Com/core/net.py instead, so this line can
+# move forward without losing the Replit transport.
+# Never install Telethon-repl next to this line: both provide `telethon`.
+telethon==1.44.0
 
 # --- HTTP (used by ~15 command modules) -------------------------------------
 # 3.8.4 (the old pin) has open CVE-2023-47627 and CVE-2024-23334.

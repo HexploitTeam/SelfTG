@@ -46,18 +46,18 @@ def _require_env(name):
     return value
 
 
-PINNED_TELETHON = "1.33.1"
+PINNED_TELETHON = "1.44.0"
 
 
 def _check_telethon():
     """Log the resolved Telegram library and make version drift visible.
 
-    `requirements.txt` pins `Telethon-repl==1.33.1`, a fork that provides the
-    `telethon` module and forces MTProto port 5222. Two ways that can go wrong
-    silently: a plain `telethon` installed alongside it (imports become
-    non-deterministic, the 5222 transport can vanish) or a newer upstream
-    version. Neither is fatal here -- every call the codebase makes exists in
-    1.33+ -- but both must show up in the log instead of as a mystery.
+    `requirements.txt` pins `telethon==1.44.0`, and the 5222 port the old
+    Telethon-repl fork forced is applied by `Com/core/net.py`. Two ways that can
+    go wrong silently: `Telethon-repl` left installed next to it (both provide
+    `telethon`, so imports become non-deterministic) or a version that drifts
+    from the pin (the poll and reaction constructors changed across layers).
+    Both show up in the log instead of as a mystery.
     """
     try:
         import telethon
@@ -78,18 +78,16 @@ def _check_telethon():
     except ImportError:  # pragma: no cover - 3.7 only, kept for clarity
         return
 
-    installed = {}
-    for dist in ("Telethon-repl", "Telethon"):
-        try:
-            installed[dist] = metadata.version(dist)
-        except metadata.PackageNotFoundError:
-            continue
-    if len(installed) > 1:
+    try:
+        fork = metadata.version("Telethon-repl")
+    except metadata.PackageNotFoundError:
+        fork = None
+    if fork:
         log.warning(
-            "both %s are installed; `telethon` may resolve to either. "
-            "Uninstall the extra one (pip uninstall telethon) so the Replit "
-            "fork is the only provider of the module.",
-            " and ".join(f"{k} {v}" for k, v in installed.items()),
+            "Telethon-repl %s is installed next to telethon %s; both provide "
+            "the `telethon` module and imports become non-deterministic. "
+            "Run `pip uninstall Telethon-repl`.",
+            fork, version,
         )
 
 

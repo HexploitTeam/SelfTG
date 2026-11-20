@@ -36,13 +36,30 @@ from telethon.tl.functions.messages import (
     GetPollResultsRequest,
     SendMediaRequest,
 )
-from telethon.tl.types import InputMediaPoll, MessageMediaPoll, Poll, PollAnswer
+from telethon.tl.types import (
+    InputMediaPoll,
+    MessageMediaPoll,
+    Poll,
+    PollAnswer,
+    TextWithEntities,
+)
 
 import Com.core.tgsend as tgsend
 
 import Com.core.registry as registry
 from Com.core.reply import say
 from Com.core.storage import load_store, save_json
+
+
+# Layer 227 sends poll text as TextWithEntities, not str
+def _as_text(value):
+    return value if isinstance(value, TextWithEntities) else TextWithEntities(
+        text=value or "", entities=[])
+
+
+def _plain(value):
+    return value.text if isinstance(value, TextWithEntities) else value
+
 
 log = logging.getLogger("selftg.poll")
 
@@ -107,11 +124,13 @@ def build_poll(question, options, *, quiz=False, multiple=False, public=False,
         if len(option) > MAX_OPTION:
             raise ValueError(f"option {option[:20]!r}… is longer than {MAX_OPTION} chars")
 
-    answers = [PollAnswer(text=option, option=bytes([index])) for index, option in enumerate(options)]
+    answers = [PollAnswer(text=_as_text(option), option=bytes([index]))
+               for index, option in enumerate(options)]
     poll = Poll(
         id=random.getrandbits(62),
-        question=question,
+        question=_as_text(question),
         answers=answers,
+        hash=0,
         closed=False,
         public_voters=public,
         multiple_choice=multiple,
@@ -119,8 +138,9 @@ def build_poll(question, options, *, quiz=False, multiple=False, public=False,
     )
     media = InputMediaPoll(
         poll=poll,
-        correct_answers=[bytes([correct_index])] if quiz else None,
+        correct_answers=[correct_index] if quiz else None,
         solution=explanation,
+        solution_entities=[] if explanation else None,
     )
     return media, correct_index
 
@@ -349,8 +369,8 @@ def setup(client, my_id):
             if reply and isinstance(reply.media, MessageMediaPoll):
                 poll = reply.media.poll
                 return reply.id, {
-                    "question": poll.question,
-                    "options": [answer.text for answer in poll.answers],
+                    "question": _plain(poll.question),
+                    "options": [_plain(answer.text) for answer in poll.answers],
                     "correct_index": None,
                     "quiz": bool(poll.quiz),
                 }
@@ -388,8 +408,8 @@ def setup(client, my_id):
         try:
             fetched = await client.get_messages(peer, ids=msg_id)
             if fetched and isinstance(fetched.media, MessageMediaPoll):
-                poll_question = fetched.media.poll.question
-                options = [answer.text for answer in fetched.media.poll.answers]
+                poll_question = _plain(fetched.media.poll.question)
+                options = [_plain(answer.text) for answer in fetched.media.poll.answers]
         except Exception:  # noqa: BLE001
             pass
 
@@ -421,6 +441,7 @@ def setup(client, my_id):
             id=poll.id,
             question=poll.question,
             answers=poll.answers,
+            hash=0,
             closed=True,
             public_voters=poll.public_voters,
             multiple_choice=poll.multiple_choice,
@@ -429,10 +450,12 @@ def setup(client, my_id):
             close_date=poll.close_date,
         )
         correct_index = (meta or {}).get("correct_index")
+        solution = (meta or {}).get("solution")
         media = InputMediaPoll(
             poll=closed,
-            correct_answers=[bytes([correct_index])] if correct_index is not None else None,
-            solution=(meta or {}).get("solution"),
+            correct_answers=[correct_index] if correct_index is not None else None,
+            solution=solution,
+            solution_entities=[] if solution else None,
         )
 
         peer = await tgsend.peer(event)
