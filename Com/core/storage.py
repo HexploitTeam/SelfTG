@@ -61,6 +61,60 @@ def ensure_json_file(path, initial):
 
 
 #------------------------------
+#Read-through cache
+#------------------------------
+
+# Five features keep a catch-all NewMessage handler that re-read a JSON file for
+# *every* message in every chat (enemy, monitor, reply, cauto, stats). On a
+# 0.5 vCPU box that is the most expensive thing the bot does while idle, and it
+# is waste: the file only changes when this process writes it, or when the
+# dashboard (a separate process) does.
+#
+# So: memoise by path, validate by (st_mtime_ns, st_size). A write from anywhere
+# changes the stat key and the next read reloads, so a same-process write or a
+# dashboard edit is never served stale. The cache holds one parsed document per
+# state file in use (a dozen), not one per chat.
+
+_cached = {}   # path -> ((mtime_ns, size), document)
+
+
+def _stat_key(path):
+    try:
+        info = os.stat(path)
+    except OSError:
+        return None
+    return (info.st_mtime_ns, info.st_size)
+
+
+def cached_json(path, default=None):
+    """`load_json` with a per-path memo that follows the file's mtime.
+
+    Same contract as :func:`load_json`: a missing or unreadable file returns
+    `default` (``{}`` when omitted), never raises.
+    """
+    key = _stat_key(path)
+    if key is None:
+        _cached.pop(path, None)
+        return load_json(path, default)
+
+    hit = _cached.get(path)
+    if hit is not None and hit[0] == key:
+        return hit[1]
+
+    document = load_json(path, default)
+    _cached[path] = (key, document)
+    return document
+
+
+def clear_cache(path=None):
+    """Drop one path's memo (or all of it); used by !update and tests."""
+    if path is None:
+        _cached.clear()
+    else:
+        _cached.pop(path, None)
+
+
+#------------------------------
 #Schemas and migrations
 #------------------------------
 

@@ -261,6 +261,28 @@ async def answer(event, text=None, alert=False):
 #Flows
 #------------------------------
 
+def prune():
+    """Drop expired flows and pending tokens; returns how many were removed.
+
+    Expiry used to be lazy: an entry disappeared only when the owner opened that
+    screen again, so `mode/botstate.json` kept dead flows -- and the chat ids in
+    them -- for as long as the bot ran. The bot heartbeat calls this every 30 s,
+    which bounds the file without adding a task.
+    """
+    now = time.time()
+    state = load_state()
+    removed = 0
+    for bucket in ("flows", "pending"):
+        for key, entry in list(state[bucket].items()):
+            expires = float(entry.get("expires", 0) or 0) if isinstance(entry, dict) else 0
+            if expires <= now:
+                state[bucket].pop(key, None)
+                removed += 1
+    if removed:
+        save_state(state)
+    return removed
+
+
 def start_flow(owner_id, name, step, data=None, ttl=FLOW_TTL):
     state = load_state()
     state["flows"][str(owner_id)] = {

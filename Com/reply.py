@@ -1,9 +1,8 @@
 """!reply: mirror the owner's messages as replies to one target message."""
 import os
-import json
 from telethon import events
 
-from Com.core.storage import save_json
+from Com.core.storage import cached_json, save_json
 
 __HELP__ = (
     "!reply on (reply to a message) → Mirror everything you say in this chat as a "
@@ -20,13 +19,10 @@ MAX_COPY_BYTES = 20 * 1024 * 1024
 os.makedirs("mode", exist_ok=True)
 
 def load_data():
-    if not os.path.exists(FILE):
-        return {"enabled": False, "target_chat": None, "target_msg": None}
-    try:
-        with open(FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except:
-        return {"enabled": False, "target_chat": None, "target_msg": None}
+    # This runs for every message the account sees (the mirror is a catch-all
+    # handler), so it goes through the shared mtime-validated cache: one parse
+    # after a write, none otherwise (Com/core/storage.py).
+    return cached_json(FILE, {"enabled": False, "target_chat": None, "target_msg": None})
 
 def save_data(data):
     save_json(FILE, data)

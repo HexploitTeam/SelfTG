@@ -5,7 +5,8 @@ import re
 from telethon import events
 import Com.core.tgsend as tgsend
 
-from Com.core.storage import load_json as _storage_load, save_json as _storage_save
+from Com.core.storage import cached_json as _storage_cached
+from Com.core.storage import save_json as _storage_save
 
 #------------------------------
 #Scary messages
@@ -119,7 +120,10 @@ if not os.path.exists(STATE_FILE):
 #------------------------------
 
 def load_json(fpath):
-    return _storage_load(fpath, {})
+    # The auto-reply handler asks for this on every incoming message, so it reads
+    # through the shared mtime-validated cache instead of parsing the file per
+    # event (Com/core/storage.py).
+    return _storage_cached(fpath, {})
 
 def save_json(fpath, data):
     _storage_save(fpath, data)
@@ -167,13 +171,8 @@ async def get_username(client, user_id):
 #------------------------------
 
 def load_state():
-    if not os.path.exists(STATE_FILE):
-        return {}
-    try:
-        with open(STATE_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except:
-        return {}
+    # Same reasoning as load_json(): this is on the per-message path.
+    return _storage_cached(STATE_FILE, {})
 
 def save_state(state):
     _storage_save(STATE_FILE, state)

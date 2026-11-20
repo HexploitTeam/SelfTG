@@ -407,6 +407,15 @@ def _register_handlers(client, owner_id):
 async def _heartbeat_loop(client):
     while True:
         interop.touch_bot(client, BOT_USERNAME, connected=client.is_connected())
+        # Expired flows and confirmation tokens used to linger in botstate.json
+        # until the owner reopened that screen; sweeping here bounds the file
+        # without adding another task to a 0.5 vCPU box.
+        try:
+            removed = kit.prune()
+            if removed:
+                log.info("[BOT] pruned %d expired flow/token(s)", removed)
+        except Exception:  # noqa: BLE001 - housekeeping must not stop the heartbeat
+            log.debug("[BOT] could not prune bot state", exc_info=True)
         await asyncio.sleep(HEARTBEAT_SECONDS)
 
 
@@ -463,7 +472,10 @@ async def _run_once(owner_id):
     # In-memory session instead of a session file: free Repls are public by
     # default, and a bot can always sign in again from BOT_TOKEN.
     client = TelegramClient(StringSession(), api_id, api_hash,
-                            connection=ReplitConnection)
+                            connection=ReplitConnection,
+                            # Same FLOOD_WAIT policy as the self-bot: short waits
+                            # are slept here, longer ones are reported.
+                            flood_sleep_threshold=60)
     try:
         await client.connect()
         if not await client.is_user_authorized():

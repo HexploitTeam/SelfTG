@@ -1,10 +1,9 @@
 """!monitor: keyword watching with per-chat and global scopes."""
 import os
-import json
 import re
 from telethon import events
 
-from Com.core.storage import save_json
+from Com.core.storage import cached_json, save_json
 
 __HELP__ = (
     "!monitor add <keyword> → Add keyword to watch (in current chat or global)\n"
@@ -42,21 +41,26 @@ DEFAULT_DATA = {
 }
 
 def load_data():
+    # Called from a catch-all handler for every incoming message, so the file is
+    # read through the shared mtime-validated cache instead of parsed per event
+    # (Com/core/storage.py).
     if not os.path.exists(DATA_FILE):
         save_data(DEFAULT_DATA)
-        return DEFAULT_DATA
-    try:
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        # Ensure keys exist
-        if "__global" not in data:
-            data["__global"] = DEFAULT_SCOPE.copy()
-        if "__settings" not in data:
-            data["__settings"] = {"global_enabled": False}
-        return data
-    except:
+        return cached_json(DATA_FILE, dict(DEFAULT_DATA))
+
+    data = cached_json(DATA_FILE, None)
+    if not isinstance(data, dict):
         save_data(DEFAULT_DATA)
-        return DEFAULT_DATA
+        return cached_json(DATA_FILE, dict(DEFAULT_DATA))
+
+    # Ensure keys exist. The cache hands back the same object each time, so this
+    # check must not mutate it unless a key is actually missing -- otherwise a
+    # write would be triggered on every message.
+    if "__global" not in data or "__settings" not in data:
+        data.setdefault("__global", DEFAULT_SCOPE.copy())
+        data.setdefault("__settings", {"global_enabled": False})
+        save_data(data)
+    return data
 
 def save_data(data):
     save_json(DATA_FILE, data)

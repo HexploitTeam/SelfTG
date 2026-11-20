@@ -125,6 +125,12 @@ MAX_EMOJI_CODEPOINTS = 16   # family/flag ZWJ sequences run 8-10 codepoints
 DEFAULT_REACTION = "👍"
 CLEAR_WORDS = ("clear", "remove", "off", "none")
 
+# `!reaction` installs one catch-all handler per watched user, and those handlers
+# run on *every* message the account sees. Twenty is already 20 checks per
+# message; past that the feature is cheaper to express as a single dispatcher,
+# which is why the cap exists instead of an unbounded list.
+MAX_TASKS = 20
+
 # Inclusive codepoint ranges that a single reaction emoji can be built from:
 # every pictograph block, the dingbats Telegram actually ships as reactions, and
 # the tag characters used by flag sequences (\U000e0067 ...). Skin-tone modifiers
@@ -245,6 +251,10 @@ def setup(client, my_id):
         except:
             return
         for task_id_str, info in data.items():
+            if len(active_reactions) >= MAX_TASKS:
+                log.warning("reaction: %d stored task(s) not restored (cap %d)",
+                            len(data) - len(active_reactions), MAX_TASKS)
+                break
             user_id = info["user_id"]
             emoji = info["emoji"]
             task_id = int(task_id_str)
@@ -265,9 +275,10 @@ def setup(client, my_id):
                         msg_id=event.message.id,
                         reaction=[ReactionEmoji(emoticon=emoji)]
                     ))
-                    print(f"[SUCCESS] Reacted with {emoji} to msg {event.message.id}")
-                except Exception as e:
-                    print(f"[ERROR] Reaction failed: {e}")
+                    log.info("reaction: %s on message %s", emoji, event.message.id)
+                except Exception as exc:  # noqa: BLE001 - one message, not the client
+                    log.warning("reaction: %s on message %s failed (%s)",
+                                emoji, event.message.id, type(exc).__name__)
         return handler
 
     asyncio.create_task(load_existing_reactions())
@@ -330,6 +341,14 @@ def setup(client, my_id):
                     except Exception as e:
                         await event.edit(f"❌ Could not find user: {e}")
                         return
+
+            if len(active_reactions) >= MAX_TASKS:
+                await event.edit(
+                    f"❌ {MAX_TASKS} reaction tasks are already running. "
+                    "Stop one with `!reaction stop <ID>` first — each task is a "
+                    "handler on every incoming message."
+                )
+                return
 
             task_id = get_new_task_id()
             handler = await create_reaction_handler(user_id, emoji)
