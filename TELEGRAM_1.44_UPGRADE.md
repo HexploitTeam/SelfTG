@@ -50,11 +50,12 @@ Layer 227 changed the poll schema. Found by construction test against 1.44.0, no
 |---|---|---|
 | `Poll(id, question=str, answers, ...)` (no `hash`) | `hash` is required positional, `question` is `TextWithEntities` | `TypeError` on the missing `hash`; with `hash` added, a `str` question fails at serialisation: `AttributeError: 'str' object has no attribute '_bytes'` |
 | `PollAnswer(text=str, option=bytes)` | `text: TextWithEntities` | same `_bytes` failure |
+| `PollAnswer(option=b"\x00")` as the *input* answer | a new poll takes `InputPollAnswer(text, media)`; Telegram assigns `option` | a schema-valid request the server answers with `MediaInvalidError` |
 | `InputMediaPoll(correct_answers=[b"\x00"])` | `correct_answers: List[int]` | `error: required argument is not an integer` |
 | `InputMediaPoll(solution="…")` | `solution_entities` must be set too | `AssertionError: solution, solution_entities parameters must all be False-y or all be True-y` |
 | `poll.question` treated as `str` when read back | it is a `TextWithEntities` | `!poll results` printed `TextWithEntities(text='Q?', entities=[])` instead of the question |
 
-Changes in `Com/poll.py`: `TextWithEntities` imported; two 2-line helpers (`_as_text`, `_plain`); `build_poll` wraps question and answers, adds `hash=0`, sends `correct_answers=[index]`, sets `solution_entities=[]` when there is an explanation; `_resolve_target` and `_results` unwrap server text before display; `_close` adds `hash=0`, int `correct_answers` and `solution_entities`.
+Changes in `Com/poll.py`: `TextWithEntities` imported; two 2-line helpers (`_as_text`, `_plain`); `build_poll` wraps the question, builds answers from `InputPollAnswer`, adds `hash=0`, sends `correct_answers=[index]`, sets `solution_entities=[]` when there is an explanation; the create call reports `ChatSendPollForbiddenError` on its own; `_resolve_target` and `_results` unwrap server text before display; `_close` adds `hash=0`, int `correct_answers` and `solution_entities`.
 
 The `solution_entities` assert **also exists in 1.33.1** (verified), so quiz polls with an explanation were already broken before this upgrade. Fixed here as part of making `!poll` work, not caused by 1.44.
 
@@ -103,7 +104,7 @@ Test environment: `/tmp/v` with `telethon==1.44.0` (import resolves to `1.44.0`,
 | `!mute` | import-checked | no `edit_permissions` use; per-chat state only |
 | `!pin` / `!unpin` | import-checked + signature-verified | `pin_message`/`unpin_message` parameter names |
 | `!react` | **constructed and serialised** | `SendReactionRequest` with `ReactionEmoji` → `_bytes()` ok; reaction alias suite 19 checks pass |
-| `!poll` (create) | **constructed and serialised** | `build_poll` plain and quiz, `_bytes()` ok |
+| `!poll` (create) | **constructed and serialised** | `build_poll` plain and quiz; answers are `InputPollAnswer`, `_bytes()` ok |
 | `!poll` (quiz + explanation) | **constructed and serialised** | proven broken on both 1.33.1 and 1.44.0 before the fix; now serialises |
 | `!poll close` | **constructed and serialised** | server-shaped `TextWithEntities` poll rebuilt as closed, `_bytes()` ok |
 | `!poll results` | **render-checked** | `render_results` with a `PollAnswerVoters` row; text no longer a repr |

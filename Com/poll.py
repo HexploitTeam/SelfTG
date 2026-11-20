@@ -2,17 +2,19 @@
 
 This replaces the previous reaction/text-based fake poll: a real poll is created
 with ``messages.SendMediaRequest`` carrying ``InputMediaPoll``/``Poll``/
-``PollAnswer``, so Telegram itself tallies votes, shows the quiz result and
+``InputPollAnswer``, so Telegram itself tallies votes, shows the quiz result and
 enforces the limits.
 
-Verified against the resolved Telethon 1.33.1 (read from the installed package,
-not assumed):
+Verified against the resolved Telethon 1.44.0 (layer 227, read from the
+installed package, not assumed):
 
-* ``types.Poll(id, question, answers, closed, public_voters, multiple_choice,
-  quiz, close_period, close_date)``;
+* ``types.Poll(id, question, answers, hash, closed, public_voters,
+  multiple_choice, quiz, ...)`` -- ``question`` is ``TextWithEntities``;
 * ``types.InputMediaPoll(poll, correct_answers, solution, solution_entities)``;
-* ``types.PollAnswer(text, option)`` -- ``option`` is the byte string Telegram
-  uses to identify the answer;
+* ``types.InputPollAnswer(text, media)`` -- a new poll is built from these and
+  Telegram assigns the ``option`` bytes itself;
+* ``types.PollAnswer(text, option)`` -- the server-side form read back from a
+  sent poll, which is what ``!poll close`` re-sends inside the edited media;
 * ``messages.GetPollResultsRequest(peer, msg_id)`` **exists** in this version, so
   `!poll results` does work for user accounts (it returns
   ``PollResults.results`` -> ``PollAnswerVoters(option, voters, chosen, correct)``
@@ -38,9 +40,9 @@ from telethon.tl.functions.messages import (
 )
 from telethon.tl.types import (
     InputMediaPoll,
+    InputPollAnswer,
     MessageMediaPoll,
     Poll,
-    PollAnswer,
     TextWithEntities,
 )
 
@@ -125,8 +127,8 @@ def build_poll(question, options, *, quiz=False, multiple=False, public=False,
         if len(option) > MAX_OPTION:
             raise ValueError(f"option {option[:20]!r}… is longer than {MAX_OPTION} chars")
 
-    answers = [PollAnswer(text=_as_text(option), option=bytes([index]))
-               for index, option in enumerate(options)]
+    # Layer 227 creates options from InputPollAnswer: no client-chosen option
+    answers = [InputPollAnswer(text=_as_text(option)) for option in options]
     poll = Poll(
         id=random.getrandbits(62),
         question=_as_text(question),
@@ -334,6 +336,9 @@ def setup(client, my_id):
             return
         except errors.ChatSendMediaForbiddenError:
             await _say(event, "❌ The account is not allowed to send media (polls) in this chat.")
+            return
+        except errors.ChatSendPollForbiddenError:
+            await _say(event, "❌ Polls are not allowed in this chat.")
             return
         except errors.ChatAdminRequiredError:
             await _say(event, "❌ Admin rights are required to create a poll here.")
