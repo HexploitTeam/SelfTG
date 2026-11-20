@@ -283,11 +283,23 @@ def setup(client, my_id):
 
     asyncio.create_task(load_existing_reactions())
 
+    # `stop` is a keyword, not a target: this pattern and the one below are
+    # written so that exactly one of them matches any given `!reaction` message.
+    # They used to overlap on `!reaction stop <ID>` -- the stop handler removed
+    # the task, then the *set* handler ran too, looked up a user called "stop"
+    # and replaced the confirmation with "Could not find user: stop".
     @client.on(
         events.NewMessage(from_users=my_id,
-                          pattern=r"^!reaction\s+stop\s+(\d+)$"))
+                          pattern=r"(?i)^!reaction\s+stop\b\s*(\S*)\s*$"))
     async def stop_reaction(event):
-        task_id = int(event.pattern_match.group(1))
+        argument = event.pattern_match.group(1)
+        if not argument.isdigit():
+            await event.edit(
+                "❌ `!reaction stop` needs the task ID that was printed when the "
+                "task started: `!reaction stop 3`."
+            )
+            return
+        task_id = int(argument)
         info = active_reactions.get(task_id)
         if not info:
             await event.edit(f"❌ No active reaction task with ID {task_id}")
@@ -303,10 +315,13 @@ def setup(client, my_id):
         save_reactions()
         await event.edit(f"✅ Stopped reaction task {task_id}")
 
+    # `(?!stop\b)` keeps this handler off `!reaction stop <ID>`, which the
+    # handler above owns; without it both fired and the second overwrote the
+    # stop confirmation with a "could not find user: stop" error.
     @client.on(
         events.NewMessage(
             from_users=my_id,
-            pattern=r"^!reaction\s+(?:(@?\w+)|reply)\s+(.+)$"))
+            pattern=r"(?i)^!reaction\s+(?!stop\b)(?:(@?\w+)|reply)\s+(.+)$"))
     async def set_reaction(event):
         try:
             target = event.pattern_match.group(1)
