@@ -22,15 +22,9 @@ __HELP__ = (
     "!reaction <@Username/ID> <Emoji/alias> → React with emoji to all future messages from the user\n"
     "!reaction (reply) <Emoji/alias> → React to messages of replied user\n"
     "!reaction stop <ID> → Stop the reaction task\n\n"
-    "💡 Supported reaction aliases:\n"
-    "👍 like, 👍 | 👎 dislike, 👎 | 🤣 Laugh 🤣 | ❤️ heart, love, ❤️\n"
-    "🔥 fire, 🔥 | 🥰 adore, 🥰 | 👏 clap, 👏\n"
-    "🎉 party, 🎉 | 🤔 think, 🤔 | 🤯 mindblown, 🤯\n"
-    "🤩 starstruck, 🤩 | 😱 scream, 😱 | 🙏 pray, 🙏\n"
-    "👀 eyes, 👀 | 💯 100, 💯 | 💪 muscle, 💪\n"
-    "😡 angry, 😡 | 😄 smile, 😄 | 😢 cry, 😢\n"
-    "🤡 clown, 🤡 | 💔 brokenheart, 💔 | 🤬 swear, 🤬\n"
-    "😮‍💨 sigh, 😮‍💨 | 🫡 salute, 🫡 | 🤝 handshake, 🤝 | 🫶 lovehand, 🫶"
+    "💡 `!react list` → every supported reaction and its aliases\n"
+    "👍 like · 👎 dislike · ❤️ heart · 🔥 fire · 🩷 pinkheart · ❤️‍🔥 fireheart\n"
+    "🎉 party · 🤣 laugh · 💯 100 · 🤝 handshake · 🫡 salute · 🫶 lovehand"
 )
 __CATEGORY__ = "Setup"
 
@@ -41,10 +35,18 @@ REACTION_FILE = "mode/reactions.json"
 #Alias map
 #------------------------------
 
+# Telegram's standard reaction set, plus the extras this bot already shipped
+# (💪 😄 😮‍💨) and the newer heart shades (🩷 🩵 🩶 🤍).
 SUPPORTED_REACTIONS = {
-    "👍", "👎", "❤️", "🔥", "🥰", "👏", "🎉", "🤔", "🤯", "🤩",
-    "😱", "🙏", "👀", "💯", "💪", "😡", "😄", "😢", "🤡", "💔",
-    "🤬", "😮‍💨", "🫡", "🤝", "🫶", "🤣"
+    "👍", "👎", "❤️", "🔥", "🥰", "👏", "😁", "🤔", "🤯", "😱",
+    "🤬", "😢", "🎉", "🤩", "🤮", "💩", "🙏", "👌", "🕊️", "🤡",
+    "🥱", "🥴", "😍", "🐳", "❤️‍🔥", "🌚", "🌭", "💯", "🤣", "⚡️",
+    "🍌", "🏆", "💔", "🤨", "😐", "🍓", "🍾", "💋", "🖕", "😈",
+    "😴", "😭", "🤓", "👻", "👨‍💻", "👀", "🎃", "🙈", "😇", "😨",
+    "🤝", "✍️", "🤗", "🫡", "🎅", "🎄", "☃️", "💅", "🤪", "🗿",
+    "🆒", "💘", "🙉", "🦄", "😘", "💊", "🙊", "😎", "👾", "🤷‍♂️",
+    "🤷", "🤷‍♀️", "😡", "😄", "💪", "😮‍💨", "🫶", "🩷", "🩵", "🩶",
+    "🤍",
 }
 
 REACTION_ALIASES = {
@@ -100,6 +102,101 @@ REACTION_ALIASES = {
     "heartsp": "🫶",
     "laugh": "🤣",
     "lol": "🤣",
+    "grin": "😁",
+    "bigsmile": "😁",
+    "puke": "🤮",
+    "sick": "🤮",
+    "poop": "💩",
+    "shit": "💩",
+    "ok": "👌",
+    "okay": "👌",
+    "dove": "🕊️",
+    "peace": "🕊️",
+    "boring": "🥱",
+    "yawn": "🥱",
+    "drunk": "🥴",
+    "woozy": "🥴",
+    "inlove": "😍",
+    "lovely": "😍",
+    "whale": "🐳",
+    "fireheart": "❤️‍🔥",
+    "heartonfire": "❤️‍🔥",
+    "lovefire": "❤️‍🔥",
+    "moon": "🌚",
+    "darkmoon": "🌚",
+    "hotdog": "🌭",
+    "bolt": "⚡️",
+    "zap": "⚡️",
+    "fast": "⚡️",
+    "banana": "🍌",
+    "trophy": "🏆",
+    "win": "🏆",
+    "confused": "🤨",
+    "suspicious": "🤨",
+    "neutral": "😐",
+    "meh": "😐",
+    "strawberry": "🍓",
+    "champagne": "🍾",
+    "cheers": "🍾",
+    "kiss": "💋",
+    "middlefinger": "🖕",
+    "devil": "😈",
+    "evil": "😈",
+    "sleep": "😴",
+    "sleepy": "😴",
+    "sobbing": "😭",
+    "sob": "😭",
+    "nerd": "🤓",
+    "ghost": "👻",
+    "boo": "👻",
+    "coder": "👨‍💻",
+    "dev": "👨‍💻",
+    "hacker": "👨‍💻",
+    "pumpkin": "🎃",
+    "halloween": "🎃",
+    "monkey": "🙈",
+    "nohear": "🙉",
+    "nospeak": "🙊",
+    "angel": "😇",
+    "innocent": "😇",
+    "fear": "😨",
+    "worried": "😨",
+    "write": "✍️",
+    "hug": "🤗",
+    "santa": "🎅",
+    "xmas": "🎄",
+    "snow": "☃️",
+    "snowman": "☃️",
+    "nails": "💅",
+    "manicure": "💅",
+    "crazy": "🤪",
+    "goofy": "🤪",
+    "moai": "🗿",
+    "stone": "🗿",
+    "cool": "🆒",
+    "awesome": "🆒",
+    "cupid": "💘",
+    "arrowheart": "💘",
+    "unicorn": "🦄",
+    "kissface": "😘",
+    "muah": "😘",
+    "pill": "💊",
+    "sunglasses": "😎",
+    "chill": "😎",
+    "alien": "👾",
+    "spaceinvader": "👾",
+    "shrugm": "🤷‍♂️",
+    "shrug": "🤷",
+    "shrugf": "🤷‍♀️",
+    "rage": "😡",
+    "furious": "😡",
+    "pinkheart": "🩷",
+    "pink": "🩷",
+    "blueheart": "🩵",
+    "lightblueheart": "🩵",
+    "greyheart": "🩶",
+    "grayheart": "🩶",
+    "whiteheart": "🤍",
 }
 
 if not os.path.exists(REACTION_FILE):
@@ -218,8 +315,20 @@ def resolve_reaction(argument):
     return None, (
         f"❌ \"{shown}\" is not a single emoji, so it cannot be a reaction.\n"
         "Reply to a message and send `!react 🔥` — or `!react` alone for 👍.\n"
-        "Words work too: " + ", ".join(sorted(REACTION_ALIASES))
+        "Send `!react list` for every reaction and alias."
     )
+
+
+def reaction_list_text():
+    """Every advertised reaction, with the words that select it."""
+    names = {}
+    for alias, emoji in REACTION_ALIASES.items():
+        names.setdefault(emoji, []).append(alias)
+    lines = [f"💡 {len(SUPPORTED_REACTIONS)} reactions — `!reaction <user> <one>`:"]
+    for emoji in sorted(SUPPORTED_REACTIONS):
+        words = sorted(names.get(emoji, ()))
+        lines.append(f"{emoji} " + ", ".join(words) if words else emoji)
+    return "\n".join(lines)
 
 
 #------------------------------
@@ -332,10 +441,12 @@ def setup(client, my_id):
             if emoji_lower in REACTION_ALIASES:
                 emoji = REACTION_ALIASES[emoji_lower]
 
-            # Ensure the emoji is supported by Telegram
-            if emoji not in SUPPORTED_REACTIONS:
-                await event.edit(f"❌ '{emoji}' is not a supported Telegram reaction.\n"
-                                 f"Use one of: {', '.join(sorted(SUPPORTED_REACTIONS))}")
+            # Shape only: Telegram is the authority on the emoji it accepts
+            if emoji not in SUPPORTED_REACTIONS and not _is_single_emoji(emoji):
+                await event.edit(
+                    f"❌ '{emoji}' is not a single emoji, so it cannot be a reaction.\n"
+                    "Send `!react list` for every reaction and alias."
+                )
                 return
 
             if target is None or target.lower() == "reply":
@@ -406,6 +517,10 @@ def setup(client, my_id):
         command must not produce. Without a reply it explains itself instead.
         """
         if not event.out or event.sender_id != my_id:
+            return
+
+        if (event.pattern_match.group(1) or "").strip().lower() in ("list", "aliases"):
+            await say(event, reaction_list_text())
             return
 
         if not event.is_reply:
