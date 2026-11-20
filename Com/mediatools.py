@@ -21,6 +21,53 @@ __HELP__ = (
     "!imgformat <format> → Convert replied image to another format (PNG/JPG).")
 
 
+# Telegram rejects a text message over 4096 characters, and ID3/APE tags can
+# carry far more than that: embedded lyrics (USLT), long comments, and tags whose
+# value is the raw cover image. `!audiometa` used to join every value into one
+# string, so a normally-tagged file failed with "Message was too long".
+MAX_FIELD_CHARS = 200     # one tag value, so a single field cannot eat the budget
+MAX_BODY_CHARS = 3500     # whole listing; leaves room for the header and footer
+
+
+def short_tag_value(value):
+    """Render one mutagen tag value as a short single-line string.
+
+    Tags are not always strings: multi-value frames arrive as lists, and picture
+    frames (APIC) are raw bytes that would blow up both the message and the log.
+    """
+    if isinstance(value, (list, tuple)):
+        parts = [short_tag_value(item) for item in value]
+        text = ", ".join(part for part in parts if part)
+    elif isinstance(value, (bytes, bytearray)):
+        text = f"<{len(value)} bytes>"
+    else:
+        text = str(value)
+    # NULs and newlines come from malformed frames; one tag must stay one line.
+    text = text.replace("\x00", " ").replace("\r", " ").replace("\n", " ").strip()
+    if len(text) > MAX_FIELD_CHARS:
+        text = text[:MAX_FIELD_CHARS] + "…"
+    return text
+
+
+def format_audio_tags(tags):
+    """Body of the !audiometa reply, bounded to what Telegram will accept."""
+    if not tags:
+        return "No tags found"
+    lines = []
+    used = 0
+    omitted = 0
+    for key, value in tags.items():
+        line = f"{key}: {short_tag_value(value)}"
+        if used + len(line) + 1 > MAX_BODY_CHARS:
+            omitted += 1
+            continue
+        lines.append(line)
+        used += len(line) + 1
+    if omitted:
+        lines.append(f"… {omitted} more tag(s) omitted, message too long")
+    return "\n".join(lines) or "No tags found"
+
+
 def probe_video(path):
     """Return (duration, width, height, fps) for a local video file.
 
@@ -72,10 +119,7 @@ def setup(client, my_id):
                 await event.reply("❌ Could not read audio metadata.")
                 return
 
-            info = "\n".join(
-                f"{k}: {v}" for k, v in
-                audio.tags.items()) if audio.tags else "No tags found"
-            await event.reply(f"🎵 Audio Metadata:\n{info}")
+            await event.reply(f"🎵 Audio Metadata:\n{format_audio_tags(audio.tags)}")
 
         except Exception as e:
             await event.reply(f"❌ Error: {str(e)}")
