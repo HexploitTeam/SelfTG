@@ -56,7 +56,7 @@ def setup(client, my_id):
                     break
                 try:
                     await client.send_message(peer, use_text, reply_to=reply_to_id)
-                except errors.FloodWaitError as exc:
+                except flood.FLOOD_ERRORS as exc:
                     left = flood.note_flood(exc.seconds)
                     note = (f"⏳ Telegram asked to wait {exc.seconds}s; stopped "
                             f"after {sent} of {N} copies.")

@@ -25,7 +25,9 @@ from dataclasses import dataclass, field
 from telethon.errors import MessageNotModifiedError
 from telethon.tl.types import (
     KeyboardButtonCallback,
+    KeyboardButtonCopy,
     KeyboardButtonRow,
+    KeyboardButtonStyle,
     KeyboardButtonUrl,
     ReplyInlineMarkup,
 )
@@ -136,23 +138,49 @@ class Screen:
     rows: list = field(default_factory=list)
 
 
-def btn(label, *parts):
-    return (label, cb(*parts))
+@dataclass(frozen=True)
+class Copy:
+    """Button data that copies text instead of calling back.
+
+    Layer 227's ``keyboardButtonCopy`` is documented as inline-only, which is
+    exactly what this bot sends. No callback arrives, so nothing to route.
+    """
+    text: str
 
 
-def url_btn(label, url):
-    return (label, url)
+# Named styles, as the clients show them; unknown names simply drop the style
+BUTTON_STYLES = {
+    "primary": KeyboardButtonStyle(bg_primary=True),
+    "success": KeyboardButtonStyle(bg_success=True),
+    "danger": KeyboardButtonStyle(bg_danger=True),
+}
+
+
+def btn(label, *parts, style=None):
+    return (label, cb(*parts), style)
+
+
+def url_btn(label, url, style=None):
+    return (label, url, style)
+
+
+def copy_btn(label, text, style=None):
+    return (label, Copy(text), style)
 
 
 def markup(rows):
     built = []
     for row in rows:
         buttons = []
-        for label, data in row:
-            if isinstance(data, str) and data.startswith("http"):
-                buttons.append(KeyboardButtonUrl(label, data))
+        for entry in row:
+            label, data = entry[0], entry[1]
+            style = BUTTON_STYLES.get(entry[2]) if len(entry) > 2 else None
+            if isinstance(data, Copy):
+                buttons.append(KeyboardButtonCopy(label, data.text, style=style))
+            elif isinstance(data, str) and data.startswith("http"):
+                buttons.append(KeyboardButtonUrl(label, data, style=style))
             else:
-                buttons.append(KeyboardButtonCallback(label, data))
+                buttons.append(KeyboardButtonCallback(label, data, style=style))
         if buttons:
             built.append(KeyboardButtonRow(buttons))
     return ReplyInlineMarkup(built) if built else None

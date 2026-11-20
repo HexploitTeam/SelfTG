@@ -47,6 +47,7 @@ from telethon.tl.types import (
 import Com.core.tgsend as tgsend
 
 import Com.core.registry as registry
+from Com.core import flood
 from Com.core.reply import say
 from Com.core.storage import load_store, save_json
 
@@ -340,7 +341,7 @@ def setup(client, my_id):
         except errors.PollOptionInvalidError:
             await _say(event, "❌ Telegram rejected an option (duplicate or too long).")
             return
-        except errors.FloodWaitError as exc:
+        except flood.FLOOD_ERRORS as exc:
             await _say(event, f"⏳ Telegram rate limit: wait {exc.seconds}s.")
             return
         except errors.RPCError as exc:

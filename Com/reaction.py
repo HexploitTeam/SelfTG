@@ -12,6 +12,7 @@ import asyncio
 import logging
 from datetime import datetime
 
+from Com.core import flood
 from Com.core.storage import save_json
 import Com.core.tgsend as tgsend
 
@@ -579,7 +580,7 @@ def setup(client, my_id):
             await say(event, "❌ Telegram does not recognise this chat any more. "
                              "Send any message here and try again.")
             return
-        except errors.FloodWaitError as exc:
+        except flood.FLOOD_ERRORS as exc:
             await say(event, f"⏳ Telegram rate-limited reactions: wait {exc.seconds}s "
                              "and try again. Nothing was retried automatically.")
             return

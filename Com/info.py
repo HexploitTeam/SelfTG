@@ -14,9 +14,21 @@ def setup(client, my_id):
             chat = await event.get_chat()
             chat_name = getattr(chat, "title", None) or getattr(chat, "first_name", "This chat")
 
+            reply_sender = None
             if event.is_reply:
+                # A reply to a message in another chat has no local reply_msg;
+                # the peer still arrives with the event (layer 155+)
                 reply_msg = await event.get_reply_message()
-                target_user = await client.get_entity(reply_msg.sender_id)
+                if reply_msg is not None:
+                    reply_sender = getattr(reply_msg, "sender_id", None)
+                reply_sender = reply_sender or event.reply_to_sender
+                if reply_sender is None:
+                    await event.edit(
+                        "❌ That reply points at a message this account cannot "
+                        "read, and Telegram sent no sender for it."
+                    )
+                    return
+                target_user = await client.get_entity(reply_sender)
             else:
                 target_user = await client.get_me()
 
@@ -42,6 +54,12 @@ def setup(client, my_id):
                 f"⭐ Premium: {'Yes' if is_premium else 'No'}\n"
                 f"📨 Total messages sent in this chat: {total_messages}"
             )
+            # Only set when the replied-to message lives in another chat
+            if event.reply_to_chat is not None:
+                origin = getattr(event.reply_to_chat, "title", None) \
+                    or getattr(event.reply_to_chat, "username", None) \
+                    or "another chat"
+                info_text += f"\n↩️ Reply came from: {origin}"
 
             if photo.total > 0:
                 await client.send_file(await tgsend.peer(event), photo[0], caption=info_text, reply_to=event.id)

@@ -95,7 +95,7 @@ def setup(client, my_id):
                 await tgsend.peer(event), str(result), reply_to=event.id
             )
             return True
-        except errors.FloodWaitError as exc:
+        except flood.FLOOD_ERRORS as exc:
             cooldown = flood.note_flood(exc.seconds)
             log.warning(
                 "cauto: flood wait %ss%s", exc.seconds,

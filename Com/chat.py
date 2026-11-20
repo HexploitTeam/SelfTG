@@ -45,10 +45,11 @@ from telethon.tl.types import (
     MessageEntityUnderline,
 )
 
+from Com.core import flood
 from Com.core.storage import load_json, save_json
 
 __HELP__ = (
-    "!chat bold|italic|underline|strike|spoiler|code|mono|quote|plain <text> → "
+    "!chat bold|italic|underline|strike|spoiler|code|mono|quote|collapse|plain <text> → "
     "Rewrite your message with that formatting\n"
     "!chat <style> all <text> → Same, explicit form (whole rest is the text)\n"
     "!chat bold+italic <text> → Combine styles\n"
@@ -82,6 +83,9 @@ STYLES = {
     "quote": (MessageEntityBlockquote, False),
     "blockquote": (MessageEntityBlockquote, False),
 }
+
+# Expandable quote: layer 222's collapsed flag on the same entity
+COLLAPSED_STYLES = {"collapse", "collapsed", "expandable", "fold"}
 
 PLAIN_STYLES = {"plain", "unformat", "none", "text"}
 
@@ -127,10 +131,17 @@ def build_entities(style, text):
         part = part.strip()
         if not part:
             continue
+        if part in PLAIN_STYLES:
+            continue
+        if part in COLLAPSED_STYLES:
+            entities.append(
+                MessageEntityBlockquote(offset=0, length=length, collapsed=True)
+            )
+            continue
         if part not in STYLES:
             raise ValueError(
                 f"unknown style {part!r}. Try: "
-                + ", ".join(sorted(set(STYLES) | PLAIN_STYLES))
+                + ", ".join(sorted(set(STYLES) | PLAIN_STYLES | COLLAPSED_STYLES))
             )
         entity_class, needs_language = STYLES[part]
         if needs_language:
@@ -190,7 +201,7 @@ def setup(client, my_id):
             await _reply(event, "❌ Too old to edit (Telegram's 48h edit window).")
         except errors.MessageIdInvalidError:
             await _reply(event, "❌ That message no longer exists.")
-        except errors.FloodWaitError as exc:
+        except flood.FLOOD_ERRORS as exc:
             await _reply(event, f"⏳ Telegram rate limit: wait {exc.seconds}s.")
         except errors.RPCError as exc:
             await _reply(event, f"❌ Telegram error ({type(exc).__name__}).")
@@ -329,7 +340,7 @@ def setup(client, my_id):
             _remember(event.chat_id, event.id)
         except errors.MessageNotModifiedError:
             pass
-        except errors.FloodWaitError as exc:
+        except flood.FLOOD_ERRORS as exc:
             log.warning("chat: auto-format flood wait %ss; paused", exc.seconds)
             try:
                 set_chat_style(event.chat_id, None)

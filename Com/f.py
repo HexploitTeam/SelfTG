@@ -118,7 +118,7 @@ def setup(client, my_id):
                     await flood.pace(chat_id, gap=5.0)
                 except asyncio.CancelledError:
                     break
-                except errors.FloodWaitError as exc:
+                except flood.FLOOD_ERRORS as exc:
                     left = flood.note_flood(exc.seconds)
                     log.warning("[f] code %s hit FLOOD_WAIT %ss", code_id, exc.seconds)
                     if left:

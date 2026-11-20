@@ -206,6 +206,10 @@ def _register_handlers(client, owner_id):
             f"Sender: <code>{event.sender_id}</code>\n"
             f"Bot: @{kit.h(BOT_USERNAME or '?')}",
             parse_mode="html",
+            # Inline-only clipboard button; the ids are copied, not retyped
+            buttons=kit.markup([[
+                kit.copy_btn("📋 Copy chat id", str(event.chat_id)),
+            ]]),
         )
 
     async def _version_cmd(event):

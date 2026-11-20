@@ -17,6 +17,7 @@ from telethon import errors, events
 from telethon.tl.types import InputMessagesFilterPinned, User
 
 import Com.core.registry as registry
+from Com.core import flood
 from Com.core.reply import say
 import Com.core.tgsend as tgsend
 
@@ -82,7 +83,7 @@ def setup(client, my_id):
             await _say(event, "ℹ️ Nothing changed.")
         except errors.MessageIdInvalidError:
             await _say(event, "❌ That message no longer exists.")
-        except errors.FloodWaitError as exc:
+        except flood.FLOOD_ERRORS as exc:
             await _say(event, f"⏳ Telegram rate limit: wait {exc.seconds}s.")
         except errors.ChatWriteForbiddenError:
             await _say(event, "❌ The account cannot post in this chat any more.")

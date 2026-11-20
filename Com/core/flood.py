@@ -26,6 +26,8 @@ import logging
 import random
 import time
 
+from telethon import errors
+
 log = logging.getLogger("selftg.flood")
 
 MIN_GAP = 1.0            # seconds between two messages of one series
@@ -33,6 +35,12 @@ JITTER = 0.3             # +/- 30 %, so no two gaps are identical
 FLOOD_WINDOW = 600       # a flood older than this no longer counts
 FLOOD_LIMIT = 3          # floods inside the window before the breaker opens
 BREAKER_COOLDOWN = 900   # how long sending stays paused once it opens
+
+# FLOOD_WAIT and FLOOD_PREMIUM_WAIT are siblings, not parent and child: a
+# handler naming FloodWaitError alone misses the premium variant completely
+FLOOD_ERRORS = (errors.FloodWaitError,)
+if hasattr(errors, "FloodPremiumWaitError"):
+    FLOOD_ERRORS += (errors.FloodPremiumWaitError,)
 
 _last_send = {}   # chat_id -> monotonic time of the last message we sent
 _floods = []      # monotonic timestamps of recent FLOOD_WAITs

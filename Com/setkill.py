@@ -95,7 +95,7 @@ async def run_timer(client, timer_id, chat_id, interval, text, reply_to):
             # Stored id: resolve per send (Com/core/tgsend.py)
             await client.send_message(await tgsend.resolve(client, chat_id),
                                       msg_text, reply_to=reply_to)
-        except errors.FloodWaitError as exc:
+        except flood.FLOOD_ERRORS as exc:
             left = flood.note_flood(exc.seconds)
             log.warning("[setkill] timer %s hit FLOOD_WAIT %ss", timer_id, exc.seconds)
             if left:

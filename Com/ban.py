@@ -32,6 +32,7 @@ from datetime import datetime, timedelta, timezone
 from telethon import errors, events
 from telethon.tl.types import Channel, Chat
 
+from Com.core import flood
 from Com.core.durations import format_duration, looks_like_duration
 from Com.core.durations import parse_duration as shared_parse_duration
 from Com.core.reply import say
@@ -200,7 +201,7 @@ def describe_error(exc):
         return "the account cannot post in this chat any more."
     if isinstance(exc, errors.ChannelPrivateError):
         return "this chat is private or the account was removed from it."
-    if isinstance(exc, errors.FloodWaitError):
+    if isinstance(exc, flood.FLOOD_ERRORS):
         return f"Telegram rate limit: wait {exc.seconds}s before trying again."
     if isinstance(exc, errors.RPCError):
         return f"Telegram error: {type(exc).__name__}: {exc}"
@@ -471,7 +472,7 @@ def setup(client, my_id):
             # `!ban <user> [reason]`
             await cmd_ban(event, head, rest, kind="ban")
 
-        except errors.FloodWaitError as exc:
+        except flood.FLOOD_ERRORS as exc:
             await _say(
                 event,
                 f"⏳ Telegram rate limit: wait {exc.seconds}s. "

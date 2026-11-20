@@ -315,6 +315,7 @@ def mod_screen(chat_id):
          kit.btn(f"limit {warns.get('limit', 3)}", "mod", chat_id),
          kit.btn("➕ Warn limit", "do", "warnlimit", chat_id, 1)],
         [kit.btn("💬 Act as self-bot", "relay", chat_id)],
+        [kit.copy_btn("📋 Copy chat id", str(chat_id))],
         [kit.btn("‹ Chats", "chats", "mod", 0), kit.btn("🏠 Menu", "home")],
     ]
     return kit.Screen(text, rows)
@@ -686,8 +687,10 @@ def queue_screen():
         )
         if state in ("failed", "unknown"):
             rows.append([
-                kit.btn(f"↻ {entry.get('id')}", "do", "qretry", entry.get("id")),
-                kit.btn(f"🗑 {entry.get('id')}", "do", "qdrop", entry.get("id")),
+                kit.btn(f"↻ {entry.get('id')}", "do", "qretry", entry.get("id"),
+                        style="primary"),
+                kit.btn(f"🗑 {entry.get('id')}", "do", "qdrop", entry.get("id"),
+                        style="danger"),
             ])
     rows.append([kit.btn("🔄 Refresh", "queue"), kit.btn("🏠 Menu", "home")])
     return kit.Screen("\n".join(lines), rows)
@@ -747,8 +750,8 @@ def confirm_screen(token):
     return kit.Screen(
         f"⚠️ <b>Confirm</b>\n{kit.h(description)}\n\n"
         "This token works once and expires in five minutes.",
-        [[kit.btn("✅ Confirm", "do", "confirm", token),
-          kit.btn("✖️ Cancel", "do", "cancel", token)]],
+        [[kit.btn("✅ Confirm", "do", "confirm", token, style="success"),
+          kit.btn("✖️ Cancel", "do", "cancel", token, style="danger")]],
     ), None
 
 

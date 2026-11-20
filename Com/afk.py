@@ -24,6 +24,7 @@ from telethon import errors, events
 import Com.core.tgsend as tgsend
 
 import Com.core.registry as registry
+from Com.core import flood
 from Com.core import scheduler
 from Com.core.reply import say
 from Com.core.storage import load_store, save_json
@@ -269,7 +270,7 @@ def setup(client, my_id):
             await client.send_message(await tgsend.peer(event), _reply_to_message(record))
             _mark_cooldown(state, key)
 
-        except errors.FloodWaitError as exc:
+        except flood.FLOOD_ERRORS as exc:
             # Obey FLOOD_WAIT once: stop replying globally
             state = load_state()
             state["pause_until"] = time.time() + exc.seconds
