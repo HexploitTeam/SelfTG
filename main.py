@@ -279,6 +279,16 @@ async def _shutdown():
     except Exception:
         log.warning("Error while stopping the scheduler", exc_info=True)
 
+    # Close the shared HTTP session too: Replit sends SIGTERM on every stop and
+    # restart, and an aiohttp session left open at exit logs a "Unclosed connector"
+    # warning that reads like a bug in whatever was being fetched.
+    try:
+        from Com.core import api as api_module
+
+        await api_module.close_session()
+    except Exception:
+        log.warning("Error while closing the HTTP session", exc_info=True)
+
     try:
         await asyncio.wait_for(client.disconnect(), timeout=DISCONNECT_TIMEOUT)
         log.info("Session closed.")

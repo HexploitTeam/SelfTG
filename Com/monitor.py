@@ -1,9 +1,12 @@
 """!monitor: keyword watching with per-chat and global scopes."""
+import logging
 import os
 import re
 from telethon import events
 
 from Com.core.storage import cached_json, save_json
+
+log = logging.getLogger("selftg.monitor")
 
 __HELP__ = (
     "!monitor add <keyword> → Add keyword to watch (in current chat or global)\n"
@@ -167,14 +170,14 @@ def setup(client, my_id):
                     f"Keyword: '{matched_keyword}'\n"
                     f"Message: {text}"
                 )
-            except Exception as e:
-                print(f"[monitor] Failed to send DM: {e}")
+            except Exception as exc:  # noqa: BLE001 - alert delivery is best effort
+                log.warning("monitor: alert DM failed (%s)", type(exc).__name__)
 
         if scope_reply:
             try:
                 await event.reply(scope_reply)
-            except Exception as e:
-                print(f"[monitor] Failed to send reply: {e}")
+            except Exception as exc:  # noqa: BLE001
+                log.warning("monitor: reply failed (%s)", type(exc).__name__)
 
     # !monitor add <keyword>
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!monitor add (.+)"))

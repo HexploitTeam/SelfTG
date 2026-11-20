@@ -1,6 +1,7 @@
 """!ocr: image text extraction, local Tesseract first and the OCR.space API second."""
 import asyncio
 import base64
+import logging
 import os
 import shutil
 from io import BytesIO
@@ -8,6 +9,8 @@ from telethon import events
 import Com.core.tgsend as tgsend
 
 import Com.core.api as api
+
+log = logging.getLogger("selftg.ocr")
 
 __HELP__ = "!ocr (reply to image) → Extract text from an image using local Tesseract (if installed) or OCR.space API."
 __CATEGORY__ = "Utilities"
@@ -121,16 +124,16 @@ def setup(client, my_id):
         if text:
             await output_result(event, client, text)
             return
-        else:
-            print(f"[OCR] Local failed: {error}")
+        # Keep the local reason: the failure message used to print the *API*
+        # error twice, because the second call had already overwritten `error`.
+        local_error = error
+        log.info("ocr: local attempt failed (%s)", error)
 
         text, error = await ocr_api(image_data)
         if text:
             await output_result(event, client, text)
             return
-        else:
-            await event.edit(f"❌ OCR failed.\nLocal: {error}\nAPI: {error}")
-            return
+        await event.edit(f"❌ OCR failed.\nLocal: {local_error}\nAPI: {error}")
 
 async def output_result(event, client, text):
     if not text:

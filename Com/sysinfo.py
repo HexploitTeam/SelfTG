@@ -2,6 +2,7 @@
 import psutil
 import platform
 import asyncio
+import logging
 import os
 import json
 from datetime import datetime
@@ -10,9 +11,11 @@ from telethon import events
 
 from Com.core.storage import save_json as _save_json
 
+log = logging.getLogger("selftg.sysinfo")
+
 try:
     import GPUtil
-except:
+except Exception:  # noqa: BLE001 - optional accelerator, absence is expected
     GPUtil = None
 
 __HELP__ = "!sysinfo → Show detailed system information including CPU, memory, disks, network, GPU, and uptime."
@@ -203,8 +206,8 @@ def setup(client, my_id):
             while True:
                 try:
                     await collect_sysinfo()
-                except Exception as e:
-                    print(f"[sysinfo] auto log failed: {e}")
+                except Exception as exc:  # noqa: BLE001 - a snapshot must not kill the task
+                    log.warning("sysinfo: auto log failed (%s)", type(exc).__name__)
                 await asyncio.sleep(60)
 
         asyncio.create_task(auto_log())
