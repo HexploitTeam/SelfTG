@@ -1,6 +1,7 @@
 """!repeat: send a message N times."""
-import asyncio
-from telethon import events
+from telethon import errors, events
+
+from Com.core import flood
 import Com.core.tgsend as tgsend
 
 __HELP__ = (
@@ -45,9 +46,29 @@ def setup(client, my_id):
 
             await event.delete()
 
+            # The copies are a series, so they go through the shared gate: no
+            # fixed 0.2 s burst, and a flood ends the series with a count rather
+            # than a retry (Com/core/flood.py).
+            peer = await tgsend.peer(event)
+            sent = 0
             for _ in range(N):
-                await client.send_message(await tgsend.peer(event), use_text, reply_to=reply_to_id)
-                await asyncio.sleep(0.2)
+                left = flood.cooldown_left()
+                if left:
+                    await client.send_message(peer, flood.describe(left))
+                    break
+                try:
+                    await client.send_message(peer, use_text, reply_to=reply_to_id)
+                except errors.FloodWaitError as exc:
+                    left = flood.note_flood(exc.seconds)
+                    note = (f"⏳ Telegram asked to wait {exc.seconds}s; stopped "
+                            f"after {sent} of {N} copies.")
+                    if left:
+                        note += "\n" + flood.describe(left)
+                    await client.send_message(peer, note)
+                    break
+                sent += 1
+                await flood.pace(event.chat_id)
+            flood.forget(event.chat_id)
 
         except ValueError:
             try:

@@ -47,6 +47,53 @@ def _require_env(name):
     return value
 
 
+PINNED_TELETHON = "1.33.1"
+
+
+def _check_telethon():
+    """Log the resolved Telegram library and make version drift visible.
+
+    `requirements.txt` pins `Telethon-repl==1.33.1`, a fork that provides the
+    `telethon` module and forces MTProto port 5222. Two ways that can go wrong
+    silently: a plain `telethon` installed alongside it (imports become
+    non-deterministic, the 5222 transport can vanish) or a newer upstream
+    version. Neither is fatal here -- every call the codebase makes exists in
+    1.33+ -- but both must show up in the log instead of as a mystery.
+    """
+    try:
+        import telethon
+
+        version = getattr(telethon, "__version__", "?")
+    except Exception:  # noqa: BLE001 - the client build below reports it properly
+        log.error("telethon is not importable; the bot cannot start")
+        return
+
+    if version != PINNED_TELETHON:
+        log.warning("telethon %s differs from the pinned %s; behaviour is not "
+                    "verified on this version", version, PINNED_TELETHON)
+    else:
+        log.info("telethon %s (pinned)", version)
+
+    try:
+        from importlib import metadata
+    except ImportError:  # pragma: no cover - 3.7 only, kept for clarity
+        return
+
+    installed = {}
+    for dist in ("Telethon-repl", "Telethon"):
+        try:
+            installed[dist] = metadata.version(dist)
+        except metadata.PackageNotFoundError:
+            continue
+    if len(installed) > 1:
+        log.warning(
+            "both %s are installed; `telethon` may resolve to either. "
+            "Uninstall the extra one (pip uninstall telethon) so the Replit "
+            "fork is the only provider of the module.",
+            " and ".join(f"{k} {v}" for k, v in installed.items()),
+        )
+
+
 def build_client():
     """Create the self-bot client from Replit Secrets.
 
@@ -80,6 +127,11 @@ def build_client():
         api_hash,
         # Replit-compatible transport (port 5222, see Com/core/net.py).
         connection=ReplitConnection,
+        # Telethon sleeps through FLOOD_WAITs up to this many seconds. Set
+        # explicitly rather than left implicit so the policy is visible in the
+        # code: short waits are absorbed here, longer ones reach the command,
+        # which reports them and never retries (see Com/core/flood.py).
+        flood_sleep_threshold=60,
         # Telethon retries short drops itself; the loop below only handles the
         # cases it gives up on, so keep this small and bounded.
         connection_retries=3,
@@ -247,6 +299,7 @@ async def main():
         log.info("Changing working directory to %s", BASE_DIR)
         os.chdir(BASE_DIR)
 
+    _check_telethon()
     client = build_client()
 
     # SIGTERM is what Replit sends on stop/restart. Without this the session is

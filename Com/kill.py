@@ -2,8 +2,9 @@
 import os
 import json
 import random
-import asyncio
-from telethon import events
+from telethon import errors, events
+
+from Com.core import flood
 import Com.core.tgsend as tgsend
 
 __HELP__ = (
@@ -61,18 +62,34 @@ def setup(client, my_id):
             except Exception:
                 pass
 
+            peer = await tgsend.peer(event)
+            sent = 0
             for item in selected:
-                text = item["text"]
-                if username:
-                    msg = f"{username}\n{text}"
-                else:
-                    msg = text
-                await client.send_message(await tgsend.peer(event),
-                    msg,
-                    reply_to=reply_msg.id if reply_msg else None
-                )
-                await asyncio.sleep(1)  # slight delay to avoid rate limits
+                # One series, one gate: the gaps are jittered and a flood stops
+                # the loop instead of retrying into a longer penalty.
+                left = flood.cooldown_left()
+                if left:
+                    await client.send_message(peer, flood.describe(left))
+                    break
 
+                text = item["text"]
+                msg = f"{username}\n{text}" if username else text
+                try:
+                    await client.send_message(
+                        peer, msg,
+                        reply_to=reply_msg.id if reply_msg else None,
+                    )
+                except errors.FloodWaitError as exc:
+                    left = flood.note_flood(exc.seconds)
+                    note = (f"⏳ Telegram asked to wait {exc.seconds}s; stopped "
+                            f"after {sent} of {N} messages.")
+                    if left:
+                        note += "\n" + flood.describe(left)
+                    await client.send_message(peer, note)
+                    break
+                sent += 1
+                await flood.pace(event.chat_id)
+            flood.forget(event.chat_id)
             if warn:
                 await client.send_message(await tgsend.peer(event),
                     f"⚠️ Only {len(lines)} texts available, used all of them.",

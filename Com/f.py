@@ -1,11 +1,15 @@
 """!f: random-reply lists and the interval task that sends them."""
-from telethon import events
+from telethon import errors, events
 import os
 import json
 import asyncio
+import logging
 import random
 
+from Com.core import flood
 from Com.core.storage import save_json
+
+log = logging.getLogger("selftg.f")
 
 __HELP__ = "!f → Manage and send random replies with IDs"
 __CATEGORY__ = "Utilities"
@@ -104,10 +108,31 @@ def setup(client, my_id):
         async def task():
             while True:
                 try:
+                    # This loop is a series that runs until stopped, so it obeys
+                    # the shared gate and the breaker (Com/core/flood.py):
+                    # jittered 5 s gaps instead of an exact clock, and a pause
+                    # when the account is already being rate limited.
+                    left = flood.cooldown_left()
+                    if left:
+                        await asyncio.sleep(min(left, 60))
+                        continue
                     item = random.choice(items)
                     await reply_msg.reply(item["text"])
-                    await asyncio.sleep(5)
+                    await flood.pace(chat_id, gap=5.0)
                 except asyncio.CancelledError:
+                    break
+                except errors.FloodWaitError as exc:
+                    left = flood.note_flood(exc.seconds)
+                    log.warning("[f] code %s hit FLOOD_WAIT %ss", code_id, exc.seconds)
+                    if left:
+                        try:
+                            await client.send_message(chat_id, flood.describe(left))
+                        except Exception:  # noqa: BLE001 - already stopping
+                            pass
+                        break
+                    await asyncio.sleep(min(exc.seconds, 300))
+                except Exception as exc:  # noqa: BLE001 - never die silently
+                    log.info("[f] code %s stopped: %s", code_id, exc)
                     break
 
         t = asyncio.create_task(task())

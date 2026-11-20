@@ -2,9 +2,11 @@
 import os
 import json
 import asyncio
+import logging
 import random
-from telethon import events
+from telethon import errors, events
 
+from Com.core import flood
 from Com.core.storage import save_json
 import Com.core.tgsend as tgsend
 
@@ -25,6 +27,8 @@ BASE_DIR = "mode"
 SETKILL_FILE = os.path.join(BASE_DIR, "setkill.json")
 ELIST_FILE = os.path.join(BASE_DIR, "EList.json")
 os.makedirs(BASE_DIR, exist_ok=True)
+
+log = logging.getLogger("selftg.setkill")
 
 active_timers = {}  # id -> asyncio.Task
 timer_data = {}     # id -> settings
@@ -59,12 +63,26 @@ def save_timers(data):
 #------------------------------
 
 async def run_timer(client, timer_id, chat_id, interval, text, reply_to):
-    """Scheduled task that sends a message every `interval` seconds."""
+    """Scheduled task that sends a message every `interval` seconds.
+
+    The interval is jittered by ±15 %: a timer firing on exactly `interval` for
+    hours is a machine-perfect pattern, which is what anti-spam looks at. While
+    the shared breaker is open (see Com/core/flood.py) the timer pauses instead
+    of sending into the penalty.
+    """
     while True:
-        await asyncio.sleep(interval)
+        await asyncio.sleep(max(1.0, interval * random.uniform(0.85, 1.15)))
         # Check if timer still exists
         if timer_id not in active_timers:
             break
+
+        left = flood.cooldown_left()
+        if left:
+            log.info("[setkill] timer %s paused for %ds (flood breaker)",
+                     timer_id, left)
+            await asyncio.sleep(min(left, 60))
+            continue
+
         # Get text
         if text:
             msg_text = text
@@ -79,8 +97,23 @@ async def run_timer(client, timer_id, chat_id, interval, text, reply_to):
             # Com/core/tgsend.py). A raw id fails after a restart on StringSession.
             await client.send_message(await tgsend.resolve(client, chat_id),
                                       msg_text, reply_to=reply_to)
+        except errors.FloodWaitError as exc:
+            left = flood.note_flood(exc.seconds)
+            log.warning("[setkill] timer %s hit FLOOD_WAIT %ss", timer_id, exc.seconds)
+            if left:
+                # Repeated floods: stop the timer and say so, rather than
+                # leaving it to wake up and hit the same wall.
+                await stop_timer(timer_id)
+                try:
+                    await client.send_message(
+                        await tgsend.resolve(client, chat_id), flood.describe(left))
+                except Exception:  # noqa: BLE001 - the timer is already stopped
+                    pass
+                break
+            await asyncio.sleep(min(exc.seconds, 300))
+            continue
         except Exception as e:
-            print(f"[setkill] Error sending: {e}")
+            log.info("[setkill] timer %s stopped: %s", timer_id, e)
             # If the message fails (e.g., chat not found), stop the timer
             await stop_timer(timer_id)
             break
