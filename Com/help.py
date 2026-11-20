@@ -158,8 +158,13 @@ def search(index, query):
     if not q:
         return [], "none"
 
-    if q in index:
-        return [q], "exact"
+    # The index is keyed by the command as written in `__HELP__`, i.e. with the
+    # leading "!", while the query arrives without one. Comparing "ping" to
+    # those keys never matched, so every real command (`!help ping` included)
+    # skipped the exact branch and came back as a suggestion list.
+    exact = f"!{q}"
+    if exact in index:
+        return [exact], "exact"
 
     names = sorted(index)
     partial = [name for name in names if q in name.lstrip("!")]
