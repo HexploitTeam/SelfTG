@@ -65,8 +65,7 @@ def setup(client, my_id):
             peer = await tgsend.peer(event)
             sent = 0
             for item in selected:
-                # One series, one gate: the gaps are jittered and a flood stops
-                # the loop instead of retrying into a longer penalty.
+                # One series, one gate: jittered gaps, flood stops the loop
                 left = flood.cooldown_left()
                 if left:
                     await client.send_message(peer, flood.describe(left))

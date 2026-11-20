@@ -9,9 +9,7 @@ __CATEGORY__ = "Utilities"
 def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!botstatus$"))
     async def botstatus_cmd(event):
-        # Read the module attributes live. The old `from Com.bot import
-        # bot_client` captured None at import time (before start_bot ran), so
-        # this command always reported "not yet connected".
+        # Read live: a module-level import captured None before start_bot
         if not bot_module.BOT_ENABLED:
             await event.edit("❌ Bot is not enabled (BOT_TOKEN missing).")
             return

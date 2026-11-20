@@ -85,7 +85,7 @@ STYLES = {
 
 PLAIN_STYLES = {"plain", "unformat", "none", "text"}
 
-# Small LRU of recently edited message ids: (chat_id, msg_id) -> monotonic time.
+# Recently edited ids
 _EDITED_TTL = 120
 _EDITED_MAX = 512
 _recently_edited = OrderedDict()
@@ -302,11 +302,7 @@ def setup(client, my_id):
         if not text or text.startswith("!"):
             return
         if event.media:
-            # Editing the caption of a media message through messages.editMessage
-            # is not something this bot does: if the edit is rejected the media
-            # can be lost, and a self-bot must never gamble with the owner's
-            # attachments. Skip it and say so in the log instead of silently
-            # producing an unformatted message.
+            # Never edit captions: a rejected edit can lose the media
             log.info("chat: auto-format skipped a media message in %s", event.chat_id)
             return
         if _was_edited(event.chat_id, event.id):

@@ -47,8 +47,8 @@ from Com.core.storage import load_json, save_json
 log = logging.getLogger("selftg.botui")
 
 REACTION_FILE = "mode/reactions.json"
-ME = "me"          # Saved Messages: a command sent here is executed silently
-# Wizards that need more than one message start at a named step, not at "text".
+ME = "me"          # Saved Messages
+# Wizards start at a named step, not "text"
 FLOW_START_STEPS = {"note_add": "name"}
 MAX_ROWS = 8
 
@@ -1016,9 +1016,7 @@ async def _relay_and_report(ctx, kind, chat_id, text):
         return f"❌ {error}"
     if not _self_online():
         return "⏳ Queued. The self-bot is not responding; it will run the action when it returns."
-    # Answer within Telegram's callback window: 4 s is far longer than the
-    # self-bot needs (it consumes on a wake-up, not on the 20 s tick), and a
-    # callback answered after ~10 s looks dead.
+    # Answer inside Telegram's 4s callback window
     entry = await interop.wait_result(action_id, timeout=4)
     state = (entry or {}).get("state")
     if state == "done":

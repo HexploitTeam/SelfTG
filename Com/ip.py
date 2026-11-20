@@ -9,7 +9,7 @@ from telethon import events
 
 import Com.core.api as api
 
-# dnspython is optional; socket-based lookups still work without it
+# dnspython is optional
 try:
     import dns.resolver
     HAS_DNS = True
@@ -139,8 +139,7 @@ async def dns_lookup(domain, record_type='A'):
 
 async def resolve_host(host):
     try:
-        # getaddrinfo() is blocking; the loop version runs it in the executor so
-        # slow DNS cannot stall every other handler.
+        # getaddrinfo is blocking: run it in the executor
         addrs = await asyncio.get_running_loop().getaddrinfo(host, None)
         ips = sorted(set(addr[4][0] for addr in addrs))
         return f"🌐 **Resolved {host}**\n" + "\n".join(ips)
@@ -162,7 +161,6 @@ async def info_lookup(ip):
     reverse_result = await reverse_lookup(ip)
     lines = ["📊 **Combined Info for " + ip + "**"]
     if geo_result.startswith("📍"):
-        # (renderer output already carries the source line)
         geo_lines = geo_result.splitlines()[1:]
         lines.extend(geo_lines)
     else:
@@ -183,8 +181,7 @@ async def port_check(host, port):
         return f"❌ Error: {str(e)}"
 
 async def ping_host(host):
-    # create_subprocess_exec instead of blocking subprocess.run(): the old call
-    # froze the whole event loop (every handler) for up to 10 seconds.
+    # Not subprocess.run(): that froze the loop for up to 10s
     try:
         proc = await asyncio.create_subprocess_exec(
             'ping', '-c', '4', '-W', '2', host,

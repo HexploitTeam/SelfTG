@@ -63,17 +63,13 @@ ALERT_COOLDOWN = 10 * 60
 RECONNECT_BASE = 5
 RECONNECT_MAX = 300
 
-# Every registry key must appear here; `_register_handlers` builds the mapping and
-# logs an error for a mismatch, so a command added to the menu cannot be dead.
+# Every registry key must be here
 HANDLER_KEYS = ("home", "status", "diagnostics", "commands", "ping", "id",
                 "version", "cancel")
 
 BASE_DIR = "mode"
 ENEMY_FILE = os.path.join(BASE_DIR, "Enemy.json")
-# NOTE: these were "Warn.json"/"Mute.json", while Com/warn.py, Com/mute.py and
-# dashboard.py have always used the lowercase names. On Linux (Replit) those are
-# different files, so the bot's /warns, /mutes, /set_warn and /add_mute commands
-# silently operated on state that nothing else could see. Unified to lowercase.
+# Lowercase: Linux is case-sensitive and the commands use these names
 WARN_FILE = os.path.join(BASE_DIR, "warn.json")
 MUTE_FILE = os.path.join(BASE_DIR, "mute.json")
 ELIST_FILE = os.path.join(BASE_DIR, "EList.json")
@@ -83,8 +79,7 @@ LEGACY_STATE_FILES = (
     (os.path.join(BASE_DIR, "Mute.json"), MUTE_FILE),
 )
 
-# Buttons sent by earlier builds carry bare data ("stats", "admin", …). They
-# stay mapped so an old message in the chat still works instead of spinning.
+# Bare data from older buttons still resolves
 LEGACY_ROUTES = {
     "stats": ("status",),
     "enemies": ("chats", "mod", 0),
@@ -178,8 +173,7 @@ def _register_handlers(client, owner_id):
         await kit.send(ctx, botui.home_screen())
         flow = kit.active_flow(owner_id)
         if flow:
-            # A flow survives a restart; say so instead of waiting silently for
-            # text the owner has forgotten about.
+            # A flow survives a restart
             await event.respond(
                 f"▶️ Unfinished flow <code>{kit.h(flow.get('name', '?'))}</code> is "
                 "still waiting for a message. Send it, or /cancel.",
@@ -278,7 +272,7 @@ def _register_handlers(client, owner_id):
                     if hint:
                         answered = await kit.answer(event, hint, alert=True)
                     else:
-                        # Dead button: replace the message so it cannot be pressed again.
+                        # Dead button: replace the message
                         await kit.edit(event, botui.home_screen())
                         answered = await kit.answer(
                             event, "This menu is out of date.", alert=True
@@ -304,8 +298,7 @@ def _register_handlers(client, owner_id):
             log.exception("bot: text flow failed")
             await event.respond("❌ That step failed; /cancel and try again.")
 
-    # Automation commands: kept because they are the scriptable interface to the
-    # same state the buttons edit.
+    # Scriptable interface to the same state the buttons edit
     @client.on(events.NewMessage(pattern=r"^/add_enemy\s+(-?\d+)\s+(\d+)(?:\s+(\w+))?(?:\s+(.+))?$"))
     async def add_enemy_cmd(event):
         if not await _is_owner(event):
@@ -407,9 +400,7 @@ def _register_handlers(client, owner_id):
 async def _heartbeat_loop(client):
     while True:
         interop.touch_bot(client, BOT_USERNAME, connected=client.is_connected())
-        # Expired flows and confirmation tokens used to linger in botstate.json
-        # until the owner reopened that screen; sweeping here bounds the file
-        # without adding another task to a 0.5 vCPU box.
+        # Bound botstate.json without another task
         try:
             removed = kit.prune()
             if removed:
@@ -469,12 +460,10 @@ async def _run_once(owner_id):
             f"API_ID must be numeric, got {raw_api_id!r}"
         ) from None
 
-    # In-memory session instead of a session file: free Repls are public by
-    # default, and a bot can always sign in again from BOT_TOKEN.
+    # In-memory session: free Repls are public
     client = TelegramClient(StringSession(), api_id, api_hash,
                             connection=ReplitConnection,
-                            # Same FLOOD_WAIT policy as the self-bot: short waits
-                            # are slept here, longer ones are reported.
+                            # Same FLOOD_WAIT policy as the self-bot
                             flood_sleep_threshold=60)
     try:
         await client.connect()

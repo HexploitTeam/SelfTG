@@ -147,9 +147,8 @@ def setup(client, my_id):
                 await event.edit(output)
                 return
 
-            # !timezone <timezone> (shortcut for current time)
-            # If it's a valid timezone, show current time
-            tz_name = cmd  # treat first arg as timezone name
+            # !timezone <timezone>: current time there
+            tz_name = cmd
             try:
                 tz = get_timezone(tz_name)
             except Exception:

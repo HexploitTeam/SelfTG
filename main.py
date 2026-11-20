@@ -22,8 +22,7 @@ log = logging.getLogger("selftg")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 COMMANDS_DIR = os.path.join(BASE_DIR, "Com")
 
-# Replit sleeps idle Repls and drops sockets. Back off between attempts instead
-# of reconnecting in a tight loop (which would also look like flood traffic).
+# Backoff (Replit drops idle sockets)
 RECONNECT_BASE_DELAY = 5
 RECONNECT_MAX_DELAY = 60
 DISCONNECT_TIMEOUT = 10
@@ -125,15 +124,11 @@ def build_client():
         session,
         api_id,
         api_hash,
-        # Replit-compatible transport (port 5222, see Com/core/net.py).
+        # Replit transport: port 5222
         connection=ReplitConnection,
-        # Telethon sleeps through FLOOD_WAITs up to this many seconds. Set
-        # explicitly rather than left implicit so the policy is visible in the
-        # code: short waits are absorbed here, longer ones reach the command,
-        # which reports them and never retries (see Com/core/flood.py).
+        # Short waits absorbed here, longer ones reach the command
         flood_sleep_threshold=60,
-        # Telethon retries short drops itself; the loop below only handles the
-        # cases it gives up on, so keep this small and bounded.
+        # Telethon retries short drops itself
         connection_retries=3,
         retry_delay=RECONNECT_BASE_DELAY,
         timeout=30,
@@ -146,11 +141,10 @@ def build_client():
 #------------------------------
 
 def load_commands():
-    # Only files directly inside Com/ are commands; shared plumbing lives in
-    # Com/core and the bot in Com/bot, so neither is scanned as a command.
+    # Commands only; Com/core and Com/bot are not scanned
     total_loaded = 0
     failures = []
-    # Sorted so handler registration order is deterministic between restarts.
+    # Deterministic registration order
     for filename in sorted(os.listdir(COMMANDS_DIR)):
         if filename.endswith(".py") and filename != "__init__.py":
             modulename = filename[:-3]
@@ -191,9 +185,7 @@ async def _on_ready():
 
     load_commands()
 
-    # The bridge used to rely on main's command scan calling its setup(); it is
-    # not a command, so main now wires it explicitly: heartbeat scheduler job,
-    # outbox worker and crash recovery of interrupted actions.
+    # Not a command: wired here explicitly
     try:
         from Com.bot import interop as interop_module
 
@@ -202,10 +194,7 @@ async def _on_ready():
         log.exception("Interop bridge failed to start; the bot will fall back "
                       "to the scheduler-free path and queue actions will wait")
 
-    # Start the separate bot as a background task. Keep a reference: a bare
-    # create_task() result can be garbage collected mid-flight. start_bot()
-    # returns by itself when BOT_TOKEN is missing (after logging what to add),
-    # so a misconfigured bot never takes the self-bot down with it.
+    # Keep the reference; a bare task can be collected mid-flight
     try:
         from Com.bot import client as bot_module
 
@@ -215,8 +204,7 @@ async def _on_ready():
     except Exception:
         log.exception("[BOT] Failed to start")
 
-    # One loop for every periodic job (reminders, AFK cooldown sweeps). Started
-    # after load_commands() so all jobs are registered by then.
+    # One loop for every periodic job (started after load_commands)
     scheduler.start(client)
     log.info("📌 Bot is ready.")
 
@@ -230,9 +218,7 @@ async def _serve():
         try:
             await client.connect()
             if not await client.is_user_authorized():
-                # connect() + is_user_authorized() instead of client.start(): a
-                # self-bot cannot complete the interactive phone/code login on
-                # Replit, so a bad SESSION_STRING used to hang waiting on stdin.
+                # Not start(): a self-bot cannot answer the phone/code prompt
                 raise SystemExit(
                     "❌ SESSION_STRING is not authorized. Generate a new string "
                     "session and update the secret, then restart."
@@ -242,8 +228,7 @@ async def _serve():
                 ready = True
             delay = RECONNECT_BASE_DELAY
 
-            # Returns when the socket is closed for good (Replit sleep, network
-            # change, Telegram kick). Telethon handles transient drops itself.
+            # Returns when the socket is gone for good
             await client.run_until_disconnected()
             log.warning(
                 "Connection closed; reconnecting in %ds.", delay
@@ -272,16 +257,13 @@ async def _shutdown():
         await asyncio.gather(*_background_tasks, return_exceptions=True)
         _background_tasks.clear()
 
-    # Stop the job loop before the client goes away, so no job tries to send on
-    # a closing connection.
+    # Stop jobs before the client
     try:
         await scheduler.stop()
     except Exception:
         log.warning("Error while stopping the scheduler", exc_info=True)
 
-    # Close the shared HTTP session too: Replit sends SIGTERM on every stop and
-    # restart, and an aiohttp session left open at exit logs a "Unclosed connector"
-    # warning that reads like a bug in whatever was being fetched.
+    # Close the shared HTTP session too (aiohttp logs "Unclosed connector")
     try:
         from Com.core import api as api_module
 
@@ -301,8 +283,7 @@ async def _shutdown():
 async def main():
     global client
 
-    # Make `Com.*` importable and keep relative state paths (mode/, Logs/)
-    # anchored to the project instead of wherever the Repl happened to start.
+    # Anchor Com.* imports and state paths to the project
     if BASE_DIR not in sys.path:
         sys.path.insert(0, BASE_DIR)
     if os.getcwd() != BASE_DIR:
@@ -312,8 +293,7 @@ async def main():
     _check_telethon()
     client = build_client()
 
-    # SIGTERM is what Replit sends on stop/restart. Without this the session is
-    # torn down mid-write instead of being closed.
+    # SIGTERM: Replit sends it on stop/restart
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGINT, signal.SIGTERM):
@@ -348,6 +328,4 @@ async def main():
 #------------------------------
 
 if __name__ == "__main__":
-    # asyncio.run() creates and closes the loop itself; the previous
-    # loop = asyncio.get_event_loop() pattern is deprecated on 3.10+.
     asyncio.run(main())

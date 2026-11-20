@@ -72,7 +72,6 @@ async def run_timer(client, timer_id, chat_id, interval, text, reply_to):
     """
     while True:
         await asyncio.sleep(max(1.0, interval * random.uniform(0.85, 1.15)))
-        # Check if timer still exists
         if timer_id not in active_timers:
             break
 
@@ -93,16 +92,14 @@ async def run_timer(client, timer_id, chat_id, interval, text, reply_to):
             else:
                 msg_text = "(no texts available)"
         try:
-            # Stored id: no event here, so resolve it once per send (see
-            # Com/core/tgsend.py). A raw id fails after a restart on StringSession.
+            # Stored id: resolve per send (Com/core/tgsend.py)
             await client.send_message(await tgsend.resolve(client, chat_id),
                                       msg_text, reply_to=reply_to)
         except errors.FloodWaitError as exc:
             left = flood.note_flood(exc.seconds)
             log.warning("[setkill] timer %s hit FLOOD_WAIT %ss", timer_id, exc.seconds)
             if left:
-                # Repeated floods: stop the timer and say so, rather than
-                # leaving it to wake up and hit the same wall.
+                # Repeated floods stop the timer
                 await stop_timer(timer_id)
                 try:
                     await client.send_message(
@@ -114,7 +111,7 @@ async def run_timer(client, timer_id, chat_id, interval, text, reply_to):
             continue
         except Exception as e:
             log.info("[setkill] timer %s stopped: %s", timer_id, e)
-            # If the message fails (e.g., chat not found), stop the timer
+            # Failed send: stop the timer
             await stop_timer(timer_id)
             break
 
@@ -158,7 +155,6 @@ def setup(client, my_id):
                 await event.edit("❌ Interval must be at least 1 second.")
                 return
             text = event.pattern_match.group(2)  # may be None
-            # If text is provided, remove leading/trailing quotes if any
             if text:
                 if (text.startswith('"') and text.endswith('"')) or (text.startswith("'") and text.endswith("'")):
                     text = text[1:-1]
@@ -209,7 +205,6 @@ def setup(client, my_id):
             await event.edit(f"✅ Timer {timer_id} stopped.")
             await event.delete()
         else:
-            # Stop timer for current chat
             chat_id = event.chat_id
             data = load_timers()
             found = None

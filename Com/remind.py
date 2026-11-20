@@ -416,6 +416,5 @@ def setup(client, my_id):
         await _say(event, f"🕐 Timezone set to `{rest}`.")
 
     async def _say(event, text):
-        # Edit-then-reply is shared: see Com/core/reply.py. The wrapper keeps the
-        # module's own name at the call sites.
+        # Com/core/reply.py
         await say(event, text, name="remind")

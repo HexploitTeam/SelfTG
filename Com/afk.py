@@ -270,8 +270,7 @@ def setup(client, my_id):
             _mark_cooldown(state, key)
 
         except errors.FloodWaitError as exc:
-            # Telegram told us exactly how long to stay quiet: obey it once and
-            # stop replying globally, instead of retrying and making it worse.
+            # Obey FLOOD_WAIT once: stop replying globally
             state = load_state()
             state["pause_until"] = time.time() + exc.seconds
             save_state(state)
@@ -305,5 +304,5 @@ def setup(client, my_id):
             log.exception("afk: auto-clear failed")
 
     async def _say(event, text):
-        # Edit-then-reply is shared: see Com/core/reply.py.
+        # Com/core/reply.py
         await say(event, text, name="afk")

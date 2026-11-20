@@ -28,9 +28,7 @@ def get_owner_panel():
 def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!panel$"))
     async def panel_cmd(event):
-        # Read the module attribute live: `from Com.bot import bot_client`
-        # captured None at import time, before start_bot had run, so !panel
-        # always waited ten seconds and then reported "still not ready".
+        # Read live: an import would capture None
         status = bot_module.get_bot_status()
         if bot_module.bot_client is None:
             await event.edit(f"⚠️ Bot not ready: {status}")

@@ -21,14 +21,13 @@ def setup(client, my_id):
             # Persian keyboards send × where the parser expects *
             expression = expression.replace("×", "*").replace("÷", "/")
 
-            # Reject anything else here; Com/core/safe_eval.py is the real guard
+            # First gate; Com/core/safe_eval.py is the real guard
             allowed = set("0123456789+-*/. ")
             if not all(c in allowed for c in expression):
                 await event.edit("❌ Invalid expression")
                 return
 
-            # Evaluate without eval(): the AST whitelist in Com/core/safe_eval.py only
-            # accepts numbers and arithmetic operators.
+            # AST whitelist: numbers and arithmetic only
             try:
                 result = safe_evaluate(expression)
             except (ValueError, ZeroDivisionError, OverflowError):

@@ -96,10 +96,7 @@ def setup(client, my_id):
 
             await event.edit(f"🔊 Generating TTS (lang: {lang}, tld: {tld})...")
 
-            # gTTS.save() is synchronous and does a network round trip, so it
-            # runs in a worker thread with a timeout: previously it blocked the
-            # whole event loop (every other handler) for the length of the call
-            # and had no timeout at all if Google stalled.
+            # gTTS.save() blocks: worker thread plus a timeout
             try:
                 tmp_path = await asyncio.wait_for(
                     asyncio.to_thread(_render_tts, text, lang, tld), timeout=45

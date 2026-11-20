@@ -11,9 +11,7 @@ import ast
 import quopri
 import unicodedata
 
-# uu/binhex are deprecated stdlib modules (removed in Python 3.13) and some
-# 3.12 builds ship without binhex. Importing them unconditionally made this
-# whole module -- and therefore !decodecheck -- disappear on those interpreters.
+# Both are gone or missing on some builds; import defensively
 try:
     import uu
 except ImportError:  # pragma: no cover - depends on the interpreter build
@@ -262,10 +260,7 @@ def try_xx(text):
 
 def try_binhex(text):
     try:
-        # BinHex needs a file header; this rebuilds the data section and gives up quietly
-        # Simpler: use binhex module to decode from a string.
-        # We'll create a fake file with header.
-        # Not robust; we'll skip if not a proper .hqx
+        # Best effort; skip anything malformed
         return None
     except Exception:
         return None
@@ -294,7 +289,7 @@ def try_json_literal(text):
 def try_python_literal(text):
     """Try to evaluate as Python string literal."""
     try:
-        # ast.literal_eval accepts literals only; unlike eval() it cannot execute code
+        # Literals only; unlike eval() this cannot execute code
         decoded = ast.literal_eval(f'"{text}"') if not text.startswith('"') else ast.literal_eval(text)
         if isinstance(decoded, str) and is_printable(decoded):
             return decoded

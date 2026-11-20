@@ -6,7 +6,6 @@ import Com.core.tgsend as tgsend
 __HELP__ = "Aliases for Persian commands (e.g., !راهنما → !help)"
 __CATEGORY__ = "Setup"
 
-# Mapping from Persian command word to English command word
 PERSIAN_ALIASES = {
     # Core commands
     "راهنما": "help",
@@ -60,8 +59,7 @@ PERSIAN_ALIASES = {
 
 
 def setup(client, my_id):
-    # Pattern to match ! followed by Persian letters (and optional arguments)
-    # Persian Unicode range: \u0600-\u06FF
+    # Persian letters, optional arguments (\u0600-\u06FF)
     @client.on(
         events.NewMessage(
             from_users=my_id,
@@ -74,7 +72,7 @@ def setup(client, my_id):
 
         english_word = PERSIAN_ALIASES.get(persian_word)
         if not english_word:
-            return  # Not a known alias
+            return
 
         if rest:
             english_cmd = f"!{english_word} {rest}"

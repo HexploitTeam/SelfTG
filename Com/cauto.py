@@ -42,7 +42,7 @@ os.makedirs("mods", exist_ok=True)
 ensure_json_file(STATE_FILE, {"enabled": False})
 ensure_json_file(LOG_FILE, [])
 
-# Per-message cache of STATE_FILE; `!cauto` writes both.
+# Mirrors STATE_FILE
 AUTO_SOLVE = False
 
 
@@ -82,8 +82,6 @@ def setup(client, my_id):
         if not isinstance(data, list):
             data = []
         data.append(entry)
-        # Bounded: this grew by one entry per solved challenge and was re-read
-        # and re-written in full every time (unbounded file + O(n²)).
         save_json(LOG_FILE, data[-MAX_LOG_ENTRIES:])
 
     async def answer(event, result):
@@ -130,7 +128,7 @@ def setup(client, my_id):
         if not AUTO_SOLVE:
             return
         if event.out:
-            return  # only challenges from other people, never our own messages
+            return  # never our own messages
 
         text = event.raw_text
         if not text:
@@ -146,8 +144,7 @@ def setup(client, my_id):
             expression = expression.replace("×", "*").replace("÷", "/")
 
             try:
-                # This expression comes from somebody else's message, so it must
-                # never reach eval() (it was an RCE path via __subclasses__).
+                # Foreign text: never eval()
                 result = safe_evaluate(expression)
             except Exception as exc:  # noqa: BLE001 - a foreign expression
                 log.info("cauto: could not evaluate %r (%s)", expression,
@@ -174,8 +171,7 @@ def setup(client, my_id):
                 log.info("cauto: could not evaluate %r (%s)", expr, type(exc).__name__)
                 return
 
-            # Click the correct button if there is one. A click is a callback
-            # query, not a message, so it is not paced with the send gate.
+            # A click is a callback query, not a send
             clicked = False
             if event.message.buttons:
                 for row in event.message.buttons:
@@ -191,8 +187,7 @@ def setup(client, my_id):
                     if clicked:
                         break
 
-            # Only record what actually happened: an entry for a challenge that
-            # was neither clicked nor answered is noise, not history.
+            # Only record what happened
             if clicked:
                 await log_challenge(event.chat_id, event.id, "جعبه حماسی", expr,
                                     result)

@@ -13,15 +13,12 @@ __HELP__ = (
 __CATEGORY__ = "Utilities"
 
 FILE = "mode/reply.json"
-# Cap for attachments copied by the mirror; the old code downloaded whole files
-# into RAM with no limit, which is fatal in a small Replit container.
+# Cap for copied attachments
 MAX_COPY_BYTES = 20 * 1024 * 1024
 os.makedirs("mode", exist_ok=True)
 
 def load_data():
-    # This runs for every message the account sees (the mirror is a catch-all
-    # handler), so it goes through the shared mtime-validated cache: one parse
-    # after a write, none otherwise (Com/core/storage.py).
+    # Per-message path: cached (Com/core/storage.py)
     return cached_json(FILE, {"enabled": False, "target_chat": None, "target_msg": None})
 
 def save_data(data):
@@ -78,7 +75,7 @@ def setup(client, my_id):
         if not target_chat or not target_msg:
             return
 
-        # Ignore copies that are already replies to the target; this is what stops a loop
+        # Stops the loop
         if event.message.reply_to_msg_id == target_msg:
             return
 

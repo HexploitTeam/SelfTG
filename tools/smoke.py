@@ -152,9 +152,7 @@ def check_helpers():
     except Exception as exc:  # noqa: BLE001
         bad("storage cache", repr(exc))
 
-    # The loaders below run for every incoming message in the real bot. They
-    # are called twice on purpose: the second call must come from the cache, and
-    # a missing import here is exactly the bug that a still-compiling file hides.
+    # Loaders run per message; call twice to prove the cache
     try:
         from Com import enemy, monitor, reply
 
@@ -254,8 +252,7 @@ async def check_modules():
     if skipped:
         warn("skipped for missing dependencies: " + ", ".join(skipped))
 
-    # Modules started fire-and-forget tasks (timers, countdown resume, stored
-    # reaction tasks); cancel them so the harness exits cleanly.
+    # Cancel fire-and-forget tasks so the harness exits
     current = asyncio.current_task()
     for task in asyncio.all_tasks():
         if task is not current:

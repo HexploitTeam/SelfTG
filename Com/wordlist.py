@@ -43,8 +43,7 @@ def count_lines(filepath):
         return sum(1 for _ in f)
 
 async def count_lines_async(filepath):
-    # Counting rockyou.txt means reading ~130 MB; doing that inline froze the
-    # whole bot (every handler) for several seconds.
+    # ~130 MB read: keep it off the loop
     return await asyncio.get_running_loop().run_in_executor(None, count_lines, filepath)
 
 def setup(client, my_id):

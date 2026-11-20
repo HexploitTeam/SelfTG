@@ -19,7 +19,7 @@ __HELP__ = (
 )
 __CATEGORY__ = "Utilities"
 
-# Raw values Telegram reports for each slot face; 22 covers both grape spellings
+# Telegram's slot values
 SLOT_MAP = {
     "bar": 1,
     "grape": 22,
@@ -46,7 +46,7 @@ async def force_dice(client, peer, emoji, target_value, reply_to):
             file=InputMediaDice(emoticon=emoji),
             reply_to=reply_to
         )
-        # The rolled value is usually on the sent message; refetch only when it is missing
+        # Usually already on the sent message
         value = None
         if msg.media:
             value = getattr(msg.media, 'value', None)

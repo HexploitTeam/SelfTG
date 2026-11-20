@@ -67,7 +67,7 @@ def setup(client, my_id):
                 await event.edit("📖 **Inline Help**\n" + __HELP__)
                 return
 
-            # Quoted text wins; otherwise the message text runs to the first | separator
+            # Quoted text wins, else split on |
             quoted = re.match(r'^"([^"]*)"', arg_str)
             if quoted:
                 text = quoted.group(1)
@@ -102,7 +102,7 @@ def setup(client, my_id):
                 await event.delete()
                 return
 
-            # Without BOT_TOKEN there is no way to attach buttons, so send the text alone
+            # No BOT_TOKEN: no buttons
             if telethon_rows:
                 await event.edit("⚠️ Bot not available. Sending as plain text without buttons.")
                 await asyncio.sleep(1)

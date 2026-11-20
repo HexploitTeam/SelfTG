@@ -101,8 +101,7 @@ STATE_FILE = os.path.join(BASE_DIR, "enemy_state.json")
 
 os.makedirs(BASE_DIR, exist_ok=True)
 
-# Create the missing state files through the shared writer, so a first run that
-# is killed mid-write leaves nothing behind instead of a truncated document.
+# Atomic first-run creation
 ensure_json_file(ENEMY_FILE, {})
 for fpath in [ELIST_FILE, ELISTNO_FILE]:
     ensure_json_file(fpath, [])
@@ -113,9 +112,7 @@ ensure_json_file(STATE_FILE, {})
 #------------------------------
 
 def load_json(fpath):
-    # The auto-reply handler asks for this on every incoming message, so it reads
-    # through the shared mtime-validated cache instead of parsing the file per
-    # event (Com/core/storage.py).
+    # Per-message path: cached read (Com/core/storage.py)
     return _storage_cached(fpath, {})
 
 def save_json(fpath, data):
@@ -151,8 +148,6 @@ def find_enemy_by_user_id(chat_id, user_id):
     return None
 
 async def get_username(client, user_id):
-    # Was a synchronous call to client.loop.run_until_complete() from inside the
-    # running event loop, which always raised, so listings showed bare IDs.
     try:
         user = await client.get_entity(user_id)
         return f"@{user.username}" if user.username else f"ID:{user_id}"
@@ -164,7 +159,6 @@ async def get_username(client, user_id):
 #------------------------------
 
 def load_state():
-    # Same reasoning as load_json(): this is on the per-message path.
     return _storage_cached(STATE_FILE, {})
 
 def save_state(state):
@@ -196,7 +190,7 @@ def setup(client, my_id):
     # Auto-reply handler
     @client.on(events.NewMessage)
     async def enemy_auto_reply(event):
-        # Ignore own messages, commands, and messages without text
+        # Skip own, command and empty messages
         if event.sender_id == my_id:
             return
         if not event.raw_text:
@@ -219,7 +213,7 @@ def setup(client, my_id):
             list_file = ELIST_FILE if category == "default" else ELISTNO_FILE
             lines = load_json(list_file)
 
-            # Ensure lines is a list of dicts with "text" key
+            # Normalise shape
             if not isinstance(lines, list):
                 if isinstance(lines, dict):
                     lines = [{"id": k, "text": v} for k, v in lines.items()]
@@ -279,13 +273,11 @@ def setup(client, my_id):
         await event.edit("✅ Added enemy (no category).")
         await event.delete()
 
-    # !enemy del (reply or ID)
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!enemy\s+del(?:\s+(\d+))?$"))
     async def enemy_del(event):
         chat_id = event.chat_id
         user_id = None
 
-        # If numeric argument, use that
         match = event.pattern_match.group(1)
         if match:
             user_id = int(match)
@@ -308,7 +300,6 @@ def setup(client, my_id):
         await event.edit("✅ Enemy removed.")
         await event.delete()
 
-    # !enemy rep <text> (reply to enemy)
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!enemy\s+rep\s+(.+)$"))
     async def enemy_rep(event):
         if not event.is_reply:
@@ -321,7 +312,6 @@ def setup(client, my_id):
 
         enemy = find_enemy_by_user_id(chat_id, user_id)
         if not enemy:
-            # Automatically add as enemy (default category) with the custom text
             enemies = get_enemy_data(chat_id)
             enemies.append({"user_id": user_id, "category": "default", "custom_text": text})
             save_enemy_data(chat_id, enemies)
@@ -329,7 +319,6 @@ def setup(client, my_id):
             await event.delete()
             return
 
-        # Update custom text for existing enemy
         enemies = get_enemy_data(chat_id)
         for e in enemies:
             if e["user_id"] == user_id:
@@ -339,7 +328,6 @@ def setup(client, my_id):
         await event.edit(f"✅ Custom reply text updated for enemy: {text}")
         await event.delete()
 
-    # !enemy list (show enemies in current chat)
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!enemy\s+list$"))
     async def enemy_list(event):
         chat_id = event.chat_id
@@ -360,7 +348,6 @@ def setup(client, my_id):
         msg = "📋 **Enemies in this chat:**\n" + "\n".join(lines)
         await event.edit(msg)
 
-    # !enemy list show (global enemies)
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!enemy\s+list\s+show$"))
     async def enemy_list_show_global(event):
         all_data = load_json(ENEMY_FILE)
@@ -375,7 +362,6 @@ def setup(client, my_id):
         for chat_id_str, enemies in all_data.items():
             if not enemies:
                 continue
-            # Try to get chat name
             try:
                 chat = await client.get_entity(int(chat_id_str))
                 chat_name = chat.title or chat.first_name or chat_id_str
@@ -389,7 +375,7 @@ def setup(client, my_id):
                 custom = e.get("custom_text")
                 custom_str = f" (custom: {custom})" if custom else ""
                 lines.append(f"  • {name} (ID: {uid}) – {cat}{custom_str}")
-            lines.append("")  # blank line between chats
+            lines.append("")
 
         msg = "🌍 **All Enemies (global):**\n" + "\n".join(lines)
         if len(msg) > 4000:
@@ -402,7 +388,6 @@ def setup(client, my_id):
         else:
             await event.edit(msg)
 
-    # !enemy list del (delete all enemies in current chat)
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!enemy\s+list\s+del$"))
     async def enemy_list_del_all(event):
         chat_id = event.chat_id
@@ -414,7 +399,6 @@ def setup(client, my_id):
         await event.edit("✅ All enemies in this chat have been removed.")
         await event.delete()
 
-    # !enemy list texts (show default list)
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!enemy\s+list\s+texts$"))
     async def enemy_list_texts(event):
         data = load_json(ELIST_FILE)
@@ -425,7 +409,6 @@ def setup(client, my_id):
         msg = "📋 **Default List:**\n" + "\n".join(lines)
         await event.edit(msg)
 
-    # !enemy list texts no (show no list)
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!enemy\s+list\s+texts\s+no$"))
     async def enemy_list_texts_no(event):
         data = load_json(ELISTNO_FILE)
@@ -436,7 +419,6 @@ def setup(client, my_id):
         msg = "📋 **No List:**\n" + "\n".join(lines)
         await event.edit(msg)
 
-    # !enemy list add <text>
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!enemy\s+list\s+add\s+(.+)$"))
     async def enemy_list_add(event):
         text = event.pattern_match.group(1).strip()
@@ -447,7 +429,6 @@ def setup(client, my_id):
         await event.edit(f"✅ Added to default list (ID: {new_id})")
         await event.delete()
 
-    # !enemy list add no <text>
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!enemy\s+list\s+add\s+no\s+(.+)$"))
     async def enemy_list_add_no(event):
         text = event.pattern_match.group(1).strip()
@@ -458,7 +439,6 @@ def setup(client, my_id):
         await event.edit(f"✅ Added to no list (ID: {new_id})")
         await event.delete()
 
-    # !enemy list del <id> (default list)
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!enemy\s+list\s+del\s+(\d+)$"))
     async def enemy_list_del(event):
         del_id = int(event.pattern_match.group(1))
@@ -471,7 +451,6 @@ def setup(client, my_id):
         await event.edit(f"✅ Deleted line with ID {del_id} from default list.")
         await event.delete()
 
-    # !enemy list del no <id> (no list)
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!enemy\s+list\s+del\s+no\s+(\d+)$"))
     async def enemy_list_del_no(event):
         del_id = int(event.pattern_match.group(1))
@@ -484,7 +463,6 @@ def setup(client, my_id):
         await event.edit(f"✅ Deleted line with ID {del_id} from no list.")
         await event.delete()
 
-    # !enemy clist (add replied text to default list)
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!enemy\s+clist$"))
     async def enemy_clist(event):
         if not event.is_reply:
@@ -502,7 +480,6 @@ def setup(client, my_id):
         await event.edit(f"✅ Added to default list (ID: {new_id})")
         await event.delete()
 
-    # !enemy clist no (add replied text to no list)
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!enemy\s+clist\s+no$"))
     async def enemy_clist_no(event):
         if not event.is_reply:
@@ -520,7 +497,6 @@ def setup(client, my_id):
         await event.edit(f"✅ Added to no list (ID: {new_id})")
         await event.delete()
 
-    # !enemy clist show (show default list)
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!enemy\s+clist\s+show$"))
     async def enemy_clist_show(event):
         data = load_json(ELIST_FILE)
@@ -538,7 +514,6 @@ def setup(client, my_id):
         else:
             await event.edit(msg)
 
-    # !enemy clist no show (show no list)
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!enemy\s+clist\s+no\s+show$"))
     async def enemy_clist_no_show(event):
         data = load_json(ELISTNO_FILE)
@@ -556,7 +531,6 @@ def setup(client, my_id):
         else:
             await event.edit(msg)
 
-    # !enemy load (scary gangster message)
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!enemy load$"))
     async def enemy_load(event):
         import random

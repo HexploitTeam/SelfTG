@@ -27,9 +27,7 @@ os.makedirs("mode", exist_ok=True)
 def setup(client, my_id):
 
     async def fetch_ct_subdomains(domain):
-        # crt.sh is free and keyless but routinely answers 502/504 under load,
-        # so the call goes through Com.api (bounded timeout + one retry) and a
-        # failure is reported instead of looking like "no subdomains found".
+        # crt.sh is flaky: bounded timeout and one retry
         url = "https://crt.sh/"
         try:
             data = await api.fetch_json(

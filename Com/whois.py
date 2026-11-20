@@ -76,7 +76,7 @@ def setup(client, my_id):
                 await event.respond("❌ Could not find the user.")
                 return
         elif reply:
-            # No target argument but replying to a message -> use that message's sender
+            # Reply: use that sender
             user_to_query = reply.sender_id
         else:
             await event.respond("❌ Usage: !whois (reply to a message) OR !whois @Username/ID OR !whois here (reply)")
@@ -84,7 +84,7 @@ def setup(client, my_id):
 
         await client.send_message(bot_entity, str(user_to_query))
 
-        # Get the ID of the latest message from the bot BEFORE the reply arrives
+        # Bot's latest id before replying
         old_msgs = await client.get_messages(bot_entity, limit=1)
         old_id = old_msgs[0].id if old_msgs else 0
 

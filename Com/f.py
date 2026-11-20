@@ -17,8 +17,7 @@ F_FILE = "mode/f.json"
 ID_FILE = "mode/f_id.txt"
 os.makedirs("mode", exist_ok=True)
 
-# Initialize JSON and ID file. The JSON goes through the shared atomic writer so
-# an interrupted first run cannot leave a truncated list behind.
+# Atomic first run
 ensure_json_file(F_FILE, [])
 
 if not os.path.exists(ID_FILE):
@@ -35,8 +34,7 @@ active_f_tasks = {}  # code_id: task
 def setup(client, my_id):
 
     def load_items():
-        # The send loop re-reads this list for every message of a series; the
-        # mtime-validated cache in Com/core/storage.py keeps that off the disk.
+        # Re-read per message; cached (Com/core/storage.py)
         return cached_json(F_FILE, [])
 
     def save_items(items):

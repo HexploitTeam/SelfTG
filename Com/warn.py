@@ -62,9 +62,7 @@ def save_chat_data(chat_id, chat_data):
 #------------------------------
 
 async def get_username(client, user_id):
-    # Was a synchronous helper calling client.loop.run_until_complete() from
-    # inside the running loop, which always raised and silently degraded every
-    # listing to a bare numeric ID.
+    # Was run_until_complete() inside a running loop: always raised
     try:
         user = await client.get_entity(user_id)
         return f"@{user.username}" if user.username else f"ID:{user_id}"
@@ -82,7 +80,7 @@ def setup(client, my_id):
             reason = ""
             target_user_id = None
 
-            # If argument provided: "!warn add @user reason" or "!warn add reason" (if replying)
+            # "!warn add @user reason", or "!warn add reason" in reply
             arg = event.pattern_match.group(1)
             if arg:
                 parts = arg.split(maxsplit=1)

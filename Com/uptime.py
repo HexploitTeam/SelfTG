@@ -25,8 +25,7 @@ def setup(client, my_id):
             minutes, seconds = divmod(remainder, 60)
             uptime_str = f"{days}d {hours}h {minutes}m {seconds}s"
 
-            # CPU. interval=0.5 would block the shared event loop for half a
-            # second on every !uptime; None reports usage since the last call.
+            # interval=0.5 would block the loop; None reports since last call
             cpu_usage = psutil.cpu_percent(interval=None)
             cpu_count = psutil.cpu_count(logical=True)
 

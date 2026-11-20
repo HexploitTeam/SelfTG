@@ -26,8 +26,7 @@ except ImportError:
     HAS_PYTESSERACT = False
 
 OCR_API_URL = "https://api.ocr.space/parse/image"
-# OCR.space's documented free key for light use is "helloworld" (25k calls/month,
-# no card). Set OCR_SPACE_API_KEY in Secrets to use your own free key instead.
+# Free key: "helloworld"; OCR_SPACE_API_KEY overrides
 OCR_API_KEY = (os.getenv("OCR_SPACE_API_KEY") or "helloworld").strip()
 
 #------------------------------
@@ -124,8 +123,7 @@ def setup(client, my_id):
         if text:
             await output_result(event, client, text)
             return
-        # Keep the local reason: the failure message used to print the *API*
-        # error twice, because the second call had already overwritten `error`.
+        # Keep the local reason for the message
         local_error = error
         log.info("ocr: local attempt failed (%s)", error)
 

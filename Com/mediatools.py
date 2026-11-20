@@ -21,10 +21,7 @@ __HELP__ = (
     "!imgformat <format> → Convert replied image to another format (PNG/JPG).")
 
 
-# Telegram rejects a text message over 4096 characters, and ID3/APE tags can
-# carry far more than that: embedded lyrics (USLT), long comments, and tags whose
-# value is the raw cover image. `!audiometa` used to join every value into one
-# string, so a normally-tagged file failed with "Message was too long".
+# 4096 is Telegram's limit; tags can carry megabytes
 MAX_FIELD_CHARS = 200     # one tag value, so a single field cannot eat the budget
 MAX_BODY_CHARS = 3500     # whole listing; leaves room for the header and footer
 
@@ -42,7 +39,7 @@ def short_tag_value(value):
         text = f"<{len(value)} bytes>"
     else:
         text = str(value)
-    # NULs and newlines come from malformed frames; one tag must stay one line.
+    # NULs and newlines come from malformed frames
     text = text.replace("\x00", " ").replace("\r", " ").replace("\n", " ").strip()
     if len(text) > MAX_FIELD_CHARS:
         text = text[:MAX_FIELD_CHARS] + "…"
@@ -137,8 +134,7 @@ def setup(client, my_id):
             temp_file.write(bio.read())
             temp_file.close()
 
-            # Decoding runs off the event loop; on 0.5 vCPU it is slow enough
-            # to look like the bot died.
+            # Off the loop: decoding is slow
             duration, width, height, fps = await asyncio.to_thread(
                 probe_video, temp_file.name
             )
@@ -151,7 +147,6 @@ def setup(client, my_id):
         except Exception as e:
             await event.reply(f"❌ Error: {str(e)}")
 
-    # PDF conversion (dummy, just re-save)
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!convertpdf$"))
     async def convertpdf(event):
         try:
@@ -167,7 +162,6 @@ def setup(client, my_id):
             temp_out = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
             temp_out.close()
 
-            # Rebuild page by page; anything PyPDF2 cannot read falls to the blank-page path
             try:
                 reader = PyPDF2.PdfReader(temp_in.name)
                 writer = PyPDF2.PdfWriter()

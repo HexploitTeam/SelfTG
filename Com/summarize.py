@@ -9,15 +9,7 @@ import Com.core.tgsend as tgsend
 
 import Com.core.api as api
 
-# Free-tier Gemini (Google AI Studio, no credit card). The old code called
-# `v1beta2/models/text-bison-001:generate`, an endpoint Google retired, with a
-# `Bearer` header instead of the `?key=` parameter -- so the LLM path could
-# never have worked and every call silently fell back to the local summarizer.
-#
-# Free text models as of this writing, cheapest quota first (per project):
-#   gemini-3.5-flash-lite / gemini-3.1-flash-lite  10 RPM, 500 RPD
-#   gemini-3.8-flash / gemini-3.6-flash             5 RPM,  20 RPD
-# GEMINI_MODEL (comma separated) overrides the chain without a code change.
+# Free-tier Gemini; GEMINI_MODEL (comma separated) overrides the chain
 GEMINI_API_KEY = (os.getenv("GEMINI_API_KEY") or "").strip()
 GEMINI_MODELS = [
     model.strip()
@@ -56,11 +48,10 @@ def summarize_locally(text, max_sentences=5, max_chars=2000):
     if not paragraphs:
         paragraphs = [text]
 
-    # Persian/English sentence boundaries: ., !, ?, ؟, …, ...
+    # fa/en sentence boundaries
     sentence_splitter = re.compile(r'(?<=[.!?…؟])\s+')
     all_sentences = []
     for p in paragraphs:
-        # If paragraph has no punctuation, treat it as one sentence
         if not re.search(r'[.!?…؟]', p):
             all_sentences.append(p.strip())
         else:
@@ -69,21 +60,19 @@ def summarize_locally(text, max_sentences=5, max_chars=2000):
                 if s:
                     all_sentences.append(s)
 
-    # Remove very short sentences (less than 3 words)
+    # Drop < 3-word sentences
     all_sentences = [s for s in all_sentences if len(s.split()) >= 3]
 
     if not all_sentences:
         return text[:500] + "..." if len(text) > 500 else text
 
-    # If we have very few sentences, return them all (they are already short)
     if len(all_sentences) <= max_sentences:
         summary = " ".join(all_sentences)
         if len(summary) > max_chars:
             return summary[:max_chars] + "..."
         return summary
 
-    # Score sentences by summed word frequency, ignoring stopwords
-    # Persian and English stopwords (common)
+    # Persian + English stopwords
     stopwords = {
         "the", "be", "to", "of", "and", "a", "in", "that", "have", "i",
         "it", "for", "not", "on", "with", "he", "as", "you", "do", "at",
@@ -105,7 +94,7 @@ def summarize_locally(text, max_sentences=5, max_chars=2000):
 
     word_freq = Counter()
     for sent in all_sentences:
-        # Split into words (allow Persian letters, numbers, and apostrophes)
+        # Persian letters, digits, apostrophes
         words = re.findall(r'[\w\u0600-\u06FF]+', sent.lower())
         for w in words:
             if w not in stopwords and len(w) > 1:
@@ -115,7 +104,7 @@ def summarize_locally(text, max_sentences=5, max_chars=2000):
     for sent in all_sentences:
         words = re.findall(r'[\w\u0600-\u06FF]+', sent.lower())
         score = sum(word_freq.get(w, 0) for w in words)
-        # Normalize by sentence length (avoid long sentences dominating)
+        # Normalise by length
         score = score / (len(words) + 1)
         scored.append((sent, score))
 
@@ -132,7 +121,7 @@ def summarize_locally(text, max_sentences=5, max_chars=2000):
     if len(summary) > max_chars:
         summary = summary[:max_chars] + "..."
 
-    # Fall back to a truncation when scoring produced no shorter text
+    # Fall back to truncation
     if len(summary) >= len(text) * 0.8:
         return text[:500] + "..." if len(text) > 500 else text
 
@@ -149,7 +138,7 @@ GEMINI_URL = (
 )
 MAX_PROMPT_CHARS = 12000  # keeps us inside the free per-minute token budget
 
-# Remembers the first model that answered so later calls skip dead IDs.
+# First model that answered
 _working_model = {"name": None}
 
 
@@ -191,7 +180,7 @@ async def summarize_with_gemini(text):
                 retries=0,
             )
         except api.RateLimited as exc:
-            # Quota is per project, so another model ID will not help.
+            # Quota is per project
             log.info("gemini: rate limited (%s), using local summarizer", exc.describe())
             return None
         except api.APIError as exc:

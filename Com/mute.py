@@ -63,7 +63,7 @@ def set_muted_users(chat_id, users):
 #------------------------------
 
 async def get_username(client, user_id):
-    # See Com/warn.py: run_until_complete() inside a running loop always failed.
+    # Same fix as Com/warn.py
     try:
         user = await client.get_entity(user_id)
         return f"@{user.username}" if user.username else f"ID:{user_id}"

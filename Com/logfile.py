@@ -33,12 +33,10 @@ def setup(client, my_id):
             await event.edit("❌ Invalid type. Use Channel, or Group.")
             return
 
-        # Ensure the folder exists
         if not os.path.exists(folder):
             await event.edit(f"❌ Log folder missing: {folder}")
             return
 
-        # Search for file in folder (exact match)
         filename = f"{number_id}.txt"
         file_path = None
         for f in os.listdir(folder):
@@ -51,8 +49,7 @@ def setup(client, my_id):
                 f"❌ Log file not found: {filename}\nCheck folder and ID.")
             return
 
-        # Send the file to Saved Messages. `get_me(input_peer=True)` gives an
-        # InputPeerSelf that needs no entity cache, unlike a bare id.
+        # InputPeerSelf: no entity cache needed
         await client.send_file(await client.get_me(input_peer=True),
                                file_path,
                                caption=f"Log file: {filename}")

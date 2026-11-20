@@ -75,8 +75,7 @@ def prettify_html(text, indent=2):
         except Exception as e:
             return f"❌ HTML prettify failed: {e}"
     else:
-        # Fallback: try using XML parser (may fail for non-well-formed HTML)
-        # We'll give a warning and try anyway
+        # Fallback: minidom may reject non-well-formed HTML
         try:
             dom = minidom.parseString(text)
             pretty = dom.toprettyxml(indent=" " * indent)

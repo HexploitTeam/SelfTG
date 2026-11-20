@@ -26,7 +26,7 @@ os.makedirs(BASE_DIR, exist_ok=True)
 #------------------------------
 
 def get_list_path(name):
-    # Sanitize name to avoid path traversal
+    # No path traversal
     safe_name = "".join(c for c in name if c.isalnum() or c in "._-")
     return os.path.join(BASE_DIR, f"{safe_name}.json")
 
@@ -38,7 +38,7 @@ def load_list(name):
     return data if isinstance(data, list) else []
 
 def save_list(name, data):
-    # Atomic: a crash mid-write used to leave an empty list, i.e. lose the list.
+    # Atomic write
     save_json(get_list_path(name), data)
 
 def get_all_lists():

@@ -64,16 +64,7 @@ def ensure_json_file(path, initial):
 #Read-through cache
 #------------------------------
 
-# Five features keep a catch-all NewMessage handler that re-read a JSON file for
-# *every* message in every chat (enemy, monitor, reply, cauto, stats). On a
-# 0.5 vCPU box that is the most expensive thing the bot does while idle, and it
-# is waste: the file only changes when this process writes it, or when the
-# dashboard (a separate process) does.
-#
-# So: memoise by path, validate by (st_mtime_ns, st_size). A write from anywhere
-# changes the stat key and the next read reloads, so a same-process write or a
-# dashboard edit is never served stale. The cache holds one parsed document per
-# state file in use (a dozen), not one per chat.
+# Read-through cache: validated by (mtime_ns, size)
 
 _cached = {}   # path -> ((mtime_ns, size), document)
 
@@ -118,16 +109,7 @@ def clear_cache(path=None):
 #Schemas and migrations
 #------------------------------
 
-# The v3 owner commands all keep their state in JSON documents written by
-# `save_json`. Each document carries a `_version` key so a schema change is a
-# deliberate migration step instead of "whatever shape the old file had".
-#
-# `load_store` is the only entry point: it returns a document that is guaranteed
-# to be a dict at the requested version, upgrading older documents through the
-# `migrations` map ({from_version: callable(old) -> new}). A document that is
-# not even a dict (the v2 reminders file was a bare list) is handed to the
-# version-0 migration; without one it is replaced by a fresh document rather
-# than crashing the caller.
+# Versioned documents; `load_store` migrates on read
 def load_store(path, version, default_factory, migrations=None):
     """Load a versioned JSON document, migrating it to `version` if needed."""
     raw = load_json(path, None)
@@ -148,7 +130,7 @@ def load_store(path, version, default_factory, migrations=None):
 
     current = int(raw.get("_version", 0) or 0)
     if current > version:
-        # Written by a newer build: keep the data, do not invent a downgrade.
+        # Newer build: keep the data
         return raw
 
     while current < version:

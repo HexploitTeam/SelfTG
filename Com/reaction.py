@@ -35,8 +35,7 @@ REACTION_FILE = "mode/reactions.json"
 #Alias map
 #------------------------------
 
-# Telegram's standard reaction set, plus the extras this bot already shipped
-# (💪 😄 😮‍💨) and the newer heart shades (🩷 🩵 🩶 🤍).
+# Telegram's set, plus the extras kept from v2
 SUPPORTED_REACTIONS = {
     "👍", "👎", "❤️", "🔥", "🥰", "👏", "😁", "🤔", "🤯", "😱",
     "🤬", "😢", "🎉", "🤩", "🤮", "💩", "🙏", "👌", "🕊️", "🤡",
@@ -212,26 +211,14 @@ log = logging.getLogger("selftg.reaction")
 #!react arguments
 #------------------------------
 
-# `!react` reuses REACTION_ALIASES but deliberately not SUPPORTED_REACTIONS: that
-# set is what the v2 build chose to guarantee, not Telegram's reaction list, and
-# Telegram is the authority on both the emoji it accepts and each chat's own
-# restrictions. So the check here is only on *shape* -- one emoji rather than
-# "ok", "🔥🔥" or "👍 nice" -- and a REACTION_INVALID from the server is what
-# reports an emoji Telegram will not take.
 MAX_EMOJI_CODEPOINTS = 16   # family/flag ZWJ sequences run 8-10 codepoints
 DEFAULT_REACTION = "👍"
 CLEAR_WORDS = ("clear", "remove", "off", "none")
 
-# `!reaction` installs one catch-all handler per watched user, and those handlers
-# run on *every* message the account sees. Twenty is already 20 checks per
-# message; past that the feature is cheaper to express as a single dispatcher,
-# which is why the cap exists instead of an unbounded list.
+# Each task is a handler on every message
 MAX_TASKS = 20
 
-# Inclusive codepoint ranges that a single reaction emoji can be built from:
-# every pictograph block, the dingbats Telegram actually ships as reactions, and
-# the tag characters used by flag sequences (\U000e0067 ...). Skin-tone modifiers
-# (\U0001f3fb-\U0001f3ff) and the keycap mark are already inside these ranges.
+# Codepoint ranges one reaction emoji can be built from
 _EMOJI_RANGES = (
     ("\u00a9", "\u00a9"),        # ©
     ("\u00ae", "\u00ae"),        # ®
@@ -252,8 +239,7 @@ _EMOJI_RANGES = (
     ("\U000e0020", "\U000e007f"),  # flag tag characters
 )
 
-# Zero-width joiner, variation selectors and the keycap mark: they only ever
-# appear *inside* a sequence, so they are skipped rather than counted.
+# Skipped inside sequences, not counted
 _EMOJI_JOINERS = frozenset("\u200d\ufe0e\ufe0f\u20e3")
 _SKIN_TONES = ("\U0001f3fb", "\U0001f3ff")   # 👍🏽 etc. modify the emoji before them
 _FLAGS = ("\U0001f1e6", "\U0001f1ff")        # two of these make one flag
@@ -392,11 +378,7 @@ def setup(client, my_id):
 
     asyncio.create_task(load_existing_reactions())
 
-    # `stop` is a keyword, not a target: this pattern and the one below are
-    # written so that exactly one of them matches any given `!reaction` message.
-    # They used to overlap on `!reaction stop <ID>` -- the stop handler removed
-    # the task, then the *set* handler ran too, looked up a user called "stop"
-    # and replaced the confirmation with "Could not find user: stop".
+    # Exactly one of the two patterns matches
     @client.on(
         events.NewMessage(from_users=my_id,
                           pattern=r"(?i)^!reaction\s+stop\b\s*(\S*)\s*$"))
@@ -424,9 +406,7 @@ def setup(client, my_id):
         save_reactions()
         await event.edit(f"✅ Stopped reaction task {task_id}")
 
-    # `(?!stop\b)` keeps this handler off `!reaction stop <ID>`, which the
-    # handler above owns; without it both fired and the second overwrote the
-    # stop confirmation with a "could not find user: stop" error.
+    # `(?!stop\b)` keeps this off the stop handler
     @client.on(
         events.NewMessage(
             from_users=my_id,
@@ -436,12 +416,11 @@ def setup(client, my_id):
             target = event.pattern_match.group(1)
             emoji = event.pattern_match.group(2).strip()
 
-            # Map alias to emoji
             emoji_lower = emoji.lower()
             if emoji_lower in REACTION_ALIASES:
                 emoji = REACTION_ALIASES[emoji_lower]
 
-            # Shape only: Telegram is the authority on the emoji it accepts
+            # Shape only: Telegram decides
             if emoji not in SUPPORTED_REACTIONS and not _is_single_emoji(emoji):
                 await event.edit(
                     f"❌ '{emoji}' is not a single emoji, so it cannot be a reaction.\n"
@@ -546,9 +525,6 @@ def setup(client, my_id):
             await client(SendReactionRequest(
                 peer=await tgsend.peer(event),
                 msg_id=reply.id,
-                # `reaction=None` leaves the field out, which is how Telegram is
-                # told to drop the account's reaction. An empty vector is not a
-                # removal: the server answers that with REACTION_EMPTY.
                 reaction=None if emoji is None else [ReactionEmoji(emoticon=emoji)],
             ))
         except errors.MessageNotModifiedError:
@@ -617,8 +593,7 @@ def setup(client, my_id):
             await say(event, "❌ Reaction failed; see the Replit log.")
             return
 
-        # Success needs no message: the reaction is already on the target. Drop
-        # the `!react` command itself so the chat does not collect commands.
+        # Drop the command message
         try:
             await event.delete()
         except Exception:  # noqa: BLE001 - without delete rights it just stays

@@ -21,9 +21,7 @@ except Exception:  # noqa: BLE001 - optional accelerator, absence is expected
 __HELP__ = "!sysinfo → Show detailed system information including CPU, memory, disks, network, GPU, and uptime."
 
 os.makedirs("mode/sys", exist_ok=True)
-# This used to be mode/sys/sysmon.json, which Com/sysmon.py keeps as a *list*
-# of samples: this module overwrote it with a single dict every few seconds, so
-# !sysmon export handed back one snapshot instead of history.
+# sysmon.json is a list of samples; this is one snapshot
 SYS_LOG_FILE = "mode/sys/sysinfo.json"
 TZ = pytz.timezone("Asia/Tehran")
 
@@ -60,8 +58,7 @@ def setup(client, my_id):
 
             # Network
             net_io = psutil.net_io_counters()
-            # psutil.net_connections() raises AccessDenied on non-root Linux and
-            # is expensive; one failure used to abort the entire report.
+            # net_connections() needs root and is slow
             try:
                 conns = len(psutil.net_connections(kind="inet"))
             except Exception:
@@ -119,7 +116,7 @@ def setup(client, my_id):
                 "gpus": gpus
             }
 
-            # Save log (atomic: this file is rewritten on every sample).
+            # Atomic: rewritten on every sample
             _save_json(SYS_LOG_FILE, sysinfo)
 
             return sysinfo
@@ -188,19 +185,13 @@ def setup(client, my_id):
     async def sysinfo_cmd(event):
         info = await collect_sysinfo()
         if info.get("error"):
-            # format_sysinfo() divided None by 1e9 and raised, so the command
-            # used to fail with no reply at all when collection broke.
             await event.edit(f"❌ Could not collect system info: {info['error']}")
             return
         msg = await format_sysinfo(info)
         await event.reply(msg)
         await event.delete()
 
-    # Optional background snapshot log
-    # Opt-in (SYSINFO_AUTOLOG=1), was unconditional every 5s. Nothing reads the
-    # snapshot except this module, and on Replit's small CPU quota a permanent
-    # 5s wakeup that rewrites a file is pure overhead. !sysinfo collects on
-    # demand anyway, so when enabled the interval is a minute.
+    # Optional snapshot log (SYSINFO_AUTOLOG=1), once a minute
     if os.environ.get("SYSINFO_AUTOLOG") == "1":
         async def auto_log():
             while True:

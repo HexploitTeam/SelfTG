@@ -54,7 +54,7 @@ BASE_DIR = "mode"
 BAN_FILE = os.path.join(BASE_DIR, "bans.json")
 os.makedirs(BASE_DIR, exist_ok=True)
 
-# Telegram: until_date < 30s is treated as forever; > 366 days is also forever.
+# Telegram: <30s or >366d becomes permanent
 MIN_TEMPBAN_SECONDS = 60
 MAX_TEMPBAN_SECONDS = 366 * 24 * 3600
 
@@ -66,10 +66,7 @@ class BanUnsupported(Exception):
 #Durations
 #------------------------------
 
-# The grammar lives in Com/core/durations.py and is shared with !remind: one parser,
-# one set of error messages, no duplicated regex. Only the bounds differ, because
-# Telegram turns a ban shorter than 30s (or longer than 366 days) into a
-# permanent one.
+# Shared with !remind; only the bounds differ
 def parse_duration(text):
     """Parse a ban duration into seconds, enforcing 60s .. 366d."""
     try:
@@ -229,7 +226,7 @@ HELP_TEXT = (
 def setup(client, my_id):
 
     async def _say(event, text):
-        # Edit-then-reply is shared: see Com/core/reply.py.
+        # Com/core/reply.py
         await say(event, text, name="ban")
 
     async def _chat(event):
@@ -330,9 +327,7 @@ def setup(client, my_id):
         entity, user_id = await _resolve(event, token)
         name = await _label(entity, user_id)
 
-        # Telegram first, ledger second: if the RPC is refused the tracked record
-        # has to stay, or a ban that is still in force would vanish from
-        # `!ban list` / `!ban info` and look lifted when it is not.
+        # Telegram first, ledger second
         await client.edit_permissions(chat, entity)  # all rights back to default
         tracked = drop_ban(chat.id, user_id)
         reason = rest.strip() or (tracked or {}).get("reason")
@@ -345,16 +340,12 @@ def setup(client, my_id):
         name = await _label(entity, user_id)
         reason = rest.strip() or "no reason given"
 
-        # Kick == ban immediately followed by an unban. Telegram drops the
-        # member on the first call and the second restores their rights, so they
-        # can be re-invited (but are not auto-rejoined).
+        # Kick = ban then unban; they can be re-invited
         await client.edit_permissions(chat, entity, view_messages=False)
         try:
             await client.edit_permissions(chat, entity)
         except Exception as exc:  # noqa: BLE001 - the ban leg already succeeded
-            # The member is banned, not kicked. Say exactly that: reporting a
-            # generic failure here would leave them restricted with no record of
-            # why, and the owner would assume they can rejoin.
+            # Banned, not kicked: say so
             save_ban(chat.id, user_id, kind="ban", reason=reason)
             log.warning("ban: kick left %s banned (%s)", user_id, type(exc).__name__)
             await _say(
@@ -422,7 +413,7 @@ def setup(client, my_id):
     # router
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!ban(?:\s+([\s\S]*))?$"))
     async def ban_router(event):
-        # Second owner check: `from_users` is per-client state, this is per-event.
+        # Second owner check (`from_users` is per-client)
         if not event.out or event.sender_id != my_id:
             return
 
@@ -443,8 +434,7 @@ def setup(client, my_id):
                 if not token:
                     await _say(event, "Usage: `!ban temp <user> <10m|2h|7d> [reason]`")
                     return
-                # Reply form: `!ban temp 10m spamming` in reply to the target.
-                # The first word is a duration, so the target has to be the reply.
+                # Reply form: first word is the duration
                 if event.is_reply and _is_duration(token):
                     await cmd_ban(
                         event, "", token + (" " + remainder if remainder else ""),

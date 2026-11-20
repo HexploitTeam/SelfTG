@@ -45,11 +45,7 @@ def extract_mentions(text):
 #Stats storage
 #------------------------------
 
-# The document used to be parsed twice and rewritten (atomically, with fsync)
-# once per counted message, and !stats scan did that for up to 5000 messages in
-# a row. On Replit's shared CPU that write amplification is the most expensive
-# thing the bot does, so the document is cached in memory and flushed once per
-# event. Only this process writes stats.json (dashboard.py is a separate app).
+# One in-memory copy, flushed once per event
 _stats_cache = None
 
 def load_stats(force_reload=False):
@@ -144,8 +140,6 @@ def update_stats(chat_id, msg, flush=True):
     # Replies you give
     if msg.reply_to_msg_id:
         stats["replies_given"] += 1
-        # Optionally track who you replied to (we can fetch the replied message)
-        # We'll not fetch to keep speed, but we can do a quick check if we have the message in memory? Not possible.
 
     save_chat_stats(chat_id, stats, flush=flush)
 
@@ -323,8 +317,7 @@ def setup(client, my_id):
             await event.edit("📭 You have no messages in the scanned range.")
             return
 
-        # Mutate the cached document and write it once, instead of one fsynced
-        # rewrite per message.
+        # One write per scan
         for msg in own_msgs:
             update_stats(chat_id, msg, flush=False)
         save_stats()

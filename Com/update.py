@@ -86,7 +86,7 @@ def setup(client, my_id):
             except Exception:
                 pass
 
-        # Remove restart marker (do this early)
+        # Remove the marker early
         os.remove(RESTART_FILE)
 
         new_hashes = collect_current_hashes()
@@ -97,7 +97,6 @@ def setup(client, my_id):
         else:
             report = "📋 **Command changes after restart:**\n" + "\n".join(changes)
 
-        # Send report to the same chat (or fallback to saved messages)
         try:
             await client.send_message(peer or "me", report)
         except Exception:
@@ -119,14 +118,13 @@ def setup(client, my_id):
 
         new_hashes = collect_current_hashes()
 
-        # Save restart info (including old_hashes for comparison after restart)
+        # Restart marker
         restart_data = {
             "chat_id": event.chat_id,
             "msg_id": event.id,
             "old_hashes": old_hashes   # <-- backup of old hashes
         }
-        # Both writes are atomic: a half-written restart marker would fire a
-        # report against corrupt hashes on the next boot, or none at all.
+        # Atomic: a half-written marker would misreport
         save_json(RESTART_FILE, restart_data)
         save_json(HASH_FILE, new_hashes)
 
@@ -135,8 +133,7 @@ def setup(client, my_id):
         try:
             os.execv(sys.executable, [sys.executable] + sys.argv)
         except Exception as e:
-            # execv only returns if it failed; without this the bot died silently
-            # and left mode/restart.json behind to fire on the next boot.
+            # execv only returns on failure
             try:
                 os.remove(RESTART_FILE)
             except OSError:

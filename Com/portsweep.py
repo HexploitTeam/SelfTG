@@ -38,8 +38,6 @@ def setup(client, my_id):
             for p in open_ports:
                 f.write(f"{p}\n")
 
-        # Previously sent to `scan_id` (a numeric string) or `client.me`, i.e.
-        # never to the chat that asked for the scan.
         await client.send_file(
             chat_id,
             filename,
@@ -76,8 +74,6 @@ def setup(client, my_id):
                 if "-" in parts[1]:
                     start_port, end_port = map(int, parts[1].split("-", 1))
                 else:
-                    # A single port used to be silently ignored (the whole
-                    # 1-1024 range was scanned instead).
                     start_port = end_port = int(parts[1])
             else:
                 start_port, end_port = 1, 1024

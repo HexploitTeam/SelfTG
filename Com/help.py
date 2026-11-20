@@ -26,7 +26,7 @@ import Com.core.tgsend as tgsend
 from Com.core import registry
 
 log = logging.getLogger("selftg.help")
-CHUNK = 3500  # Telegram's hard limit is 4096; leave room for the prefix
+CHUNK = 3500  # Telegram limit is 4096
 EDIT_LIMIT = 4000
 
 __HELP__ = (
@@ -38,7 +38,7 @@ __HELP__ = (
 )
 __CATEGORY__ = "Setup"
 
-# Category mapping (folders → display name + emoji)
+# Category labels
 CATEGORY_MAP = {
     "Information": "ℹ️ Information Commands",
     "Setup": "⚙️ Setup Commands",
@@ -128,10 +128,7 @@ def collect_commands():
                 # Continuation lines ("Subcommands:", "  geo <IP> ...").
                 current["notes"].append(line)
 
-    # The v3 families render their `__HELP__` from Com/core/registry.py, so those
-    # lines are markdown ("**!afk** — …") and never start with "!". Merge their
-    # declared subcommands into the index so `!help unpin` or `!help here`
-    # resolve like any other command name.
+    # Registry families render markdown, not "!" lines
     for key in registry.names():
         family = registry.get(key)
         for usage, description in family["subcommands"]:
@@ -158,10 +155,6 @@ def search(index, query):
     if not q:
         return [], "none"
 
-    # The index is keyed by the command as written in `__HELP__`, i.e. with the
-    # leading "!", while the query arrives without one. Comparing "ping" to
-    # those keys never matched, so every real command (`!help ping` included)
-    # skipped the exact branch and came back as a suggestion list.
     exact = f"!{q}"
     if exact in index:
         return [exact], "exact"

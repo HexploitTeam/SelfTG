@@ -46,9 +46,7 @@ def setup(client, my_id):
 
             await event.delete()
 
-            # The copies are a series, so they go through the shared gate: no
-            # fixed 0.2 s burst, and a flood ends the series with a count rather
-            # than a retry (Com/core/flood.py).
+            # Shared gate: a flood ends the series (Com/core/flood.py)
             peer = await tgsend.peer(event)
             sent = 0
             for _ in range(N):

@@ -40,13 +40,12 @@ class SmartMarkov:
 
         if seed:
             seed_words = seed.split()
-            # Prefer a state that begins with the seed so generation stays on topic
+            # Prefer a state that starts with the seed
             for i in range(len(seed_words), 0, -1):
                 prefix = tuple(seed_words[:i])
                 for state in self.transitions.keys():
                     if state[:i] == prefix:
                         result = list(state)
-                        # Then continue from there
                         for _ in range(max_words - len(result)):
                             next_words = self.transitions.get(tuple(result[-self.order:]))
                             if not next_words:
@@ -54,8 +53,7 @@ class SmartMarkov:
                             next_word = random.choice(next_words)
                             result.append(next_word)
                         return ' '.join(result)
-            # If no state starts with seed, pick a random start
-            # But we'll try to match the seed partially
+            # No exact prefix: try shorter ones
             for i in range(len(seed_words), 0, -1):
                 prefix = tuple(seed_words[:i])
                 for state in self.transitions.keys():
@@ -69,7 +67,7 @@ class SmartMarkov:
                             result.append(next_word)
                         return ' '.join(result)
 
-        # No seed or seed not found – start from a random state
+        # Random start
         state = random.choice(list(self.transitions.keys()))
         result = list(state)
         for _ in range(max_words - len(result)):
@@ -97,8 +95,7 @@ class SmartMarkov:
         with open(filepath, 'r', encoding='utf-8') as f:
             data = json.load(f)
         mc = cls(order=data["order"])
-        # ast.literal_eval instead of eval: the model file is untrusted input and
-        # eval() there allowed arbitrary code execution from a crafted model.
+        # Model files are untrusted: no eval()
         transitions = defaultdict(list)
         for key, value in data["transitions"].items():
             try:

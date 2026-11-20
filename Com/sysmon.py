@@ -20,10 +20,9 @@ LOG_DIR = "mode/sys"
 LOG_FILE = os.path.join(LOG_DIR, "sysmon.json")
 os.makedirs(LOG_DIR, exist_ok=True)
 
-# A running monitor appends a sample every 2s. Unbounded, that is ~43k entries
-# and several MB per day on a Repl with very little disk.
+# 2s samples; bound the file
 MAX_LOG_ENTRIES = 500
-# Prime psutil so interval=None has a baseline to compare against.
+# Prime psutil for interval=None
 psutil.cpu_percent(interval=None)
 
 
@@ -38,8 +37,7 @@ def format_stats():
     minutes, seconds = divmod(remainder, 60)
     uptime_str = f"{days}d {hours}h {minutes}m {seconds}s"
 
-    # interval=None instead of 0.5: this runs inside the monitor coroutine and
-    # a blocking sample froze every other handler twice per second.
+    # interval=None: a blocking sample froze handlers
     cpu_usage = psutil.cpu_percent(interval=None)
     cpu_count = psutil.cpu_count(logical=True)
 
@@ -99,7 +97,6 @@ def save_stats(stats):
                 if isinstance(loaded, list):
                     data = loaded
                 else:
-                    # If file contains dict or something else, reset to list
                     data = []
         except Exception:
             data = []
@@ -108,7 +105,7 @@ def save_stats(stats):
     if len(data) > MAX_LOG_ENTRIES:
         del data[:-MAX_LOG_ENTRIES]
 
-    # Atomic write: the dashboard and repeated samples read this file.
+    # Atomic: the dashboard reads this
     _save_json(LOG_FILE, data)
 
 

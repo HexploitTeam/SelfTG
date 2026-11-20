@@ -44,9 +44,7 @@ DEFAULT_DATA = {
 }
 
 def load_data():
-    # Called from a catch-all handler for every incoming message, so the file is
-    # read through the shared mtime-validated cache instead of parsed per event
-    # (Com/core/storage.py).
+    # Per-message path: cached read (Com/core/storage.py)
     if not os.path.exists(DATA_FILE):
         save_data(DEFAULT_DATA)
         return cached_json(DATA_FILE, dict(DEFAULT_DATA))
@@ -56,9 +54,7 @@ def load_data():
         save_data(DEFAULT_DATA)
         return cached_json(DATA_FILE, dict(DEFAULT_DATA))
 
-    # Ensure keys exist. The cache hands back the same object each time, so this
-    # check must not mutate it unless a key is actually missing -- otherwise a
-    # write would be triggered on every message.
+    # Mutate only when a key is missing
     if "__global" not in data or "__settings" not in data:
         data.setdefault("__global", DEFAULT_SCOPE.copy())
         data.setdefault("__settings", {"global_enabled": False})
@@ -125,7 +121,7 @@ def setup(client, my_id):
         if not all_keywords:
             return
 
-        # A chat that has an entry uses its own flags; otherwise the global ones apply
+        # Per-chat flags, else global
         case_sensitive = False
         regex_mode = False
         if chat_id_str in data:
@@ -154,7 +150,7 @@ def setup(client, my_id):
         if not matched_keyword:
             return
 
-        # Every hit is logged; silent mode only suppresses the alert and the reply
+        # Silent only mutes the alert
         log_match(event.chat_id, event.sender_id, matched_keyword, text)
 
         if not scope_silent:
@@ -242,7 +238,6 @@ def setup(client, my_id):
         status = "ON" if not current else "OFF"
         await event.reply(f"🌍 Global watch mode: {status}")
 
-    # !monitor reply <text> or off
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!monitor reply (.+)"))
     async def monitor_reply(event):
         text = event.pattern_match.group(1).strip()
