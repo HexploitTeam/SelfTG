@@ -25,6 +25,7 @@ import Com.core.tgsend as tgsend
 
 import Com.core.registry as registry
 from Com.core import scheduler
+from Com.core.reply import say
 from Com.core.storage import load_store, save_json
 
 log = logging.getLogger("selftg.afk")
@@ -304,10 +305,5 @@ def setup(client, my_id):
             log.exception("afk: auto-clear failed")
 
     async def _say(event, text):
-        try:
-            await event.edit(text)
-        except Exception:
-            try:
-                await event.reply(text)
-            except Exception:
-                log.info("afk: response could not be delivered")
+        # Edit-then-reply is shared: see Com/core/reply.py.
+        await say(event, text, name="afk")

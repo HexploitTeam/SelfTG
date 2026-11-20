@@ -17,6 +17,7 @@ from telethon import errors, events
 from telethon.tl.types import InputMessagesFilterPinned, User
 
 import Com.core.registry as registry
+from Com.core.reply import say
 import Com.core.tgsend as tgsend
 
 log = logging.getLogger("selftg.pin")
@@ -156,10 +157,5 @@ def setup(client, my_id):
         await _say(event, "\n".join(lines))
 
     async def _say(event, text):
-        try:
-            await event.edit(text)
-        except Exception:
-            try:
-                await event.reply(text)
-            except Exception:
-                log.info("pin: response could not be delivered")
+        # Edit-then-reply is shared: see Com/core/reply.py.
+        await say(event, text, name="pin")

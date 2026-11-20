@@ -14,6 +14,7 @@ from telethon import events
 
 import Com.core.registry as registry
 from Com.core import confirm
+from Com.core.reply import say
 from Com.core.storage import load_store, save_json
 
 log = logging.getLogger("selftg.todo")
@@ -249,10 +250,5 @@ def setup(client, my_id):
         )
 
     async def _say(event, text):
-        try:
-            await event.edit(text)
-        except Exception:
-            try:
-                await event.reply(text)
-            except Exception:
-                log.info("todo: response could not be delivered")
+        # Edit-then-reply is shared: see Com/core/reply.py.
+        await say(event, text, name="todo")
