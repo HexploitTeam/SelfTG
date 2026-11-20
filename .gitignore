@@ -31,3 +31,14 @@ mode/botstate.json
 Logs/
 mods/
 temp/
+
+# --- Large or personal data that is not source ---
+# rockyou.txt is 140 MB of every checkout for a file `!wordlist download`
+# fetches on demand; stats files are one machine's chat history. Tracked by
+# accident in earlier commits -- untracked in v4, still on disk.
+mode/rockyou.txt
+mode/stats.json
+mode/chatstats.json
+
+# A stale concatenated dump of the source tree, kept for years and wrong.
+project_files.txt
