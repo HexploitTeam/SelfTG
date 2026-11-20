@@ -9,7 +9,9 @@ Verified against the resolved Telethon 1.44.0 (layer 227, read from the
 installed package, not assumed):
 
 * ``types.Poll(id, question, answers, hash, closed, public_voters,
-  multiple_choice, quiz, ...)`` -- ``question`` is ``TextWithEntities``;
+  multiple_choice, quiz, ...)`` -- ``question`` is ``TextWithEntities`` and a
+  new poll goes out with ``id=0`` (Telegram assigns the id); a nonzero id is
+  only meaningful for a poll read back from a sent message;
 * ``types.InputMediaPoll(poll, correct_answers, solution, solution_entities)``;
 * ``types.InputPollAnswer(text, media)`` -- a new poll is built from these and
   Telegram assigns the ``option`` bytes itself;
@@ -129,8 +131,10 @@ def build_poll(question, options, *, quiz=False, multiple=False, public=False,
 
     # Layer 227 creates options from InputPollAnswer: no client-chosen option
     answers = [InputPollAnswer(text=_as_text(option)) for option in options]
+    # TDLib sends id 0 when creating a poll (the server assigns one); a nonzero
+    # id refers to an existing poll and is only used when reading one back.
     poll = Poll(
-        id=random.getrandbits(62),
+        id=0,
         question=_as_text(question),
         answers=answers,
         hash=0,
@@ -322,15 +326,34 @@ def setup(client, my_id):
             return
 
         peer = await tgsend.peer(event)
-        try:
-            result = await client(
-                SendMediaRequest(
-                    peer=peer,
-                    media=media,
-                    message="",
-                    random_id=random.getrandbits(63),
+
+        async def _send():
+            """Send the poll, retrying once with the other known poll id shape."""
+            try:
+                return await client(
+                    SendMediaRequest(
+                        peer=peer,
+                        media=media,
+                        message="",
+                        random_id=random.getrandbits(63),
+                    )
                 )
-            )
+            except errors.MediaInvalidError:
+                # TDLib sends id 0, older clients (Pyrogram) send a random id;
+                # a rejected id changes nothing server-side, so try the other.
+                media.poll.id = random.getrandbits(62)
+                log.info("poll: id 0 refused, retrying with a random id")
+                return await client(
+                    SendMediaRequest(
+                        peer=peer,
+                        media=media,
+                        message="",
+                        random_id=random.getrandbits(63),
+                    )
+                )
+
+        try:
+            result = await _send()
         except errors.ChatWriteForbiddenError:
             await _say(event, "❌ The account cannot post in this chat.")
             return
@@ -348,6 +371,14 @@ def setup(client, my_id):
             return
         except flood.FLOOD_ERRORS as exc:
             await _say(event, f"⏳ Telegram rate limit: wait {exc.seconds}s.")
+            return
+        except errors.MediaInvalidError:
+            await _say(
+                event,
+                "❌ Telegram rejected the poll media (MEDIA_INVALID). Polls cannot "
+                "be created in secret chats or channel direct-message chats; "
+                "post it in a group, a channel or Saved Messages.",
+            )
             return
         except errors.RPCError as exc:
             log.warning("poll: send failed %s", type(exc).__name__)
@@ -396,7 +427,10 @@ def setup(client, my_id):
 
         peer = await tgsend.peer(event)
         try:
-            result = await client(GetPollResultsRequest(peer=peer, msg_id=msg_id))
+            # poll_hash=0 asks for the full tally instead of a cached diff.
+            result = await client(
+                GetPollResultsRequest(peer=peer, msg_id=msg_id, poll_hash=0)
+            )
         except errors.RPCError as exc:
             log.info("poll: results failed (%s)", type(exc).__name__)
             await _say(

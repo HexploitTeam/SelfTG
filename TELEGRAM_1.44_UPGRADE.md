@@ -51,11 +51,14 @@ Layer 227 changed the poll schema. Found by construction test against 1.44.0, no
 | `Poll(id, question=str, answers, ...)` (no `hash`) | `hash` is required positional, `question` is `TextWithEntities` | `TypeError` on the missing `hash`; with `hash` added, a `str` question fails at serialisation: `AttributeError: 'str' object has no attribute '_bytes'` |
 | `PollAnswer(text=str, option=bytes)` | `text: TextWithEntities` | same `_bytes` failure |
 | `PollAnswer(option=b"\x00")` as the *input* answer | a new poll takes `InputPollAnswer(text, media)`; Telegram assigns `option` | a schema-valid request the server answers with `MediaInvalidError` |
+| `Poll(id=<random 62-bit>, …)` when creating | TDLib sends `id=0`; a nonzero id identifies an existing poll | still `MediaInvalidError` after the answer fix (reported live) |
 | `InputMediaPoll(correct_answers=[b"\x00"])` | `correct_answers: List[int]` | `error: required argument is not an integer` |
 | `InputMediaPoll(solution="…")` | `solution_entities` must be set too | `AssertionError: solution, solution_entities parameters must all be False-y or all be True-y` |
 | `poll.question` treated as `str` when read back | it is a `TextWithEntities` | `!poll results` printed `TextWithEntities(text='Q?', entities=[])` instead of the question |
 
 Changes in `Com/poll.py`: `TextWithEntities` imported; two 2-line helpers (`_as_text`, `_plain`); `build_poll` wraps the question, builds answers from `InputPollAnswer`, adds `hash=0`, sends `correct_answers=[index]`, sets `solution_entities=[]` when there is an explanation; the create call reports `ChatSendPollForbiddenError` on its own; `_resolve_target` and `_results` unwrap server text before display; `_close` adds `hash=0`, int `correct_answers` and `solution_entities`.
+
+Second pass, after `!poll` still failed live with `MediaInvalidError`: `build_poll` now sends `id=0` (TDLib's creation shape); the create call retries once with a random id if the server refuses that one, since the Pyrogram fork uses a random id; `MediaInvalidError` has its own message naming the chat kinds that cannot hold polls; `!poll results` passes `poll_hash=0`, which 1.44.0 requires positionally and which `_results` had been omitting (`TypeError`, not an RPC error).
 
 The `solution_entities` assert **also exists in 1.33.1** (verified), so quiz polls with an explanation were already broken before this upgrade. Fixed here as part of making `!poll` work, not caused by 1.44.
 
@@ -104,10 +107,10 @@ Test environment: `/tmp/v` with `telethon==1.44.0` (import resolves to `1.44.0`,
 | `!mute` | import-checked | no `edit_permissions` use; per-chat state only |
 | `!pin` / `!unpin` | import-checked + signature-verified | `pin_message`/`unpin_message` parameter names |
 | `!react` | **constructed and serialised** | `SendReactionRequest` with `ReactionEmoji` → `_bytes()` ok; reaction alias suite 19 checks pass |
-| `!poll` (create) | **constructed and serialised** | `build_poll` plain and quiz; answers are `InputPollAnswer`, `_bytes()` ok |
+| `!poll` (create) | **constructed and serialised** | `build_poll` plain and quiz; answers are `InputPollAnswer`, `id=0`, `_bytes()` ok |
 | `!poll` (quiz + explanation) | **constructed and serialised** | proven broken on both 1.33.1 and 1.44.0 before the fix; now serialises |
 | `!poll close` | **constructed and serialised** | server-shaped `TextWithEntities` poll rebuilt as closed, `_bytes()` ok |
-| `!poll results` | **render-checked** | `render_results` with a `PollAnswerVoters` row; text no longer a repr |
+| `!poll results` | **constructed and render-checked** | `GetPollResultsRequest(poll_hash=0)` serialises; `render_results` with a `PollAnswerVoters` row |
 | `!chat` formatting | **constructed** | every entity class instantiated; `formatting_entities` present on send/edit |
 | Everything else | **import-checked** | `tools/smoke.py`: 76 modules loaded, 172 handlers registered, exit 0 |
 
