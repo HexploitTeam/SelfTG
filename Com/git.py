@@ -24,7 +24,7 @@ from Com.core.reply import say
 log = logging.getLogger("selftg.git")
 
 __HELP__ = (
-    "!git pull → Fetch origin/beta and reset the checkout to it "
+    "!git pull → Fetch origin/new and reset the checkout to it "
     "(local edits to tracked files are discarded)\n"
     "!git pull <branch> → Same, for another branch (e.g. !git pull new)\n"
     "!git push → Placeholder; not implemented yet"
@@ -32,7 +32,7 @@ __HELP__ = (
 __CATEGORY__ = "Setup"
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BRANCH = "beta"
+BRANCH = "new"
 TIMEOUT = 90
 
 # git-check-ref-format, minus the parts that cannot appear in a branch name
