@@ -183,6 +183,15 @@ async def _on_ready():
 
     load_commands()
 
+    # `!typo` answers here. After load_commands(), so every command pattern is
+    # already registered (see Com/core/notfound.py).
+    try:
+        from Com.core import notfound
+
+        notfound.setup(client, my_id)
+    except Exception:
+        log.exception("Command-not-found fallback failed to start")
+
     # Not a command: wired here explicitly
     try:
         from Com.bot import interop as interop_module
