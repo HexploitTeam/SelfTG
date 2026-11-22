@@ -21,13 +21,16 @@ so a restart mid-write cannot leave a truncated store.
 Delivery and layout
 -------------------
 One message, edited into the command message through ``Com/core/reply.py`` (the
-same path `!chat` uses). A single line is far inside Telegram's 4096 limit.
+same path `!chat` uses), which also signs it ``— Spooku Self · !love``. A single
+line is far inside Telegram's 4096 limit.
 
-The message is a script-font ``Love`` header over the line in italics. The
-header is ordinary Unicode letters from ``Com/core/fonts.py``, so it renders in
-every client without any markup; the italics are one ``<i>`` tag sent with
-``parse_mode="html"``. The name itself is never re-styled -- a name the owner
-set in one font must not come back in another.
+The body is a ``Love`` header over one line, both in the same bold-script font
+from ``Com/core/fonts.py`` -- the one font the product allows, shared with
+`!creator`. It is ordinary Unicode letters, so it renders in every client
+without any markup. The font covers the whole rendered line, the name included:
+``!love Emma`` must not read as a script sentence with a plain ``Emma`` in the
+middle. A name the owner already set in a font is kept as written, because the
+mapping is ASCII-only and rewriting their choice would be worse than mixing.
 
 Name handling and formatting injection
 --------------------------------------
@@ -187,11 +190,13 @@ def pick_line(name):
 
 
 def render_line(name):
-    """The message `!love` sends: script header, one italic line; "" if empty."""
+    """The message `!love` sends: script header, one script line; "" if empty."""
     line = pick_line(name)
     if not line:
         return ""
-    return f"{HEADER}\n<i>{html.escape(line)}</i>"
+    # Font first, then escape: escaping first would turn "&" into "&amp;" and the
+    # mapping would then rewrite the letters inside that entity.
+    return f"{HEADER}\n{html.escape(script(line))}"
 
 
 #------------------------------

@@ -41,6 +41,7 @@ from telethon.sessions import StringSession
 
 from Com.bot import kit
 from Com.bot import interop, registry, ui as botui
+from Com.core import brand
 from Com.core.net import ReplitConnection
 from Com.core.storage import load_json as _load_json, save_json as _save_json
 
@@ -175,8 +176,10 @@ def _register_handlers(client, owner_id):
         if flow:
             # A flow survives a restart
             await event.respond(
-                f"▶️ Unfinished flow <code>{kit.h(flow.get('name', '?'))}</code> is "
-                "still waiting for a message. Send it, or /cancel.",
+                brand.sign(
+                    f"▶️ Unfinished flow <code>{kit.h(flow.get('name', '?'))}</code> "
+                    "is still waiting for a message. Send it, or /cancel."
+                ),
                 parse_mode="html",
             )
 
@@ -191,20 +194,25 @@ def _register_handlers(client, owner_id):
 
     async def _ping_cmd(event):
         started = time.monotonic()
-        message = await event.respond("🏓 …")
+        message = await event.respond(brand.sign("🏓 <b>Pinging…</b>"), parse_mode="html")
         elapsed = int((time.monotonic() - started) * 1000)
         try:
-            await message.edit(f"🏓 pong in {elapsed} ms")
+            await message.edit(
+                brand.sign(f"🏓 <b>Pong</b> · <code>{elapsed} ms</code>"),
+                parse_mode="html",
+            )
         except Exception:  # noqa: BLE001 - an edit failure is not a ping failure
             log.debug("bot: ping edit failed", exc_info=True)
 
     async def _id_cmd(event):
         await event.respond(
-            "🆔 <b>Ids</b>\n"
-            f"Owner: <code>{owner_id}</code>\n"
-            f"Chat: <code>{event.chat_id}</code>\n"
-            f"Sender: <code>{event.sender_id}</code>\n"
-            f"Bot: @{kit.h(BOT_USERNAME or '?')}",
+            brand.sign(
+                "🆔 <b>Ids</b>\n"
+                f"Owner: <code>{owner_id}</code>\n"
+                f"Chat: <code>{event.chat_id}</code>\n"
+                f"Sender: <code>{event.sender_id}</code>\n"
+                f"Bot: @{kit.h(BOT_USERNAME or '?')}"
+            ),
             parse_mode="html",
             # Inline-only clipboard button; the ids are copied, not retyped
             buttons=kit.markup([[
@@ -215,18 +223,23 @@ def _register_handlers(client, owner_id):
     async def _version_cmd(event):
         self_info = interop.load_runtime().get("selfbot", {})
         await event.respond(
-            "🏷 <b>Version</b>\n"
-            f"Bot boot: <code>{kit.h(interop.BOOT_ID)}</code>\n"
-            f"Self-bot boot: <code>{kit.h(self_info.get('boot_id', '?'))}</code>\n"
-            f"Pid: <code>{os.getpid()}</code>\n"
-            f"Commands in registry: {len(registry.COMMANDS)}\n"
-            f"Bot uptime: {kit.age(time.time() - interop.started_at())}",
+            brand.sign(
+                "🏷 <b>Version</b>\n"
+                f"Bot boot: <code>{kit.h(interop.BOOT_ID)}</code>\n"
+                f"Self-bot boot: <code>{kit.h(self_info.get('boot_id', '?'))}</code>\n"
+                f"Pid: <code>{os.getpid()}</code>\n"
+                f"Commands in registry: {len(registry.COMMANDS)}\n"
+                f"Bot uptime: {kit.age(time.time() - interop.started_at())}"
+            ),
             parse_mode="html",
         )
 
     async def _cancel_cmd(event):
         kit.clear_flow(owner_id)
-        await event.respond("Flow cancelled. /start for the menu.")
+        await event.respond(
+            brand.sign("Flow cancelled. Send /start for the menu."),
+            parse_mode="html",
+        )
 
     handlers = {
         "home": _home,

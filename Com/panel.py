@@ -11,6 +11,7 @@ import Com.bot as bot_module
 import Com.core.tgsend as tgsend
 from Com.bot import ui as botui
 from Com.bot.kit import markup
+from Com.core import brand
 
 __HELP__ = (
     "!panel → Send the bot's control panel into this chat.\n"
@@ -31,7 +32,10 @@ def setup(client, my_id):
         # Read live: an import would capture None
         status = bot_module.get_bot_status()
         if bot_module.bot_client is None:
-            await event.edit(f"⚠️ Bot not ready: {status}")
+            await event.edit(
+                brand.render(f"⚠️ Bot not ready: {status}", "panel"),
+                parse_mode="html",
+            )
             return
 
         screen = botui.home_screen()
@@ -44,11 +48,17 @@ def setup(client, my_id):
                 reply_to=event.id,
             )
         except Exception as exc:  # noqa: BLE001 - report, do not delete the command
-            await event.edit(f"❌ Failed to send panel: {exc}")
+            await event.edit(
+                brand.render(f"❌ Failed to send panel: {exc}", "panel"),
+                parse_mode="html",
+            )
             return
         await event.delete()
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!botstatus$"))
     async def botstatus_cmd(event):
-        await event.edit(f"Bot status\n{bot_module.get_bot_status()}")
+        await event.edit(
+            brand.render(f"🤖 Bot status\n{bot_module.get_bot_status()}", "botstatus"),
+            parse_mode="html",
+        )
         await event.delete()

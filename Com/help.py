@@ -23,7 +23,7 @@ import os
 from io import BytesIO
 
 import Com.core.tgsend as tgsend
-from Com.core import registry
+from Com.core import brand, registry
 
 log = logging.getLogger("selftg.help")
 CHUNK = 3500  # Telegram limit is 4096
@@ -78,10 +78,8 @@ def _description(line):
 
 
 def _format_usage(line):
-    """Bold + monospace the command part, like the old listing did."""
-    split = line.split(" ", 1)
-    cmd = f"**`{split[0]}`**"
-    return f"{cmd} {split[1]}" if len(split) > 1 else cmd
+    """Monospace the whole usage line, so an argument can be copied as written."""
+    return f"<code>{brand.esc(line)}</code>"
 
 
 def collect_commands():
@@ -172,28 +170,38 @@ def search(index, query):
 
 def render_command(index, name):
     entry = index[name]
-    lines = [f"📖 **`{entry['name']}`** — _{entry['module']} · {entry['category']}_"]
+    lines = [
+        f"📖 <b>{brand.esc(entry['name'])}</b> "
+        f"<i>· {brand.esc(entry['module'])} · {brand.esc(entry['category'])}</i>"
+    ]
     for usage in entry["usages"]:
         lines.append(f"• {_format_usage(usage)}")
     if entry["notes"]:
         lines.append("")
-        lines.extend(entry["notes"])
+        lines.extend(brand.esc(note) for note in entry["notes"])
     family = registry.get(entry["name"])
     if family:
-        lines.append(f"\n💡 Full family help: `!help {entry['name'].lstrip('!')}`")
+        lines.append(
+            f"\n💡 <b>Full family help:</b> "
+            f"<code>!help {brand.esc(entry['name'].lstrip('!'))}</code>"
+        )
     return "\n".join(lines)
 
 
 def render_matches(index, names, kind, query):
     if not names:
         return None
+    wanted = brand.esc(query.strip().lstrip("!"))
     heading = (
-        f"🗂️ There are {len(names)} commands matching `{query.strip().lstrip('!')}`:"
+        f"🗂️ <b>{len(names)} commands</b> match <code>{wanted}</code>:"
         if len(names) > 1
-        else f"🗂️ There is 1 command matching `{query.strip().lstrip('!')}`:"
+        else f"🗂️ <b>1 command</b> matches <code>{wanted}</code>:"
     )
     if kind == "similar":
-        heading = f"🤔 No exact match for `{query.strip().lstrip('!')}`. Closest commands:"
+        heading = (
+            f"🤔 No exact match for <code>{wanted}</code>.\n"
+            "Closest commands:"
+        )
 
     lines = [heading]
     for name in names:
@@ -201,10 +209,14 @@ def render_matches(index, names, kind, query):
         description = _description(first)
         if len(description) > 90:
             description = description[:89] + "…"
-        lines.append(f"• `{name}` — {description}")
+        lines.append(
+            f"• <code>{brand.esc(name)}</code> — {brand.esc(description)}"
+        )
 
     if kind != "similar":
-        lines.append("\n💡 `!help <command>` for details.")
+        lines.append(
+            "\n💡 <code>!help COMMAND</code> shows one command in full."
+        )
     return "\n".join(lines)
 
 
@@ -217,7 +229,8 @@ def setup(client, my_id):
     async def send_text_file(event, content, name="help.txt"):
         """Send long help as a .txt file, falling back to plain messages."""
         bio = BytesIO()
-        bio.write(content.encode("utf-8"))
+        # A .txt export must not contain the HTML tags the message uses
+        bio.write(brand.plain(content).encode("utf-8"))
         bio.seek(0)
         bio.name = name
         try:
@@ -235,19 +248,22 @@ def setup(client, my_id):
                 return
 
     async def deliver(event, text, name="help.txt"):
-        if len(text) > EDIT_LIMIT:
-            await send_text_file(event, text, name)
+        # The long form goes out as a .txt so it stays copy-pasteable; the
+        # message form carries the product signature like every other answer.
+        signed = brand.sign(text, "help")
+        if len(signed) > EDIT_LIMIT:
+            await send_text_file(event, signed, name)
         else:
-            await event.edit(text)
+            await event.edit(signed, parse_mode="html")
 
     def render_listing(title, cmds):
-        text = f"-----------------------------\n{title} ({len(cmds)})\n\n"
+        text = f"<b>{brand.esc(title)}</b> · {len(cmds)}\n\n"
         last_prefix = None
         for cmd in sorted(cmds):
             prefix = cmd.split()[0]
             if last_prefix and not cmd.startswith(last_prefix):
                 text += "\n"
-            text += f"  • {cmd}\n"
+            text += f"  • {cmd}\n"   # already escaped by _format_usage
             last_prefix = prefix
         return text + "\n"
 
@@ -259,22 +275,23 @@ def setup(client, my_id):
 
             # no argument: category overview
             if not arg:
-                text = "📖 **Available Command Categories**\n\n"
+                text = "📖 <b>Available command categories</b>\n\n"
                 for cat, title in CATEGORY_MAP.items():
-                    text += f"{title} ({len(commands_by_cat[cat])}) → **`!help {cat.lower()}`**\n"
-                text += (f"\n💡 **`!help all`** lists everything, "
-                         f"**`!help ping`** shows one command, "
-                         f"**`!help pin`** searches by name.")
+                    text += (f"{title} ({len(commands_by_cat[cat])}) → "
+                             f"<code>!help {cat.lower()}</code>\n")
+                text += ("\n💡 <code>!help all</code> lists everything, "
+                         "<code>!help ping</code> shows one command, "
+                         "<code>!help pin</code> searches by name.")
                 await deliver(event, text)
                 return
 
             # `!help all`
             if arg.lower() == "all":
-                text = "📖 **All Commands**\n\n"
+                text = "📖 <b>All commands</b>\n\n"
                 for cat, title in CATEGORY_MAP.items():
                     if commands_by_cat[cat]:
                         text += render_listing(title, commands_by_cat[cat])
-                text += "💡 Tip: **`!help <command>`** for details."
+                text += "💡 <code>!help COMMAND</code> shows one command in full."
                 await deliver(event, text, "all_commands.txt")
                 return
 
@@ -287,7 +304,7 @@ def setup(client, my_id):
             for cat, title in CATEGORY_MAP.items():
                 if arg.lower() == cat.lower():
                     text = render_listing(title, commands_by_cat[cat])
-                    text += "\n💡 Tip: **`!help all`** to see everything."
+                    text += "\n💡 <code>!help all</code> to see everything."
                     await deliver(event, text)
                     return
 
@@ -304,13 +321,18 @@ def setup(client, my_id):
 
             await deliver(
                 event,
-                f"❌ No command matches `{arg.strip().lstrip('!')}`.\n"
-                "Try `!help` for categories or `!help all` for everything.",
+                "❌ <b>No command matches</b> "
+                f"<code>{brand.esc(arg.strip().lstrip('!'))}</code>.\n"
+                "Try <code>!help</code> for categories or <code>!help all</code> "
+                "for everything.",
             )
 
         except Exception:  # noqa: BLE001 - a help lookup must never crash the client
             log.exception("help: command failed")
             try:
-                await event.edit("❌ Help failed; see the Replit log.")
+                await event.edit(
+                    brand.sign("❌ <b>Help failed.</b> See the Replit log.", "help"),
+                    parse_mode="html",
+                )
             except Exception:
                 pass

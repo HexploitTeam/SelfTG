@@ -32,6 +32,7 @@ from telethon.tl.types import (
     ReplyInlineMarkup,
 )
 
+from Com.core import brand
 from Com.core.storage import load_json, save_json
 
 log = logging.getLogger("selftg.botkit")
@@ -241,9 +242,10 @@ def pager_row(route, page, pages, *fixed):
 #------------------------------
 
 async def send(ctx, screen, chat_id=None, reply_to=None):
+    # Every bot screen carries the same signature as a self-bot answer
     return await ctx.client.send_message(
         chat_id or ctx.owner_id,
-        screen.text,
+        brand.sign(screen.text),
         buttons=markup(screen.rows),
         parse_mode="html",
         link_preview=False,
@@ -255,7 +257,7 @@ async def edit(event, screen):
     """Edit the menu message; returns False when it cannot be edited any more."""
     try:
         await event.edit(
-            screen.text,
+            brand.sign(screen.text),
             buttons=markup(screen.rows),
             parse_mode="html",
             link_preview=False,

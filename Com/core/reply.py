@@ -21,6 +21,8 @@ This module has no ``setup()`` and no ``__HELP__``.
 """
 import logging
 
+from Com.core import brand
+
 log = logging.getLogger("selftg.reply")
 
 
@@ -29,15 +31,29 @@ log = logging.getLogger("selftg.reply")
 _UNSET = object()
 
 
-async def say(event, text, *, name="reply", parse_mode=_UNSET):
+async def say(event, text, *, name="reply", parse_mode=_UNSET, sign=True):
     """Show `text` on `event`, editing in place and falling back to a reply.
 
-    `name` only labels the log line, so a failure in ``mode/`` logs points at the
-    command that produced it. Returns True when either delivery worked.
+    `name` labels the log line and, when it names a command, the signature
+    (``— Spooku Self · !ban``): every module already passes it, so the brand is
+    attached once here instead of in 188 messages.
 
-    `parse_mode` is opt-in: a command that sends styled text passes "html", and
-    every other command keeps the client's current behaviour untouched.
+    `parse_mode` is opt-in. Without it `text` is a plain body: it is escaped and
+    signed, then sent as HTML. With it the body is expected to be HTML already
+    and only the signature is appended -- that is how `!love` and `!creator`
+    keep their own markup.
+
+    `sign=False` is for a message that leaves the product: an auto-reply to
+    someone else, or a relayed body. Returns True when either delivery worked.
     """
+    if sign:
+        command = None if name == "reply" else name
+        if parse_mode is _UNSET:
+            text = brand.render(text, command)
+            parse_mode = "html"
+        else:
+            text = brand.sign(text, command)
+
     options = {} if parse_mode is _UNSET else {"parse_mode": parse_mode}
 
     try:

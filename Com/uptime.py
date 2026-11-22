@@ -1,9 +1,19 @@
-"""!uptime: bot runtime plus a resource snapshot."""
+"""`!uptime` -- the self-bot's runtime plus a resource snapshot.
+
+The numbers were already collected here; the shape was not. Each line is a bold
+label and a monospace value, so the value is what the eye lands on and can be
+copied, and the message is delivered through ``Com/core/reply.py`` -- which is
+where the Spooku Self signature is attached.
+"""
+import os
+import platform
 import time
+
 import psutil
 from telethon import events
-import platform
-import os
+
+from Com.core import brand
+from Com.core.reply import say
 
 __HELP__ = "!uptime → Report bot runtime uptime and system resource snapshot."
 __CATEGORY__ = "Utilities"
@@ -57,16 +67,23 @@ def setup(client, my_id):
             # System info
             sys_info = f"{platform.system()} {platform.release()} ({platform.machine()})"
 
-            msg = (f"⏱ **Bot Uptime:** `{uptime_str}`\n\n"
-                   f"💻 **System:** `{sys_info}`\n"
-                   f"🧮 **CPU:** `{cpu_usage}%` of {cpu_count} cores\n"
-                   f"📦 **Memory:** `{mem_usage}`\n"
-                   f"💾 **Swap:** `{swap_usage}`\n"
-                   f"📊 **Load Avg (1/5/15m):** `{load_avg}`\n"
-                   f"💽 **Disk:** `{disk_usage}`\n"
-                   f"⚙️ **Processes:** `{processes}`")
+            msg = (
+                "⏱ <b>Uptime</b>\n"
+                f"<code>{uptime_str}</code>\n\n"
+                f"💻 <b>System</b> · <code>{brand.esc(sys_info)}</code>\n"
+                f"🧮 <b>CPU</b> · {cpu_usage}% of {cpu_count} cores\n"
+                f"📦 <b>Memory</b> · <code>{mem_usage}</code>\n"
+                f"💾 <b>Swap</b> · <code>{swap_usage}</code>\n"
+                f"📊 <b>Load 1/5/15m</b> · <code>{load_avg}</code>\n"
+                f"💽 <b>Disk</b> · <code>{disk_usage}</code>\n"
+                f"⚙️ <b>Processes</b> · {processes}"
+            )
+            await say(event, msg, name="uptime", parse_mode="html")
 
-            await event.reply(msg)
-
-        except Exception as e:
-            await event.reply(f"❌ Error: {str(e)}")
+        except Exception as exc:  # noqa: BLE001 - a snapshot must not kill the client
+            await say(
+                event,
+                f"❌ <b>Uptime failed.</b> {brand.esc(exc)}",
+                name="uptime",
+                parse_mode="html",
+            )
