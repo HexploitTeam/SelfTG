@@ -1,34 +1,39 @@
-"""`!love` -- print one fixed message that lives in the source.
+"""`!love <name>` -- ten fixed lines for the person the owner names.
 
-Where the text lives
---------------------
-``LOVE_TEXT`` at the top of ``main.py`` (Configuration). Edit that string and
-restart the Repl. There is deliberately no runtime setter: the point is that the
-message is source the owner reviews in the repository, not state that can be
-changed from chat.
+The lines are source, not data: ``LOVE_LINES`` below is the whole feature.
+There is no API, no model, no cache, no per-chat state and no rate limiting,
+because there is no external call to protect -- the command formats a constant
+and sends one message.
 
 Delivery
 --------
-The command message is edited into the text, so ``!love`` leaves one message
-instead of a command plus a reply; the ``!chat`` family behaves the same way.
-``Com/core/reply.py`` falls back to a plain reply when the edit is refused (a
-message older than Telegram's 48h window, a deleted message) and never raises.
+One message with all ten lines, edited into the command message through
+``Com/core/reply.py`` (the same path `!chat` uses). Ten separate messages would
+be ten outgoing events for one command -- exactly the burst the flood gate in
+``Com/core/flood.py`` exists to slow -- and would read as spam. The formatted
+message is roughly 600 characters, far inside Telegram's 4096 limit.
+
+Name handling and formatting injection
+--------------------------------------
+The given name is pasted into the text, so it is checked against an English-name
+alphabet before use: ASCII letters, single spaces, hyphens and apostrophes,
+1-30 characters. ``*``, ``_``, backticks, angle brackets, backslashes, newlines,
+digits and emoji are rejected with a short message, so no entity or markdown
+syntax can enter the output. As a second layer the message is sent with no
+``parse_mode`` and no entities, so the characters that are allowed stay literal.
+
+Substitution uses ``str.replace("{name}", name)``, never ``str.format``: braces
+inside an edited line cannot raise ``KeyError`` or ``IndexError``.
 
 Who can use it
 --------------
-Owner-only, through the same ``from_users=my_id`` gate as every other command.
-The self-bot has no audience model, and answering strangers would mean a new
-outgoing message per person who typed the command.
-
-Empty state
------------
-A blank or whitespace-only ``LOVE_TEXT`` is not sent as an empty message: the
-command says the constant is unset and names the file. Oversized text is
-refused before sending, for the same reason -- a silent failure would look like
-a broken command.
+Owner-only, through the same ``from_users=my_id`` gate as every other self-bot
+command. A public handler would be a second, differently shaped registration
+that answers strangers in every chat, costs one outgoing message per stranger,
+and could drift from the single owner check used everywhere else.
 """
 import logging
-import sys
+import re
 
 from telethon import events
 
@@ -36,38 +41,62 @@ from Com.core.reply import say
 
 log = logging.getLogger("selftg.love")
 
-# Telegram rejects a message (and an edit) above 4096 characters
-MAX_TEXT = 4096
+# English given names: letters, single spaces, hyphens and apostrophes only
+NAME_RE = re.compile(r"^[A-Za-z]+(?:[ '-][A-Za-z]+)*$")
+MAX_NAME = 30
+
+# The ten lines `!love` prints; {name} is replaced with the given name.
+LOVE_LINES = (
+    "{name} is the first thought I want in the morning and the last one I keep at night.",
+    "I stopped looking for the right person the day {name} walked in.",
+    "There's no version of my future I want that doesn't have {name} in it.",
+    "My whole heart has one address, and it's wherever {name} is.",
+    "The best part of my day is the part I spend with {name}.",
+    "I didn't know what home felt like until {name} said my name.",
+    "A thousand times over, I would still choose {name}.",
+    "Everything in me goes quiet when {name} is near.",
+    "Give me the ordinary days, as long as they're with {name}.",
+    "Loving {name} is the easiest thing I have ever done.",
+)
 
 __HELP__ = (
-    "!love → Show the message written in `LOVE_TEXT` in main.py\n"
-    "Edit that constant and restart; it has no runtime setter."
+    "!love <name> → Ten short lines for that person\n"
+    "The lines are `LOVE_LINES` in Com/love.py; edit them there."
 )
 __CATEGORY__ = "Utilities"
 
 
 #------------------------------
-#Reading the constant
+#Name check
 #------------------------------
 
-def configured_text():
-    """Return ``main.py``'s LOVE_TEXT, stripped; "" when empty or unreachable.
+def normalize_name(raw):
+    """Trim and validate a given name; raises ValueError with a short reason."""
+    name = (raw or "").strip()
+    if not name:
+        raise ValueError("Usage: `!love <name>` — e.g. `!love Sarah`")
+    if len(name) > MAX_NAME:
+        raise ValueError(f"that name is longer than {MAX_NAME} characters")
+    if not NAME_RE.match(name):
+        raise ValueError(
+            "use letters, spaces, hyphens or apostrophes only "
+            "(e.g. `Anne-Marie`, `O'Brien`)"
+        )
+    return name
 
-    In production ``main.py`` is the ``__main__`` module, so the constant is
-    read from there and the entry point is not imported a second time. Under
-    ``tools/smoke.py`` and any other harness the fallback import finds the same
-    module without running ``main()`` (its entry guard is false).
-    """
-    entry = sys.modules.get("__main__")
-    text = getattr(entry, "LOVE_TEXT", None) if entry is not None else None
-    if not isinstance(text, str):
-        try:
-            import main
-        except Exception:  # noqa: BLE001 - report "unset", never crash the client
-            log.exception("love: main.py could not be imported")
-            return ""
-        text = getattr(main, "LOVE_TEXT", "")
-    return text.strip() if isinstance(text, str) else ""
+
+#------------------------------
+#Rendering
+#------------------------------
+
+def build_message(name):
+    """Substitute `name` into every configured line; "" when none are left."""
+    lines = []
+    for template in LOVE_LINES:
+        line = (template or "").replace("{name}", name).strip()
+        if line:
+            lines.append(line)
+    return "\n".join(lines)
 
 
 #------------------------------
@@ -82,23 +111,18 @@ def setup(client, my_id):
             return
 
         args = (event.pattern_match.group(1) or "").strip()
-        if args:
-            await _say(event, "❌ `!love` takes no arguments.")
+        try:
+            name = normalize_name(args)
+        except ValueError as exc:
+            await _say(event, f"❌ {exc}")
             return
 
-        text = configured_text()
+        text = build_message(name)
         if not text:
             await _say(
                 event,
-                "❌ `LOVE_TEXT` in main.py is empty. Write the message there and "
+                "❌ `LOVE_LINES` in Com/love.py is empty. Add the lines there and "
                 "restart the Repl.",
-            )
-            return
-        if len(text) > MAX_TEXT:
-            await _say(
-                event,
-                f"❌ `LOVE_TEXT` is {len(text)} characters; Telegram's limit is "
-                f"{MAX_TEXT}. Shorten it in main.py and restart.",
             )
             return
 
