@@ -18,10 +18,16 @@ constant. Reads and writes go through ``Com.core.storage``: every other key in
 that file is kept, and ``save_json`` renames a temporary file over the target,
 so a restart mid-write cannot leave a truncated store.
 
-Delivery
---------
+Delivery and layout
+-------------------
 One message, edited into the command message through ``Com/core/reply.py`` (the
 same path `!chat` uses). A single line is far inside Telegram's 4096 limit.
+
+The message is a script-font ``Love`` header over the line in italics. The
+header is ordinary Unicode letters from ``Com/core/fonts.py``, so it renders in
+every client without any markup; the italics are one ``<i>`` tag sent with
+``parse_mode="html"``. The name itself is never re-styled -- a name the owner
+set in one font must not come back in another.
 
 Name handling and formatting injection
 --------------------------------------
@@ -31,11 +37,12 @@ formatting characters, and none of the characters that would split or mark up
 the message -- ``*``, ``_``, backticks, angle brackets, backslashes, ``~``,
 ``|``, brackets, braces, ``#``, ``@`` and ``$``. Everything else is kept, so
 names in any language and any Unicode font work (``𝐒𝐚𝐫𝐚𝐡``, ``𝓢𝓪𝓻𝓪𝓱``,
-``Ｓａｒａｈ``). As a second layer the message is sent with no ``parse_mode`` and
-no entities, so the characters that are allowed stay literal.
+``Ｓａｒａｈ``).
 
-Substitution uses ``str.replace("{name}", name)``, never ``str.format``: braces
-inside an edited line cannot raise ``KeyError`` or ``IndexError``.
+Because the message is parsed as HTML, the name and the chosen line go through
+``html.escape`` before they are sent: a name can never open a tag, and an ``&``
+cannot start an entity. Substitution uses ``str.replace("{name}", name)``,
+never ``str.format``, so braces inside an edited line cannot raise.
 
 Who can use it
 --------------
@@ -44,12 +51,14 @@ command. A public handler would be a second, differently shaped registration
 that answers strangers in every chat, costs one outgoing message per stranger,
 and could drift from the single owner check used everywhere else.
 """
+import html
 import logging
 import random
 import unicodedata
 
 from telethon import events
 
+from Com.core.fonts import script
 from Com.core.reply import say
 from Com.core.storage import load_store, save_json
 
@@ -62,6 +71,9 @@ KEY = "lover_name"
 # Markup that would split the message; every other character is kept
 BLOCKED_CHARS = set("*_`<>\\~|[](){}#@$")
 MAX_NAME = 30
+
+# The header above every line; plain Unicode letters, no markup
+HEADER = f"♡ {script('Love')} ♡"
 
 # The twenty lines `!love` picks from; {name} is replaced with the stored name.
 LOVE_LINES = (
@@ -111,7 +123,7 @@ def normalize_name(raw):
     """Collapse spaces and validate a name; raises ValueError with a short reason."""
     name = " ".join((raw or "").split())
     if not name:
-        raise ValueError("Usage: `!love <name>` — e.g. `!love Sarah`")
+        raise ValueError("Usage: <code>!love NAME</code>, e.g. <code>!love Sarah</code>")
     if len(name) > MAX_NAME:
         raise ValueError(f"that name is longer than {MAX_NAME} characters")
     if _bad_char(name) is not None:
@@ -174,6 +186,14 @@ def pick_line(name):
     return random.choice(lines) if lines else ""
 
 
+def render_line(name):
+    """The message `!love` sends: script header, one italic line; "" if empty."""
+    line = pick_line(name)
+    if not line:
+        return ""
+    return f"{HEADER}\n<i>{html.escape(line)}</i>"
+
+
 #------------------------------
 #Command handler
 #------------------------------
@@ -193,15 +213,16 @@ def setup(client, my_id):
             if name is None:
                 await _say(
                     event,
-                    "❌ No name set yet. Use `!love <name>` first, e.g. `!love Sarah`.",
+                    "❌ <b>No name set yet.</b>\n"
+                    "Use <code>!love NAME</code> first, e.g. <code>!love Sarah</code>.",
                 )
                 return
-            text = pick_line(name)
+            text = render_line(name)
             if not text:
                 await _say(
                     event,
-                    "❌ `LOVE_LINES` in Com/love.py is empty. Add the lines there "
-                    "and restart the Repl.",
+                    "❌ <code>LOVE_LINES</code> in <code>Com/love.py</code> is "
+                    "empty. Add the lines there and restart the Repl.",
                 )
                 return
             await _say(event, text)
@@ -216,16 +237,16 @@ def setup(client, my_id):
         if not store_name(name):
             await _say(
                 event,
-                f"❌ Could not save the name: `{SETTINGS_FILE}` is unavailable. "
-                "Nothing was changed.",
+                "❌ <b>Could not save the name.</b> "
+                f"<code>{SETTINGS_FILE}</code> is unavailable; nothing was changed.",
             )
             return
         await _say(
             event,
-            f"✅ Lover set to `{name}`. `!love` now sends one of "
-            f"{len(LOVE_LINES)} lines.",
+            f"✅ <b>Lover set</b> to <i>{html.escape(name)}</i>\n"
+            f"<code>!love</code> now sends one of the {len(LOVE_LINES)} lines.",
         )
 
     async def _say(event, text):
         # Edit-then-reply is shared: see Com/core/reply.py.
-        await say(event, text, name="love")
+        await say(event, text, name="love", parse_mode="html")

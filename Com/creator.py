@@ -9,6 +9,15 @@ people in every chat, costs an outgoing message per stranger, and could drift
 from the owner gate used everywhere else. The owner runs it and copies the line
 wherever it is needed.
 
+Formatting
+----------
+The credit line is a script-font ``Made by`` from ``Com/core/fonts.py`` -- plain
+Unicode letters, so it renders without any markup -- followed by the handle as
+plain text, which keeps Telegram's mention detection working. Confirmations use
+``<b>``/``<i>``/``<code>`` and are sent with ``parse_mode="html"``; the handle
+is ``html.escape``-d first. The registry-rendered help is markdown, so it is
+sent without a parse mode.
+
 Storage
 -------
 The username lives in ``mode/settings.json`` -- the same store ``!remind tz``
@@ -35,12 +44,14 @@ Why no confirmation token for ``clear``
 token flow in ``Com/core/confirm.py`` exists for jobs that delete many entries;
 asking for a token here would be ceremony, not safety.
 """
+import html
 import logging
 import re
 
 from telethon import events
 
 import Com.core.registry as registry
+from Com.core.fonts import script
 from Com.core.reply import say
 from Com.core.storage import load_store, save_json
 
@@ -49,6 +60,10 @@ log = logging.getLogger("selftg.creator")
 SETTINGS_FILE = "mode/settings.json"
 SETTINGS_VERSION = 1
 KEY = "creator_username"
+
+# Script-font label, so the credit line reads as a signature; the @handle stays
+# plain text so Telegram still turns it into a mention
+CREDIT = f"✧ {script('Made by')}"
 
 # Telegram's username shape: 5-32 characters, a letter first, then letters,
 # digits or '_'. This is a format check only: the command never resolves the
@@ -79,11 +94,13 @@ def normalize_username(raw):
     if name.startswith("@"):
         name = name[1:].strip()
     if not name:
-        raise ValueError("give a username, e.g. `!creator set @yourname`")
+        raise ValueError(
+            "give a username, e.g. <code>!creator set @yourname</code>"
+        )
     if not USERNAME_RE.match(name):
         raise ValueError(
             "that is not a Telegram username (5-32 characters, a letter first, "
-            "then letters, digits or `_`)"
+            "then letters, digits or underscore)"
         )
     # Usernames are case-insensitive; one canonical form avoids @Foo vs @foo.
     return name.lower()
@@ -147,10 +164,11 @@ def setup(client, my_id):
                 if username is None:
                     await _say(
                         event,
-                        "❌ No creator set yet. Use `!creator set @yourname`.",
+                        "❌ <b>No creator set yet.</b>\n"
+                        "Use <code>!creator set @yourname</code>.",
                     )
                 else:
-                    await _say(event, f"Made by @{username}")
+                    await _say(event, f"{CREDIT} @{html.escape(username)}")
                 return
 
             if sub == "set":
@@ -162,37 +180,51 @@ def setup(client, my_id):
                 if not store_username(username):
                     await _say(
                         event,
-                        f"❌ Could not save the username: `{SETTINGS_FILE}` is "
-                        "unavailable. Nothing was changed.",
+                        "❌ <b>Could not save the username.</b> "
+                        f"<code>{SETTINGS_FILE}</code> is unavailable; nothing "
+                        "was changed.",
                     )
                     return
-                await _say(event, f"✅ Creator set to `@{username}`.")
+                await _say(
+                    event,
+                    f"✅ <b>Creator set</b> to <code>@{html.escape(username)}</code>\n"
+                    f"<i>Your credit line:</i>\n{CREDIT} @{html.escape(username)}",
+                )
                 return
 
             if sub == "clear":
                 if rest:
-                    await _say(event, "Usage: `!creator clear`")
+                    await _say(event, "Usage: <code>!creator clear</code>")
                     return
                 existing = load_username()
                 if existing is None:
-                    await _say(event, "ℹ️ No creator was set; nothing to clear.")
+                    await _say(
+                        event,
+                        "ℹ️ <b>No creator was set;</b> nothing to clear.",
+                    )
                     return
                 if not store_username(None):
                     await _say(
                         event,
-                        f"❌ Could not update `{SETTINGS_FILE}`; nothing was "
-                        "changed.",
+                        "❌ <b>Could not update the username.</b> "
+                        f"<code>{SETTINGS_FILE}</code> is unavailable; nothing "
+                        "was changed.",
                     )
                     return
-                await _say(event, f"🗑️ Creator `@{existing}` cleared.")
+                await _say(
+                    event,
+                    f"🗑️ <b>Creator cleared.</b> "
+                    f"@{html.escape(existing)} was removed.",
+                )
                 return
 
-            await _say(event, "📖 " + __HELP__)
+            # The rendered help is registry markdown, not HTML
+            await _say(event, "📖 " + __HELP__, parse_mode=None)
 
         except Exception:  # noqa: BLE001 - never take the client down
             log.exception("creator: command failed")
-            await _say(event, "❌ Creator command failed; see the Replit log.")
+            await _say(event, "❌ <b>Creator command failed;</b> see the Replit log.")
 
-    async def _say(event, text):
+    async def _say(event, text, parse_mode="html"):
         # Edit-then-reply is shared: see Com/core/reply.py.
-        await say(event, text, name="creator")
+        await say(event, text, name="creator", parse_mode=parse_mode)

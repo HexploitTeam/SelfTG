@@ -24,20 +24,30 @@ import logging
 log = logging.getLogger("selftg.reply")
 
 
-async def say(event, text, *, name="reply"):
+# "parse_mode not given": the client's own default, which is what every call
+# site had before styled output needed to opt in
+_UNSET = object()
+
+
+async def say(event, text, *, name="reply", parse_mode=_UNSET):
     """Show `text` on `event`, editing in place and falling back to a reply.
 
     `name` only labels the log line, so a failure in ``mode/`` logs points at the
     command that produced it. Returns True when either delivery worked.
+
+    `parse_mode` is opt-in: a command that sends styled text passes "html", and
+    every other command keeps the client's current behaviour untouched.
     """
+    options = {} if parse_mode is _UNSET else {"parse_mode": parse_mode}
+
     try:
-        await event.edit(text)
+        await event.edit(text, **options)
         return True
     except Exception:  # noqa: BLE001 - the edit is the fast path, not a promise
         pass
 
     try:
-        await event.reply(text)
+        await event.reply(text, **options)
         return True
     except Exception:  # noqa: BLE001 - there is nothing left to try
         log.info("%s: response could not be delivered", name)
