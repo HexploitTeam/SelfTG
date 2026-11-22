@@ -6,6 +6,8 @@ from collections import Counter
 
 from telethon import events
 import Com.core.tgsend as tgsend
+from Com.core import brand
+from Com.core.reply import say
 
 import Com.core.api as api
 
@@ -209,7 +211,8 @@ def setup(client, my_id):
         try:
             arg_str = event.pattern_match.group(1)
             if not arg_str and not event.is_reply:
-                await event.edit("📖 **Summarize Help**\n" + __HELP__)
+                await say(event, "📖 Summarize Help\n\n" + __HELP__,
+                          name="summarize")
                 return
 
             # Chat summarization
@@ -226,15 +229,21 @@ def setup(client, my_id):
                     except:
                         pass
 
-                await event.edit(f"⏳ Fetching last {limit} messages...")
+                await say(event,
+                          f"⏳ <b>Fetching</b> the last "
+                          f"<code>{limit}</code> messages…",
+                          name="summarize", parse_mode="html")
                 try:
                     messages = await client.get_messages(await tgsend.peer(event), limit=limit)
                 except Exception as e:
-                    await event.edit(f"❌ Failed to fetch messages: {e}")
+                    await say(event,
+                              f"❌ <b>Could not fetch messages</b> · "
+                              f"<code>{brand.esc(e)}</code>",
+                              name="summarize", parse_mode="html")
                     return
 
                 if not messages:
-                    await event.edit("📭 No messages found.")
+                    await say(event, "📭 No messages found.", name="summarize")
                     return
 
                 texts = []
@@ -242,28 +251,39 @@ def setup(client, my_id):
                     if m.text and not m.text.startswith("!"):
                         texts.append(m.text)
                 if not texts:
-                    await event.edit("📭 No text messages to summarize.")
+                    await say(event, "📭 No text messages to summarize.",
+                              name="summarize")
                     return
 
                 combined = " ".join(texts)
-                await event.edit("⏳ Summarizing...")
+                await say(event, "⏳ <b>Summarizing</b>…", name="summarize",
+                          parse_mode="html")
 
                 # Try Gemini first
                 summary = await summarize_with_gemini(combined)
                 if summary:
-                    output = f"📝 **Chat Summary** (last {len(messages)} messages)\n\n{summary}"
+                    output = (f"📝 <b>Chat Summary</b> "
+                              f"<i>(last {len(messages)} messages)</i>\n\n"
+                              f"<blockquote>{brand.esc(summary)}</blockquote>")
                 else:
                     summary = summarize_locally(combined, max_sentences=7, max_chars=2000)
-                    output = f"📝 **Chat Summary** (local, last {len(messages)} messages)\n\n{summary}"
+                    output = (f"📝 <b>Chat Summary</b> "
+                              f"<i>(local, last {len(messages)} messages)</i>\n\n"
+                              f"<blockquote>{brand.esc(summary)}</blockquote>")
 
                 if len(output) > 4000:
                     import io
-                    bio = io.BytesIO(output.encode("utf-8"))
+                    bio = io.BytesIO(brand.plain(output).encode("utf-8"))
                     bio.name = "summary.txt"
-                    await client.send_file(await tgsend.peer(event), bio, caption="📝 Chat Summary")
+                    await client.send_file(
+                        await tgsend.peer(event), bio,
+                        caption=brand.sign("📝 <b>Chat Summary</b>",
+                                           "summarize"),
+                        parse_mode="html")
                     await event.delete()
                 else:
-                    await event.edit(output)
+                    await say(event, output, name="summarize",
+                              parse_mode="html")
                 return
 
             # Text summarization
@@ -272,27 +292,38 @@ def setup(client, my_id):
                 reply = await event.get_reply_message()
                 text = reply.text or reply.raw_text
             if not text:
-                await event.edit("❌ No text provided. Use `!summarize <text>` or reply to a message.")
+                await say(event,
+                          "❌ No text provided. Use "
+                          "<code>!summarize &lt;text&gt;</code> or reply to a "
+                          "message.",
+                          name="summarize", parse_mode="html")
                 return
 
-            await event.edit("⏳ Summarizing...")
+            await say(event, "⏳ <b>Summarizing</b>…", name="summarize",
+                      parse_mode="html")
 
             # Try Gemini
             summary = await summarize_with_gemini(text)
             if summary:
-                output = f"📝 **Summary**\n\n{summary}"
+                output = (f"📝 <b>Summary</b>\n\n"
+                          f"<blockquote>{brand.esc(summary)}</blockquote>")
             else:
                 summary = summarize_locally(text, max_sentences=5, max_chars=2000)
-                output = f"📝 **Summary** (local)\n\n{summary}"
+                output = (f"📝 <b>Summary</b> <i>(local)</i>\n\n"
+                          f"<blockquote>{brand.esc(summary)}</blockquote>")
 
             if len(output) > 4000:
                 import io
-                bio = io.BytesIO(output.encode("utf-8"))
+                bio = io.BytesIO(brand.plain(output).encode("utf-8"))
                 bio.name = "summary.txt"
-                await client.send_file(await tgsend.peer(event), bio, caption="📝 Summary")
+                await client.send_file(
+                    await tgsend.peer(event), bio,
+                    caption=brand.sign("📝 <b>Summary</b>", "summarize"),
+                    parse_mode="html")
                 await event.delete()
             else:
-                await event.edit(output)
+                await say(event, output, name="summarize", parse_mode="html")
 
         except Exception as e:
-            await event.edit(f"❌ Error: {str(e)}")
+            await say(event, f"❌ <b>Error</b> · <code>{brand.esc(e)}</code>",
+                      name="summarize", parse_mode="html")

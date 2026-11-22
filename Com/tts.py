@@ -5,6 +5,8 @@ import shlex
 import tempfile
 from telethon import events
 import Com.core.tgsend as tgsend
+from Com.core import brand
+from Com.core.reply import say
 from gtts import gTTS
 from gtts.tts import gTTSError
 
@@ -77,7 +79,7 @@ def setup(client, my_id):
             options = {'lang': 'en', 'tld': 'com', 'voice_note': False}
 
             if not arg_str and not event.is_reply:
-                await event.edit("📖 **TTS Help**\n" + __HELP__)
+                await say(event, "📖 TTS Help\n\n" + __HELP__, name="tts")
                 return
 
             if arg_str:
@@ -88,13 +90,20 @@ def setup(client, my_id):
                 reply = await event.get_reply_message()
                 text = reply.text or reply.raw_text
             if not text:
-                await event.edit("❌ No text to convert. Provide text or reply to a message.")
+                await say(event,
+                          "❌ No text to convert. Provide text or reply to a "
+                          "message.",
+                          name="tts")
                 return
 
             lang = options['lang']
             tld = options['tld']
 
-            await event.edit(f"🔊 Generating TTS (lang: {lang}, tld: {tld})...")
+            await say(event,
+                      f"🔊 <b>Generating TTS</b> · lang "
+                      f"<code>{brand.esc(lang)}</code>, tld "
+                      f"<code>{brand.esc(tld)}</code>…",
+                      name="tts", parse_mode="html")
 
             # gTTS.save() blocks: worker thread plus a timeout
             try:
@@ -102,13 +111,21 @@ def setup(client, my_id):
                     asyncio.to_thread(_render_tts, text, lang, tld), timeout=45
                 )
             except asyncio.TimeoutError:
-                await event.edit("❌ TTS timed out (free Google endpoint is slow right now).")
+                await say(event,
+                          "❌ <b>TTS timed out</b> · the free Google "
+                          "endpoint is slow right now.",
+                          name="tts", parse_mode="html")
                 return
             except gTTSError as e:
-                await event.edit(f"❌ TTS error: {e} (the free endpoint may be rate limiting)")
+                await say(event,
+                          f"❌ <b>TTS error</b> · <code>{brand.esc(e)}</code> "
+                          "<i>(the free endpoint may be rate limiting)</i>",
+                          name="tts", parse_mode="html")
                 return
             except Exception as e:
-                await event.edit(f"❌ Error: {e}")
+                await say(event,
+                          f"❌ <b>Error</b> · <code>{brand.esc(e)}</code>",
+                          name="tts", parse_mode="html")
                 return
 
             if options['voice_note']:
@@ -119,18 +136,28 @@ def setup(client, my_id):
                         reply_to=event.id if event.is_reply else None
                     )
                 except Exception as e:
-                    await event.edit(f"❌ Failed to send voice note: {e}")
+                    await say(event,
+                              f"❌ <b>Voice note failed</b> · "
+                              f"<code>{brand.esc(e)}</code>",
+                              name="tts", parse_mode="html")
                     os.remove(tmp_path)
                     return
             else:
                 try:
-                    await client.send_file(await tgsend.peer(event),
+                    await client.send_file(
+                        await tgsend.peer(event),
                         tmp_path,
-                        caption=f"🔊 TTS ({lang})",
-                        reply_to=event.id if event.is_reply else None
+                        caption=brand.sign(
+                            f"🔊 <b>TTS</b> · <code>{brand.esc(lang)}</code>",
+                            "tts"),
+                        reply_to=event.id if event.is_reply else None,
+                        parse_mode="html"
                     )
                 except Exception as e:
-                    await event.edit(f"❌ Failed to send audio: {e}")
+                    await say(event,
+                              f"❌ <b>Audio send failed</b> · "
+                              f"<code>{brand.esc(e)}</code>",
+                              name="tts", parse_mode="html")
                     os.remove(tmp_path)
                     return
 
@@ -138,6 +165,8 @@ def setup(client, my_id):
             await event.delete()
 
         except ValueError as e:
-            await event.edit(f"❌ {e}")
+            await say(event, f"❌ {brand.esc(e)}", name="tts",
+                      parse_mode="html")
         except Exception as e:
-            await event.edit(f"❌ Error: {str(e)}")
+            await say(event, f"❌ <b>Error</b> · <code>{brand.esc(e)}</code>",
+                      name="tts", parse_mode="html")

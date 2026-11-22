@@ -8,6 +8,8 @@ import shutil
 from datetime import datetime
 from telethon import events
 import Com.core.tgsend as tgsend
+from Com.core import brand
+from Com.core.reply import say
 
 __HELP__ = (
     "!export → Export all settings (enemies, warns, mutes, lists, reactions, monitor) to a zip file.\n"
@@ -74,31 +76,40 @@ def extract_zip(zip_path):
 def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!export$"))
     async def export_cmd(event):
-        await event.edit("📦 Creating export archive...")
+        await say(event, "📦 Creating export archive…", name="export")
         zip_path = create_export_zip()
         await event.delete()
+        stamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         await client.send_file(await tgsend.peer(event),
             zip_path,
-            caption=f"📦 Settings export ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})"
+            caption=brand.sign(
+                f"📦 <b>Settings export</b> · <code>{stamp}</code>", "export"),
+            parse_mode="html"
         )
         os.remove(zip_path)
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!import$"))
     async def import_cmd(event):
         if not event.is_reply:
-            await event.edit("❌ Reply to a settings zip file with `!import`.")
+            await say(event,
+                      "❌ Reply to a settings zip file with "
+                      "<code>!import</code>.",
+                      name="import", parse_mode="html")
             return
 
         reply = await event.get_reply_message()
         if not reply.file:
-            await event.edit("❌ The replied message does not contain a file.")
+            await say(event, "❌ The replied message does not contain a file.",
+                      name="import")
             return
 
         if not reply.file.name or not reply.file.name.endswith(".zip"):
-            await event.edit("❌ The file must be a .zip archive.")
+            await say(event, "❌ The file must be a <code>.zip</code> archive.",
+                      name="import", parse_mode="html")
             return
 
-        await event.edit("📥 Downloading and importing settings...")
+        await say(event, "📥 Downloading and importing settings…",
+                  name="import")
 
         tmp = tempfile.NamedTemporaryFile(suffix=".zip", delete=False)
         zip_path = tmp.name
@@ -108,18 +119,22 @@ def setup(client, my_id):
 
         if not zipfile.is_zipfile(zip_path):
             os.remove(zip_path)
-            await event.edit("❌ The file is not a valid zip archive.")
+            await say(event, "❌ The file is not a valid zip archive.",
+                      name="import")
             return
 
         try:
             extract_zip(zip_path)
         except Exception as e:
             os.remove(zip_path)
-            await event.edit(f"❌ Failed to extract: {str(e)}")
+            await say(event,
+                      f"❌ Failed to extract · <code>{brand.esc(e)}</code>",
+                      name="import", parse_mode="html")
             return
 
         os.remove(zip_path)
 
         # Send success and restart
-        await event.edit("✅ Settings restored. Restarting...")
+        await say(event, "✅ <b>Settings restored</b> · restarting…",
+                  name="import", parse_mode="html")
         os.execv(sys.executable, [sys.executable] + sys.argv)

@@ -1,6 +1,8 @@
 """!imgwatermark: stamp text onto a replied image with Pillow."""
 from telethon import events
 import Com.core.tgsend as tgsend
+from Com.core import brand
+from Com.core.reply import say
 from PIL import Image, ImageDraw, ImageFont
 from io import BytesIO
 import os
@@ -22,18 +24,21 @@ def setup(client, my_id):
                 reply_msg = await event.get_reply_message()
                 text = reply_msg.text or reply_msg.message
             if not text:
-                await event.reply(
-                    "❌ Provide watermark text or reply to a message with text."
-                )
+                await say(event,
+                          "❌ Provide watermark text or reply to a message "
+                          "with text.",
+                          name="imgwatermark")
                 return
 
             if not event.is_reply:
-                await event.reply("❌ Reply to an image to add a watermark.")
+                await say(event, "❌ Reply to an image to add a watermark.",
+                          name="imgwatermark")
                 return
 
             reply_msg = await event.get_reply_message()
             if not reply_msg.media:
-                await event.reply("❌ Replied message has no media.")
+                await say(event, "❌ Replied message has no media.",
+                          name="imgwatermark")
                 return
 
             bio = BytesIO()
@@ -67,8 +72,12 @@ def setup(client, my_id):
 
             await client.send_file(await tgsend.peer(event),
                 out_bio,
-                caption=f"💧 Watermarked Image with text: {text}",
-                reply_to=event.id)
+                caption=brand.sign(
+                    f"💧 <b>Watermarked</b> · {brand.esc(text)}",
+                    "imgwatermark"),
+                reply_to=event.id, parse_mode="html")
 
         except Exception as e:
-            await event.reply(f"❌ Error: {str(e)}")
+            await say(event,
+                      f"❌ <b>Error</b> · <code>{brand.esc(e)}</code>",
+                      name="imgwatermark", parse_mode="html")

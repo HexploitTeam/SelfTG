@@ -25,6 +25,8 @@ from urllib.parse import quote
 from telethon import events
 
 import Com.core.api as api
+from Com.core import brand
+from Com.core.reply import say
 
 __HELP__ = (
     "!translate <lang_code> <text> → Translate text (e.g. !translate en سلام)\n"
@@ -89,25 +91,24 @@ def setup(client, my_id):
         try:
             translated, source, provider = await translate_text(text, lang)
         except api.APIError as exc:
-            await _reply(
-                event,
-                f"❌ Translation failed ({exc}).\n"
-                "Both endpoints are free and keyless, so this is throttling or an "
-                "outage — retry in a minute.",
-            )
+            await say(event,
+                      f"❌ <b>Translation failed</b> · "
+                      f"<i>{brand.esc(exc)}</i>\n"
+                      "Both endpoints are free and keyless, so this is "
+                      "throttling or an outage — retry in a minute.",
+                      name="translate", parse_mode="html")
             return
         except Exception as exc:  # noqa: BLE001
             log.exception("translate: unexpected failure")
-            await _reply(event, f"❌ {type(exc).__name__}: {exc}")
+            await say(event,
+                      f"❌ <b>{type(exc).__name__}</b> · "
+                      f"<code>{brand.esc(exc)}</code>",
+                      name="translate", parse_mode="html")
             return
 
-        await _reply(event, f"🌐 ({source} → {lang}, via {provider}):\n{translated}")
-
-    async def _reply(event, text):
-        try:
-            await event.reply(text)
-        except Exception:
-            try:
-                await event.edit(text)
-            except Exception:
-                log.info("translate: response could not be delivered")
+        await say(event,
+                  f"🌐 <b>Translation</b> · "
+                  f"<code>{brand.esc(source)} → {brand.esc(lang)}</code> "
+                  f"<i>via {brand.esc(provider)}</i>\n"
+                  f"<blockquote>{brand.esc(translated)}</blockquote>",
+                  name="translate", parse_mode="html")

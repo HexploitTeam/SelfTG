@@ -2,6 +2,8 @@
 import asyncio
 import shlex
 from telethon import events
+from Com.core import brand
+from Com.core.reply import say
 
 try:
     import speedtest
@@ -86,33 +88,37 @@ def get_server_list(limit=10):
     return all_servers[:limit]
 
 def format_server_list(servers):
-    lines = ["📡 **Closest Servers (by distance)**", ""]
+    lines = ["📡 <b>Closest Servers</b> <i>(by distance)</i>", ""]
     for i, server in enumerate(servers, 1):
         lines.append(
-            f"{i}. ID: `{server['id']}` – {server['name']} ({server['country']}) – "
-            f"{server.get('d', '?')} km, {server['host']}"
+            f"{i}. <code>{brand.esc(server['id'])}</code> · "
+            f"{brand.esc(server['name'])} ({brand.esc(server['country'])})\n"
+            f"   {brand.esc(server.get('d', '?'))} km · "
+            f"<code>{brand.esc(server['host'])}</code>"
         )
-    lines.append("\nUse `!speedtest --server <id>` to test a specific server.")
+    lines.append("\nUse <code>!speedtest --server &lt;id&gt;</code> "
+                 "to test a specific server.")
     return "\n".join(lines)
 
 def format_output(result, detailed=False):
-    lines = []
-    lines.append("📶 **Speed Test Results**")
-    lines.append(f"• Ping: `{result['ping']:.2f} ms`")
-    lines.append(f"• Download: `{result['download_mbps']:.2f} Mbps` (`{result['download_mb_s']:.2f} MB/s`)")
-    lines.append(f"• Upload: `{result['upload_mbps']:.2f} Mbps` (`{result['upload_mb_s']:.2f} MB/s`)")
+    lines = ["📶 <b>Speed Test Results</b>"]
+    lines.append(f"Ping · <code>{result['ping']:.2f} ms</code>")
+    lines.append(f"Download · <b>{result['download_mbps']:.2f} Mbps</b> "
+                 f"(<code>{result['download_mb_s']:.2f} MB/s</code>)")
+    lines.append(f"Upload · <b>{result['upload_mbps']:.2f} Mbps</b> "
+                 f"(<code>{result['upload_mb_s']:.2f} MB/s</code>)")
 
     if detailed:
         server = result["server"]
-        lines.append("\n🖥️ **Server Information:**")
-        lines.append(f"  • Name: {server['name']}")
-        lines.append(f"  • Sponsor: {server['sponsor']}")
-        lines.append(f"  • Country: {server['country']}")
-        lines.append(f"  • Host: {server['host']}")
-        lines.append(f"  • Distance: {server['distance']:.2f} km")
+        lines.append("\n🖥️ <b>Server</b>")
+        lines.append(f"Name · {brand.esc(server['name'])}")
+        lines.append(f"Sponsor · {brand.esc(server['sponsor'])}")
+        lines.append(f"Country · {brand.esc(server['country'])}")
+        lines.append(f"Host · <code>{brand.esc(server['host'])}</code>")
+        lines.append(f"Distance · <code>{server['distance']:.2f} km</code>")
         if server.get("lat") and server.get("lon"):
-            lines.append(f"  • Location: ({server['lat']}, {server['lon']})")
-        lines.append(f"  • Server ID: `{server['id']}`")
+            lines.append(f"Location · <code>{server['lat']}, {server['lon']}</code>")
+        lines.append(f"Server ID · <code>{brand.esc(server['id'])}</code>")
 
     return "\n".join(lines)
 
@@ -124,21 +130,30 @@ def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!speedtest(?:\s+(.*))?$"))
     async def speedtest_cmd(event):
         if not HAS_SPEEDTEST:
-            await event.edit("❌ Speedtest library not installed.\nInstall with: `pip install speedtest-cli`")
+            await say(event,
+                      "❌ <b>speedtest-cli is not installed</b>\n"
+                      "Install with · <code>pip install speedtest-cli</code>",
+                      name="speedtest", parse_mode="html")
             return
 
         arg_str = event.pattern_match.group(1)
         args = shlex.split(arg_str) if arg_str else []
 
         if args and args[0].lower() == "list":
-            msg = await event.edit("⏳ Fetching server list...")
+            msg = await event.edit(
+                brand.sign("⏳ <b>Fetching server list</b>…", "speedtest"),
+                parse_mode="html")
             try:
                 servers = get_server_list()
             except Exception as e:
-                await msg.edit(f"❌ Failed to get server list: {e}")
+                await msg.edit(
+                    brand.sign(
+                        f"❌ <b>Server list failed</b> · "
+                        f"<code>{brand.esc(e)}</code>", "speedtest"),
+                    parse_mode="html")
                 return
             output = format_server_list(servers)
-            await msg.edit(output)
+            await msg.edit(brand.sign(output, "speedtest"), parse_mode="html")
             return
 
         detailed = False
@@ -151,29 +166,43 @@ def setup(client, my_id):
                 i += 1
             elif arg == "--server":
                 if i + 1 >= len(args):
-                    await event.edit("❌ Missing server ID after `--server`")
+                    await say(event,
+                              "❌ Missing server ID after "
+                              "<code>--server</code>",
+                              name="speedtest", parse_mode="html")
                     return
                 try:
                     server_id = int(args[i+1])
                 except ValueError:
-                    await event.edit("❌ Server ID must be a number")
+                    await say(event, "❌ Server ID must be a number.",
+                              name="speedtest")
                     return
                 i += 2
             else:
-                await event.edit(f"❌ Unknown option: {arg}\nUse `!speedtest` for help.")
+                await say(event,
+                          f"❌ Unknown option · <code>{brand.esc(arg)}</code>\n"
+                          "Use <code>!speedtest</code> for help.",
+                          name="speedtest", parse_mode="html")
                 return
 
-        msg = await event.edit("⏳ Starting speed test... (may take 30–60 seconds)")
+        msg = await event.edit(
+            brand.sign("⏳ <b>Starting speed test</b>… "
+                       "<i>(may take 30–60 seconds)</i>", "speedtest"),
+            parse_mode="html")
 
         loop = asyncio.get_event_loop()
         try:
             result = await loop.run_in_executor(None, run_test, server_id, detailed)
         except ValueError as e:
-            await msg.edit(f"❌ {e}")
+            await msg.edit(brand.sign(f"❌ {brand.esc(e)}", "speedtest"),
+                           parse_mode="html")
             return
         except Exception as e:
-            await msg.edit(f"❌ Speed test failed: {e}")
+            await msg.edit(
+                brand.sign(f"❌ <b>Speed test failed</b> · "
+                           f"<code>{brand.esc(e)}</code>", "speedtest"),
+                parse_mode="html")
             return
 
         output = format_output(result, detailed)
-        await msg.edit(output)
+        await msg.edit(brand.sign(output, "speedtest"), parse_mode="html")

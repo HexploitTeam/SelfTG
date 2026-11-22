@@ -4,6 +4,8 @@ import sys
 import re
 from telethon import events
 import Com.core.tgsend as tgsend
+from Com.core import brand
+from Com.core.reply import say
 from pygments import highlight
 from pygments.lexers import get_lexer_by_name, guess_lexer, get_all_lexers
 from pygments.formatters import TerminalFormatter
@@ -81,15 +83,21 @@ def setup(client, my_id):
 
             if arg and arg == "--list":
                 langs = get_all_languages()
-                msg = "📚 **Supported languages:**\n" + ", ".join(langs[:100]) + "..."
+                msg = (f"📚 <b>Supported languages</b> "
+                       f"<i>({len(langs)} total)</i>\n"
+                       f"{brand.esc(', '.join(langs[:100]))}…")
                 if len(msg) > 4000:
                     import io
                     bio = io.BytesIO(("\n".join(langs)).encode("utf-8"))
                     bio.name = "languages.txt"
-                    await client.send_file(await tgsend.peer(event), bio, caption="📚 All supported languages")
+                    await client.send_file(
+                        await tgsend.peer(event), bio,
+                        caption=brand.sign("📚 <b>All supported languages</b>",
+                                           "syntax"),
+                        parse_mode="html")
                     await event.delete()
                 else:
-                    await event.edit(msg)
+                    await say(event, msg, name="syntax", parse_mode="html")
                 return
 
             lang = arg
@@ -99,12 +107,16 @@ def setup(client, my_id):
                 reply_msg = await event.get_reply_message()
                 code = reply_msg.text or reply_msg.raw_text
             else:
-                await event.edit("❌ Reply to a message containing code.\n"
-                                 "Usage: `!syntax [lang]` (reply to code)")
+                await say(event,
+                          "❌ Reply to a message containing code.\n"
+                          "Usage · <code>!syntax [lang]</code> "
+                          "<i>(reply to code)</i>",
+                          name="syntax", parse_mode="html")
                 return
 
             if not code:
-                await event.edit("❌ No code found in the replied message.")
+                await say(event, "❌ No code found in the replied message.",
+                          name="syntax")
                 return
 
             if not lang:
@@ -116,25 +128,41 @@ def setup(client, my_id):
                     langs = get_all_languages()
                     suggestions = [l for l in langs if lang.lower() in l]
                     if suggestions:
-                        await event.edit(f"❌ Language '{lang}' not recognized.\n"
-                                         f"Did you mean: {', '.join(suggestions[:5])}?\n"
-                                         f"Use `!syntax --list` for all languages.")
+                        await say(event,
+                                  f"❌ Language <code>{brand.esc(lang)}</code> "
+                                  "not recognized.\n"
+                                  f"Did you mean · "
+                                  f"<code>{', '.join(suggestions[:5])}</code>?\n"
+                                  "Use <code>!syntax --list</code> for all "
+                                  "languages.",
+                                  name="syntax", parse_mode="html")
                     else:
-                        await event.edit(f"❌ Language '{lang}' not recognized.\n"
-                                         "Use `!syntax --list` for all languages.")
+                        await say(event,
+                                  f"❌ Language <code>{brand.esc(lang)}</code> "
+                                  "not recognized.\n"
+                                  "Use <code>!syntax --list</code> for all "
+                                  "languages.",
+                                  name="syntax", parse_mode="html")
                     return
 
             code_with_lines = format_code_with_lines(code, lang)
-            output = f"📝 **Language:** {lang}\n```{lang}\n{code_with_lines}\n```"
+            output = (f"📝 <b>Language</b> · <code>{brand.esc(lang)}</code>\n"
+                      f"<code>{brand.esc(code_with_lines)}</code>")
 
             if len(output) > 4000:
                 import io
-                bio = io.BytesIO(output.encode("utf-8"))
+                bio = io.BytesIO(brand.plain(output).encode("utf-8"))
                 bio.name = f"syntax.{lang}.txt"
-                await client.send_file(await tgsend.peer(event), bio, caption=f"📝 Syntax: {lang}")
+                await client.send_file(
+                    await tgsend.peer(event), bio,
+                    caption=brand.sign(
+                        f"📝 <b>Syntax</b> · <code>{brand.esc(lang)}</code>",
+                        "syntax"),
+                    parse_mode="html")
                 await event.delete()
             else:
-                await event.edit(output)
+                await say(event, output, name="syntax", parse_mode="html")
 
         except Exception as e:
-            await event.edit(f"❌ Error: {str(e)}")
+            await say(event, f"❌ <b>Error</b> · <code>{brand.esc(e)}</code>",
+                      name="syntax", parse_mode="html")

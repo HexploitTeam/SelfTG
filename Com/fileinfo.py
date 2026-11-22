@@ -1,5 +1,7 @@
 """!fileinfo: size, MIME type and hashes for a replied document."""
 from telethon import events
+from Com.core import brand
+from Com.core.reply import say
 import hashlib
 import os
 import datetime
@@ -13,18 +15,21 @@ def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!fileinfo$"))
     async def fileinfo(event):
         if not event.is_reply:
-            await event.reply("❌ Reply to a file to get its info.")
+            await say(event, "❌ Reply to a file to get its info.",
+                      name="fileinfo")
             return
 
         reply_msg = await event.get_reply_message()
         if not reply_msg.media:
-            await event.reply("❌ The replied message doesn’t contain a file.")
+            await say(event, "❌ The replied message doesn’t contain a file.",
+                      name="fileinfo")
             return
 
         try:
             file = reply_msg.file
             if not file:
-                await event.reply("❌ No file information found.")
+                await say(event, "❌ No file information found.",
+                          name="fileinfo")
                 return
 
             path = await reply_msg.download_media(file="./temp_fileinfo")
@@ -46,40 +51,45 @@ def setup(client, my_id):
                     size /= 1024
                 return f"{size:.2f} PB"
 
-            msg = "📂 **File Information**\n\n"
+            msg = "📂 <b>File Information</b>"
             if file.name:
-                msg += f"**Name:** `{file.name}`\n"
+                msg += f"\nName · <code>{brand.esc(file.name)}</code>"
             if file.size:
-                msg += f"**Size:** {human_size(file.size)} ({file.size} bytes)\n"
+                msg += (f"\nSize · <b>{human_size(file.size)}</b> · "
+                        f"<code>{file.size} bytes</code>")
             if file.mime_type:
-                msg += f"**MIME Type:** `{file.mime_type}`\n"
+                msg += f"\nMIME type · <code>{brand.esc(file.mime_type)}</code>"
             if file.id:
-                msg += f"**File ID:** `{file.id}`\n"
+                msg += f"\nFile ID · <code>{brand.esc(file.id)}</code>"
             if reply_msg.date:
-                msg += f"**Upload Date:** `{reply_msg.date.strftime('%Y-%m-%d %H:%M:%S')}`\n"
+                stamp = reply_msg.date.strftime('%Y-%m-%d %H:%M:%S')
+                msg += f"\nUploaded · <code>{stamp}</code>"
 
             # Try to extract document-specific fields
             if hasattr(reply_msg.media, "document"):
                 doc = reply_msg.media.document
                 if hasattr(doc, "dc_id"):
-                    msg += f"**Data Center ID:** `{doc.dc_id}`\n"
+                    msg += f"\nData center · <code>{doc.dc_id}</code>"
                 if hasattr(doc, "mime_type"):
-                    msg += f"**MIME Type (Doc):** `{doc.mime_type}`\n"
+                    msg += (f"\nDocument MIME · "
+                            f"<code>{brand.esc(doc.mime_type)}</code>")
 
             # Media specific info
             if file.width and file.height:
-                msg += f"**Dimensions:** {file.width}×{file.height}\n"
+                msg += (f"\nDimensions · <b>{file.width}×{file.height}</b>")
             if file.duration:
                 duration = str(datetime.timedelta(seconds=file.duration))
-                msg += f"**Duration:** {duration}\n"
+                msg += f"\nDuration · <code>{duration}</code>"
 
             # Hashes
-            msg += "\n🔑 **Hashes:**\n"
-            msg += f"MD5: `{md5_hash}`\n"
-            msg += f"SHA1: `{sha1_hash}`\n"
-            msg += f"SHA256: `{sha256_hash}`\n"
+            msg += (f"\n\n🔑 <b>Hashes</b>\n"
+                    f"MD5 · <code>{md5_hash}</code>\n"
+                    f"SHA1 · <code>{sha1_hash}</code>\n"
+                    f"SHA256 · <code>{sha256_hash}</code>")
 
-            await event.reply(msg)
+            await say(event, msg, name="fileinfo", parse_mode="html")
 
         except Exception as e:
-            await event.reply(f"❌ Error: {str(e)}")
+            await say(event,
+                      f"❌ <b>Error</b> · <code>{brand.esc(e)}</code>",
+                      name="fileinfo", parse_mode="html")

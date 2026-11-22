@@ -7,6 +7,8 @@ import shutil
 from io import BytesIO
 from telethon import events
 import Com.core.tgsend as tgsend
+from Com.core import brand
+from Com.core.reply import say
 
 import Com.core.api as api
 
@@ -100,12 +102,12 @@ def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!ocr$"))
     async def ocr_handler(event):
         if not event.is_reply:
-            await event.reply("❌ Reply to an image to extract text.")
+            await say(event, "❌ Reply to an image to extract text.", name="ocr")
             return
 
         reply_msg = await event.get_reply_message()
         if not reply_msg.media:
-            await event.reply("❌ The replied message has no media.")
+            await say(event, "❌ The replied message has no media.", name="ocr")
             return
 
         try:
@@ -114,10 +116,13 @@ def setup(client, my_id):
             bio.seek(0)
             image_data = bio.read()
         except Exception as e:
-            await event.reply(f"❌ Failed to download image: {e}")
+            await say(event,
+                      f"❌ Failed to download image · <code>{brand.esc(e)}</code>",
+                      name="ocr", parse_mode="html")
             return
 
-        await event.edit("🔍 OCR in progress...")
+        await say(event, "🔍 <b>OCR in progress</b>…", name="ocr",
+                  parse_mode="html")
 
         text, error = await ocr_local(image_data)
         if text:
@@ -131,18 +136,25 @@ def setup(client, my_id):
         if text:
             await output_result(event, client, text)
             return
-        await event.edit(f"❌ OCR failed.\nLocal: {local_error}\nAPI: {error}")
+        await say(event,
+                  "❌ <b>OCR failed</b>\n"
+                  f"Local · <i>{brand.esc(local_error)}</i>\n"
+                  f"API · <i>{brand.esc(error)}</i>",
+                  name="ocr", parse_mode="html")
 
 async def output_result(event, client, text):
     if not text:
-        await event.edit("❌ No text detected.")
+        await say(event, "❌ No text detected.", name="ocr")
         return
-    output = f"📝 **Extracted Text:**\n\n{text}"
+    output = f"📝 <b>Extracted Text</b>\n\n<blockquote>{brand.esc(text)}</blockquote>"
     if len(output) > 4000:
         import io
         bio = io.BytesIO(text.encode('utf-8'))
         bio.name = "ocr_result.txt"
-        await client.send_file(await tgsend.peer(event), bio, caption="📝 OCR Result")
+        await client.send_file(
+            await tgsend.peer(event), bio,
+            caption=brand.sign("📝 <b>OCR Result</b>", "ocr"),
+            parse_mode="html")
         await event.delete()
     else:
-        await event.edit(output)
+        await say(event, output, name="ocr", parse_mode="html")

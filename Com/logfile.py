@@ -1,6 +1,8 @@
 """!logfile: send the exported transcript for one chat as a document."""
 
 from telethon import events
+from Com.core import brand
+from Com.core.reply import say
 import os
 
 __HELP__ = "!logfile <Channel|Group|PV> <NumberID> → Sends the log file of the specified chat"
@@ -30,11 +32,16 @@ def setup(client, my_id):
 
         folder = folder_map.get(log_type)
         if not folder:
-            await event.edit("❌ Invalid type. Use Channel, or Group.")
+            await say(event,
+                      "❌ Invalid type. Use <code>Channel</code>, or "
+                      "<code>Group</code>.",
+                      name="logfile", parse_mode="html")
             return
 
         if not os.path.exists(folder):
-            await event.edit(f"❌ Log folder missing: {folder}")
+            await say(event,
+                      f"❌ Log folder missing · <code>{brand.esc(folder)}</code>",
+                      name="logfile", parse_mode="html")
             return
 
         filename = f"{number_id}.txt"
@@ -45,21 +52,30 @@ def setup(client, my_id):
                 break
 
         if not file_path or not os.path.isfile(file_path):
-            await event.edit(
-                f"❌ Log file not found: {filename}\nCheck folder and ID.")
+            await say(event,
+                      f"❌ Log file not found · <code>{brand.esc(filename)}</code>\n"
+                      "Check the folder and the ID.",
+                      name="logfile", parse_mode="html")
             return
 
         # InputPeerSelf: no entity cache needed
         await client.send_file(await client.get_me(input_peer=True),
                                file_path,
-                               caption=f"Log file: {filename}")
-        await event.edit(f"✅ Log file sent: {filename}")
+                               caption=brand.sign(
+                                   f"📄 <b>Log file</b> · "
+                                   f"<code>{brand.esc(filename)}</code>",
+                                   "logfile"),
+                               parse_mode="html")
+        await say(event,
+                  f"✅ Log file sent · <code>{brand.esc(filename)}</code>",
+                  name="logfile", parse_mode="html")
 
     # Fallback for wrong usage
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!logfile\b"))
     async def logfile_fallback(event):
         parts = event.text.split()
         if len(parts) != 3 or parts[1] not in ["Channel", "PV", "Group"]:
-            await event.edit(
-                "❌ Wrong format. Correct usage: !logfile <Channel|Group> <NumberID>"
-            )
+            await say(event,
+                      "❌ Wrong format. Correct usage · "
+                      "<code>!logfile &lt;Channel|Group&gt; &lt;NumberID&gt;</code>",
+                      name="logfile", parse_mode="html")

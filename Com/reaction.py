@@ -15,6 +15,8 @@ from datetime import datetime
 from Com.core import flood
 from Com.core.storage import save_json
 import Com.core.tgsend as tgsend
+from Com.core import brand
+from Com.core.reply import say as _say
 
 __HELP__ = (
     "!react <Emoji/alias> (reply) → React to the replied message; no message is posted\n"
@@ -300,9 +302,11 @@ def resolve_reaction(argument):
 
     shown = text if len(text) <= 20 else text[:19] + "…"
     return None, (
-        f"❌ \"{shown}\" is not a single emoji, so it cannot be a reaction.\n"
-        "Reply to a message and send `!react 🔥` — or `!react` alone for 👍.\n"
-        "Send `!react list` for every reaction and alias."
+        f"❌ <b>{brand.esc(shown)}</b> is not a single emoji, so it cannot "
+        "be a reaction.\n"
+        "Reply to a message and send <code>!react 🔥</code> — or "
+        "<code>!react</code> alone for 👍.\n"
+        "Send <code>!react list</code> for every reaction and alias."
     )
 
 
@@ -311,7 +315,8 @@ def reaction_list_text():
     names = {}
     for alias, emoji in REACTION_ALIASES.items():
         names.setdefault(emoji, []).append(alias)
-    lines = [f"💡 {len(SUPPORTED_REACTIONS)} reactions — `!reaction <user> <one>`:"]
+    lines = [f"💡 <b>{len(SUPPORTED_REACTIONS)} reactions</b> · "
+             "<code>!reaction &lt;user&gt; &lt;one&gt;</code>"]
     for emoji in sorted(SUPPORTED_REACTIONS):
         words = sorted(names.get(emoji, ()))
         lines.append(f"{emoji} " + ", ".join(words) if words else emoji)
@@ -386,26 +391,35 @@ def setup(client, my_id):
     async def stop_reaction(event):
         argument = event.pattern_match.group(1)
         if not argument.isdigit():
-            await event.edit(
-                "❌ `!reaction stop` needs the task ID that was printed when the "
-                "task started: `!reaction stop 3`."
-            )
+            await say(event,
+                      "❌ <code>!reaction stop</code> needs the task ID that "
+                      "was printed when the task started: "
+                      "<code>!reaction stop 3</code>.",
+                      name="reaction")
             return
         task_id = int(argument)
         info = active_reactions.get(task_id)
         if not info:
-            await event.edit(f"❌ No active reaction task with ID {task_id}")
+            await say(event,
+                      f"❌ No active reaction task with ID "
+                      f"<code>{task_id}</code>",
+                      name="reaction", parse_mode="html")
             return
         handler = info.get("handler")
         if handler:
             try:
                 client.remove_event_handler(handler)
             except Exception as e:
-                await event.edit(f"❌ Failed to remove handler: {e}")
+                await say(event,
+                          f"❌ <b>Could not remove the handler</b> · "
+                          f"<code>{brand.esc(e)}</code>",
+                          name="reaction", parse_mode="html")
                 return
         del active_reactions[task_id]
         save_reactions()
-        await event.edit(f"✅ Stopped reaction task {task_id}")
+        await say(event,
+                  f"✅ <b>Stopped reaction task</b> · <code>{task_id}</code>",
+                  name="reaction", parse_mode="html")
 
     # `(?!stop\b)` keeps this off the stop handler
     @client.on(
@@ -423,17 +437,20 @@ def setup(client, my_id):
 
             # Shape only: Telegram decides
             if emoji not in SUPPORTED_REACTIONS and not _is_single_emoji(emoji):
-                await event.edit(
-                    f"❌ '{emoji}' is not a single emoji, so it cannot be a reaction.\n"
-                    "Send `!react list` for every reaction and alias."
-                )
+                await say(event,
+                          f"❌ <b>{brand.esc(emoji)}</b> is not a single emoji, "
+                          "so it cannot be a reaction.\n"
+                          "Send <code>!react list</code> for every reaction "
+                          "and alias.",
+                          name="reaction", parse_mode="html")
                 return
 
             if target is None or target.lower() == "reply":
                 if not event.is_reply:
-                    await event.edit(
-                        "❌ Must reply to a message when using 'reply' option."
-                    )
+                    await say(event,
+                              "❌ Must reply to a message when using the "
+                              "<code>reply</code> option.",
+                              name="reaction", parse_mode="html")
                     return
                 reply_msg = await event.get_reply_message()
                 user_id = reply_msg.sender_id
@@ -445,15 +462,19 @@ def setup(client, my_id):
                         user_entity = await client.get_entity(target)
                         user_id = user_entity.id
                     except Exception as e:
-                        await event.edit(f"❌ Could not find user: {e}")
+                        await say(event,
+                                  f"❌ <b>Could not find that user</b> · "
+                                  f"<code>{brand.esc(e)}</code>",
+                                  name="reaction", parse_mode="html")
                         return
 
             if len(active_reactions) >= MAX_TASKS:
-                await event.edit(
-                    f"❌ {MAX_TASKS} reaction tasks are already running. "
-                    "Stop one with `!reaction stop <ID>` first — each task is a "
-                    "handler on every incoming message."
-                )
+                await say(event,
+                          f"❌ <b>{MAX_TASKS} reaction tasks</b> are already "
+                          "running. Stop one with "
+                          "<code>!reaction stop &lt;ID&gt;</code> first — each "
+                          "task is a handler on every incoming message.",
+                          name="reaction", parse_mode="html")
                 return
 
             task_id = get_new_task_id()
@@ -465,26 +486,30 @@ def setup(client, my_id):
             }
             save_reactions()
 
-            await event.edit(
-                f"✅ Reaction task started for user `{user_id}` with emoji '`{emoji}`'. Task ID: `{task_id}`"
-            )
+            await say(event,
+                      "✅ <b>Reaction task started</b>\n"
+                      f"User · <code>{user_id}</code>\n"
+                      f"Emoji · <code>{brand.esc(emoji)}</code>\n"
+                      f"Task ID · <code>{task_id}</code>",
+                      name="reaction", parse_mode="html")
 
         except Exception as e:
-            await event.edit(f"❌ Failed to set reaction: {str(e)}")
+            await say(event,
+                      f"❌ <b>Could not set the reaction</b> · "
+                      f"<code>{brand.esc(e)}</code>",
+                      name="reaction", parse_mode="html")
 
     #------------------------------
     #One-off reaction to a replied message
     #------------------------------
 
     async def say(event, text):
-        """Answer in place, falling back to a reply when the edit is refused."""
-        try:
-            await event.edit(text)
-        except Exception:  # noqa: BLE001 - the message is the point, not the edit
-            try:
-                await event.reply(text)
-            except Exception:  # noqa: BLE001
-                log.info("react: response could not be delivered")
+        """Answer in place with the Spooku Self signature, else reply.
+
+        Every body in this module is HTML, so the shared helper only appends the
+        signature.
+        """
+        await _say(event, text, name="react", parse_mode="html")
 
     @client.on(events.NewMessage(from_users=my_id,
                                  pattern=r"^!react(?:\s+([\s\S]+))?$"))
@@ -505,8 +530,9 @@ def setup(client, my_id):
 
         if not event.is_reply:
             await say(event,
-                      "❌ `!react` needs a target: reply to the message you want "
-                      "to react to, then send `!react 🔥` (or `!react` for 👍).\n"
+                      "❌ <code>!react</code> needs a target: reply to the "
+                      "message you want to react to, then send "
+                      "<code>!react 🔥</code> (or <code>!react</code> for 👍).\n"
                       "Nothing is posted in the chat — the reaction is attached "
                       "to that message.")
             return
@@ -530,25 +556,31 @@ def setup(client, my_id):
             ))
         except errors.MessageNotModifiedError:
             if emoji is None:
-                await say(event, f"ℹ️ You have no reaction on message `{reply.id}`.")
+                await say(event,
+                          "ℹ️ You have no reaction on message "
+                          f"<code>{reply.id}</code>.")
             else:
-                await say(event, f"ℹ️ `{emoji}` is already your reaction on that message.")
+                await say(event,
+                          f"ℹ️ <code>{brand.esc(emoji)}</code> is already "
+                          "your reaction on that message.")
             return
         except errors.ReactionEmptyError:
-            await say(event, "❌ Telegram reported an empty reaction; that should "
-                             "only happen on removal. Try `!react 🔥` instead.")
+            await say(event, "❌ Telegram reported an empty reaction; that "
+                             "should only happen on removal. Try "
+                             "<code>!react 🔥</code> instead.")
             return
         except errors.ReactionInvalidError:
             await say(event,
-                      f"❌ Telegram refused `{emoji}` here. Either that emoji is "
-                      "not in its reaction set, or this chat restricts reactions "
-                      "to a fixed list. 👍 and 🔥 are accepted everywhere that "
-                      "allows reactions.")
+                      f"❌ Telegram refused <code>{brand.esc(emoji)}</code> "
+                      "here. Either that emoji is not in its reaction set, or "
+                      "this chat restricts reactions to a fixed list. 👍 and 🔥 "
+                      "are accepted everywhere that allows reactions.")
             return
         except errors.ReactionsTooManyError:
             await say(event,
-                      f"❌ Message `{reply.id}` already has the maximum number of "
-                      "different reactions, so a new emoji cannot be added. "
+                      "❌ Message "
+                      f"<code>{reply.id}</code> already has the maximum number "
+                      "of different reactions, so a new emoji cannot be added. "
                       "Replace an existing one instead of adding a new type.")
             return
         except errors.PremiumAccountRequiredError:
@@ -560,8 +592,9 @@ def setup(client, my_id):
                              "custom (Premium) emoji are not supported here.")
             return
         except (errors.MessageIdInvalidError, errors.MsgIdInvalidError):
-            await say(event, f"❌ Message `{reply.id}` no longer exists in this "
-                             "chat, so it cannot be reacted to.")
+            await say(event, "❌ Message "
+                             f"<code>{reply.id}</code> no longer exists in "
+                             "this chat, so it cannot be reacted to.")
             return
         except errors.ChatWriteForbiddenError:
             await say(event, "❌ The account cannot write in this chat, so it "
@@ -581,13 +614,15 @@ def setup(client, my_id):
                              "Send any message here and try again.")
             return
         except flood.FLOOD_ERRORS as exc:
-            await say(event, f"⏳ Telegram rate-limited reactions: wait {exc.seconds}s "
-                             "and try again. Nothing was retried automatically.")
+            await say(event, "⏳ <b>Telegram rate-limited reactions</b> · "
+                             f"wait <code>{exc.seconds}s</code> and try again. "
+                             "Nothing was retried automatically.")
             return
         except errors.RPCError as exc:
             log.warning("react: RPC failure %s", type(exc).__name__)
-            await say(event, f"❌ Telegram rejected the reaction "
-                             f"({type(exc).__name__}); see the Replit log.")
+            await say(event, "❌ Telegram rejected the reaction · "
+                             f"<code>{type(exc).__name__}</code>; see the "
+                             "Replit log.")
             return
         except Exception:  # noqa: BLE001 - a reaction must never kill the client
             log.exception("react: unexpected failure")

@@ -4,6 +4,8 @@ import sys
 import random
 from telethon import events
 import Com.core.tgsend as tgsend
+from Com.core import brand
+from Com.core.reply import say
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from ML.smart_markov import SmartMarkov
@@ -53,14 +55,19 @@ def setup(client, my_id):
                 if limit > 10000: limit = 10000
             except:
                 pass
-        await event.edit(f"🧠 Training on last {limit} messages... (instant)")
+        await say(event,
+                  f"🧠 <b>Training</b> on the last <code>{limit}</code> messages "
+                  "(instant).",
+                  name="aiml", parse_mode="html")
 
         texts, err = await fetch_messages(client, await tgsend.peer(event), limit)
         if err:
-            await event.edit(f"❌ Failed to fetch messages: {err}")
+            await say(event,
+                      f"❌ Failed to fetch messages · <code>{brand.esc(err)}</code>",
+                      name="aiml", parse_mode="html")
             return
         if not texts:
-            await event.edit("❌ No text messages found.")
+            await say(event, "❌ No text messages found.", name="aiml")
             return
 
         mc = SmartMarkov(order=4)
@@ -68,17 +75,21 @@ def setup(client, my_id):
         mc.save(get_model_path(event.chat_id))
 
         stats = mc.get_stats()
-        await event.edit(f"✅ Training complete!\n"
-                         f"Total transitions: {stats['total_transitions']}\n"
-                         f"Unique states: {stats['unique_states']}\n"
-                         f"Total words: {stats['total_words']}")
+        await say(event,
+                  "✅ <b>Training complete</b>\n"
+                  f"Transitions · <code>{stats['total_transitions']}</code>\n"
+                  f"Unique states · <code>{stats['unique_states']}</code>\n"
+                  f"Total words · <code>{stats['total_words']}</code>",
+                  name="aiml", parse_mode="html")
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!aiml generate\s+(.+)$"))
     async def aiml_generate(event):
         chat_id = event.chat_id
         model_path = get_model_path(chat_id)
         if not os.path.exists(model_path):
-            await event.edit("❌ No model trained yet. Use `!aiml train` first.")
+            await say(event,
+                      "❌ No model trained yet. Use <code>!aiml train</code> first.",
+                      name="aiml", parse_mode="html")
             return
 
         seed = event.pattern_match.group(1).strip()
@@ -88,7 +99,10 @@ def setup(client, my_id):
         if not generated:
             generated = "I don't have enough data to continue that thought."
 
-        await client.send_message(await tgsend.peer(event), f"🧠 **AI generated:**\n{generated}", reply_to=event.id)
+        await client.send_message(
+            await tgsend.peer(event),
+            brand.sign(f"🧠 <b>AI generated</b>\n{brand.esc(generated)}", "aiml"),
+            reply_to=event.id, parse_mode="html")
         await event.delete()
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!aiml status$"))
@@ -96,15 +110,17 @@ def setup(client, my_id):
         chat_id = event.chat_id
         model_path = get_model_path(chat_id)
         if not os.path.exists(model_path):
-            await event.edit("❌ No model trained.")
+            await say(event, "❌ No model trained.", name="aiml")
             return
         mc = SmartMarkov.load(model_path)
         stats = mc.get_stats()
-        await event.edit(f"📊 **Model Stats**\n"
-                         f"Order: 4\n"
-                         f"Total transitions: {stats['total_transitions']}\n"
-                         f"Unique states: {stats['unique_states']}\n"
-                         f"Total words: {stats['total_words']}")
+        await say(event,
+                  "📊 <b>Model Stats</b>\n"
+                  "Order · <code>4</code>\n"
+                  f"Transitions · <code>{stats['total_transitions']}</code>\n"
+                  f"Unique states · <code>{stats['unique_states']}</code>\n"
+                  f"Total words · <code>{stats['total_words']}</code>",
+                  name="aiml", parse_mode="html")
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!aiml reset$"))
     async def aiml_reset(event):
@@ -112,7 +128,8 @@ def setup(client, my_id):
         model_path = get_model_path(chat_id)
         if os.path.exists(model_path):
             os.remove(model_path)
-            await event.edit("✅ Model reset for this chat.")
+            await say(event, "✅ <b>Model reset</b> for this chat.",
+                      name="aiml", parse_mode="html")
         else:
-            await event.edit("❌ No model to reset.")
+            await say(event, "❌ No model to reset.", name="aiml")
         await event.delete()

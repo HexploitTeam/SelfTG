@@ -4,6 +4,8 @@ import re
 from telethon import events
 from telethon.tl.types import KeyboardButtonCallback, KeyboardButtonUrl
 import Com.core.tgsend as tgsend
+from Com.core import brand
+from Com.core.reply import say
 from Com.bot import client as bot_module
 
 __HELP__ = (
@@ -64,7 +66,7 @@ def setup(client, my_id):
         try:
             arg_str = event.pattern_match.group(1)
             if not arg_str:
-                await event.edit("📖 **Inline Help**\n" + __HELP__)
+                await say(event, "📖 Inline Help\n\n" + __HELP__, name="inline")
                 return
 
             # Quoted text wins, else split on |
@@ -104,10 +106,15 @@ def setup(client, my_id):
 
             # No BOT_TOKEN: no buttons
             if telethon_rows:
-                await event.edit("⚠️ Bot not available. Sending as plain text without buttons.")
+                await say(event,
+                          "⚠️ <b>Bot not available</b> · sending as plain text "
+                          "without buttons.",
+                          name="inline", parse_mode="html")
                 await asyncio.sleep(1)
             await client.send_message(await tgsend.peer(event), text, reply_to=reply_to)
             await event.delete()
 
         except Exception as e:
-            await event.edit(f"❌ Error: {e}")
+            await say(event,
+                      f"❌ <b>Error</b> · <code>{brand.esc(e)}</code>",
+                      name="inline", parse_mode="html")

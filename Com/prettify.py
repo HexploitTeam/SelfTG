@@ -6,6 +6,8 @@ import textwrap
 from xml.dom import minidom
 from telethon import events
 import Com.core.tgsend as tgsend
+from Com.core import brand
+from Com.core.reply import say
 
 try:
     from bs4 import BeautifulSoup
@@ -140,7 +142,8 @@ def setup(client, my_id):
         try:
             arg_str = event.pattern_match.group(1)
             if not arg_str and not event.is_reply:
-                await event.edit("📖 **Prettify Help**\n" + __HELP__)
+                await say(event, "📖 Prettify Help\n\n" + __HELP__,
+                          name="prettify")
                 return
 
             text = None
@@ -156,7 +159,10 @@ def setup(client, my_id):
                 reply = await event.get_reply_message()
                 text = reply.text or reply.raw_text
             if not text:
-                await event.edit("❌ No text provided. Reply to a message or pass text in the command.")
+                await say(event,
+                          "❌ No text provided. Reply to a message or pass "
+                          "text in the command.",
+                          name="prettify")
                 return
 
             if flags['type'] is None:
@@ -175,20 +181,28 @@ def setup(client, my_id):
                 output = prettify_text(text, flags['width'])
 
             if output.startswith("❌"):
-                await event.edit(output)
+                await say(event, output, name="prettify")
                 return
 
-            final = f"**{detected.upper()}** prettified:\n```\n{output}\n```"
+            final = (f"<b>{detected.upper()}</b> prettified\n"
+                     f"<code>{brand.esc(output)}</code>")
             if len(final) > 4000:
                 import io
                 bio = io.BytesIO(output.encode("utf-8"))
                 bio.name = f"prettified.{detected}.txt"
-                await client.send_file(await tgsend.peer(event), bio, caption=f"📝 Prettified ({detected})")
+                await client.send_file(
+                    await tgsend.peer(event), bio,
+                    caption=brand.sign(
+                        f"📝 <b>Prettified</b> · <code>{detected}</code>",
+                        "prettify"),
+                    parse_mode="html")
                 await event.delete()
             else:
-                await event.edit(final)
+                await say(event, final, name="prettify", parse_mode="html")
 
         except ValueError as e:
-            await event.edit(f"❌ {e}")
+            await say(event, f"❌ {brand.esc(e)}", name="prettify",
+                      parse_mode="html")
         except Exception as e:
-            await event.edit(f"❌ Error: {str(e)}")
+            await say(event, f"❌ <b>Error</b> · <code>{brand.esc(e)}</code>",
+                      name="prettify", parse_mode="html")

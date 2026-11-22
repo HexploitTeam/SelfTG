@@ -24,6 +24,8 @@ from datetime import datetime
 from telethon import errors, events
 
 import Com.core.tgsend as tgsend
+from Com.core import brand
+from Com.core.reply import say
 from Com.core import flood
 from Com.core.safe_eval import evaluate as safe_evaluate
 from Com.core.storage import ensure_json_file, load_json, save_json
@@ -115,13 +117,16 @@ def setup(client, my_id):
             AUTO_SOLVE = save_enabled(state == "on")
         except Exception:  # noqa: BLE001 - never leave the toggle lying
             log.exception("cauto: could not persist the toggle")
-            await event.edit("❌ Could not save the setting (storage error).")
+            await say(event, "❌ Could not save the setting (storage error).",
+                      name="cauto")
             return
 
         await event.edit(
-            "✅ Auto Challenge Solver: ON" if AUTO_SOLVE
-            else "❌ Auto Challenge Solver: OFF"
-        )
+            brand.sign(
+                "✅ <b>Auto Challenge Solver</b> · <code>ON</code>" if AUTO_SOLVE
+                else "❌ <b>Auto Challenge Solver</b> · <code>OFF</code>",
+                "cauto"),
+            parse_mode="html")
 
     @client.on(events.NewMessage())
     async def auto_solver(event):

@@ -1,5 +1,7 @@
 """!reverseimg: upload a replied image to catbox and link a reverse image search."""
 from telethon import events
+from Com.core import brand
+from Com.core.reply import say
 import aiohttp
 import os
 
@@ -33,28 +35,33 @@ def setup(client, my_id):
             service = (event.pattern_match.group(1) or "google").lower()
 
             if not event.is_reply:
-                await event.reply(
-                    "❌ Reply to an image or sticker to use reverse search.")
+                await say(event,
+                          "❌ Reply to an image or sticker to use reverse "
+                          "search.",
+                          name="reverseimg")
                 return
 
             reply_msg = await event.get_reply_message()
             if not reply_msg.media:
-                await event.reply("❌ That’s not an image or file.")
+                await say(event, "❌ That’s not an image or file.",
+                          name="reverseimg")
                 return
 
             file_path = await client.download_media(reply_msg,
                                                     file="temp_reverseimg")
             if not file_path:
-                await event.reply("❌ Failed to download media.")
+                await say(event, "❌ Failed to download media.",
+                          name="reverseimg")
                 return
 
             url = await upload_to_catbox(file_path)
             os.remove(file_path)
 
             if not url:
-                await event.reply(
-                    "❌ Failed to upload image to hosting service.\n"
-                    "Try a smaller image or use a different service.")
+                await say(event,
+                          "❌ <b>Upload failed</b> · the hosting service "
+                          "refused the image.\nTry a smaller image.",
+                          name="reverseimg", parse_mode="html")
                 return
 
             if service == "google":
@@ -67,13 +74,18 @@ def setup(client, my_id):
                 link = f"https://tineye.com/search?url={url}"
                 service_name = "TinEye"
             else:
-                await event.reply(
-                    "❌ Invalid service. Use google / yandex / tineye.")
+                await say(event,
+                          "❌ Invalid service. Use <code>google</code> / "
+                          "<code>yandex</code> / <code>tineye</code>.",
+                          name="reverseimg", parse_mode="html")
                 return
 
-            await event.reply(
-                f"🔍 Reverse Image Search ({service_name}):\n{link}")
+            await say(event,
+                      f"🔍 <b>Reverse image search</b> · {brand.esc(service_name)}\n"
+                      f"<code>{brand.esc(link)}</code>",
+                      name="reverseimg", parse_mode="html")
             await event.delete()  # remove command message
 
         except Exception as e:
-            await event.reply(f"❌ Error: {str(e)}")
+            await say(event, f"❌ <b>Error</b> · <code>{brand.esc(e)}</code>",
+                      name="reverseimg", parse_mode="html")

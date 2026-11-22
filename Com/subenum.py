@@ -1,6 +1,8 @@
 """!subenum: certificate-transparency subdomain enumeration with DNS checks."""
 from telethon import events
 import Com.core.tgsend as tgsend
+from Com.core import brand
+from Com.core.reply import say
 import asyncio
 import json
 import logging
@@ -82,8 +84,10 @@ def setup(client, my_id):
                 arg = (reply_msg.text or "").strip()
 
             if not arg:
-                await event.reply(
-                    "❌ Provide a domain or reply to a message containing one.")
+                await say(event,
+                          "❌ Provide a domain or reply to a message containing "
+                          "one.",
+                          name="subenum")
                 return
 
             await event.delete()
@@ -91,7 +95,10 @@ def setup(client, my_id):
             if arg.startswith("del"):
                 parts = arg.split()
                 if len(parts) != 2 or not parts[1].isdigit():
-                    await event.reply("❌ Usage: !subenum del <ID>")
+                    await say(event,
+                              "❌ Usage · "
+                              "<code>!subenum del &lt;ID&gt;</code>",
+                              name="subenum", parse_mode="html")
                     return
                 del_id = parts[1]
                 active_data = load_active()
@@ -100,10 +107,15 @@ def setup(client, my_id):
                     os.remove(entry["file"])
                     del active_data[del_id]
                     save_active(active_data)
-                    await event.reply(
-                        f"✅ Deleted subdomain file with ID {del_id}")
+                    await say(event,
+                              f"✅ <b>Deleted</b> · ID "
+                              f"<code>{brand.esc(del_id)}</code>",
+                              name="subenum", parse_mode="html")
                 else:
-                    await event.reply(f"❌ File with ID {del_id} not found")
+                    await say(event,
+                              f"❌ No file with ID "
+                              f"<code>{brand.esc(del_id)}</code>",
+                              name="subenum", parse_mode="html")
                 return
 
             domain = arg
@@ -112,22 +124,33 @@ def setup(client, my_id):
             for task_id, info in active_data.items():
                 if info.get("domain") == domain and os.path.exists(
                         info.get("file", "")):
-                    await event.reply(
-                        f"📄 Already scanned **{domain}**, sending saved file..."
-                    )
-                    await client.send_file(await tgsend.peer(event),
-                        info["file"],
-                        caption=f"Subdomains for **{domain}** (ID: {task_id})")
+                    await say(event,
+                              f"📄 <b>Already scanned</b> · "
+                              f"<code>{brand.esc(domain)}</code>, sending the "
+                              "saved file…",
+                              name="subenum", parse_mode="html")
+                    await client.send_file(
+                        await tgsend.peer(event), info["file"],
+                        caption=brand.sign(
+                            f"📄 <b>Subdomains</b> · "
+                            f"<code>{brand.esc(domain)}</code> · ID "
+                            f"<code>{task_id}</code>",
+                            "subenum"),
+                        parse_mode="html")
                     return
 
-            await event.reply(f"🔍 Scanning subdomains for **{domain}**...")
+            await say(event,
+                      f"🔍 <b>Scanning subdomains</b> · "
+                      f"<code>{brand.esc(domain)}</code>…",
+                      name="subenum", parse_mode="html")
 
             subdomains = await fetch_ct_subdomains(domain)
             if subdomains is None:
-                await event.reply(
-                    "❌ crt.sh (free certificate-transparency API) is unavailable or "
-                    "rate limiting right now. Try again in a minute."
-                )
+                await say(event,
+                          "❌ <b>crt.sh unavailable</b> — the free "
+                          "certificate-transparency API is down or rate "
+                          "limiting. Try again in a minute.",
+                          name="subenum", parse_mode="html")
                 return
             active_subs = []
             for sub in subdomains:
@@ -137,8 +160,10 @@ def setup(client, my_id):
                     active_subs.append(f"{sub} → {ip}")
 
             if not active_subs:
-                await event.reply(
-                    f"❌ No active subdomains found for **{domain}**")
+                await say(event,
+                          f"❌ No active subdomains found for "
+                          f"<code>{brand.esc(domain)}</code>",
+                          name="subenum", parse_mode="html")
                 return
 
             now = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -154,10 +179,17 @@ def setup(client, my_id):
             }
             save_active(active_data)
 
-            await client.send_file(await tgsend.peer(event),
+            await client.send_file(
+                await tgsend.peer(event),
                 file_path,
-                caption=f"✅ Active subdomains for **{domain}** (ID: {task_id})"
+                caption=brand.sign(
+                    f"✅ <b>Active subdomains</b> · "
+                    f"<code>{brand.esc(domain)}</code> · ID "
+                    f"<code>{task_id}</code>",
+                    "subenum"),
+                parse_mode="html"
             )
 
         except Exception as e:
-            await event.reply(f"❌ Error: {str(e)}")
+            await say(event, f"❌ <b>Error</b> · <code>{brand.esc(e)}</code>",
+                      name="subenum", parse_mode="html")

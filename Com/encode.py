@@ -6,6 +6,8 @@ import html
 import re
 from telethon import events
 import Com.core.tgsend as tgsend
+from Com.core import brand
+from Com.core.reply import say
 
 __HELP__ = (
     "!encode <method> <text> → Encode text using a specific method.\n"
@@ -245,45 +247,52 @@ def setup(client, my_id):
             text = event.pattern_match.group(2)
 
             if method == "all":
-                output = "📦 **All Encodings**\n"
-                output += f"🔹 Input: `{text}`\n\n"
+                output = "📦 <b>All Encodings</b>\n"
+                output += f"Input · <code>{brand.esc(text)}</code>\n"
                 for name, func in sorted(ENCODERS.items()):
+                    label = f"{EMOJIS.get(name, '🔹')} <b>{name.upper()}</b>"
                     try:
                         encoded = func(text)
                         if encoded.startswith("⚠️"):
-                            output += f"{EMOJIS.get(name, '🔹')} **{name.upper()}:** `{encoded}`\n"
+                            output += f"\n{label} · <i>{brand.esc(encoded)}</i>"
                         else:
-                            output += f"{EMOJIS.get(name, '🔹')} **{name.upper()}:** ```{encoded}```\n"
+                            output += f"\n{label} · <code>{brand.esc(encoded)}</code>"
                     except Exception as e:
-                        output += f"❌ **{name.upper()}:** Error: {e}\n\n"
+                        output += f"\n❌ <b>{name.upper()}</b> · <i>{brand.esc(e)}</i>"
                 if len(output) > 4000:
                     import io
-                    bio = io.BytesIO(output.encode('utf-8'))
+                    bio = io.BytesIO(brand.plain(output).encode('utf-8'))
                     bio.name = "encodings.txt"
-                    await client.send_file(await tgsend.peer(event), bio, caption="📦 All Encodings")
+                    await client.send_file(
+                        await tgsend.peer(event), bio,
+                        caption=brand.sign("📦 <b>All Encodings</b>", "encode"),
+                        parse_mode="html")
                     await event.delete()
                 else:
-                    await event.edit(output)
+                    await say(event, output, name="encode", parse_mode="html")
                 return
 
             if method not in ENCODERS:
-                await event.edit(
-                    f"❌ Unknown method: `{method}`\n"
-                    f"Available: `{', '.join(sorted(ENCODERS.keys()))}`"
-                )
+                await say(event,
+                          f"❌ Unknown method · <code>{brand.esc(method)}</code>\n"
+                          "Available · "
+                          f"<code>{', '.join(sorted(ENCODERS.keys()))}</code>",
+                          name="encode", parse_mode="html")
                 return
 
             encoded = ENCODERS[method](text)
             if encoded.startswith("⚠️"):
-                await event.edit(f"❌ {encoded}")
+                await say(event, f"❌ {brand.esc(encoded)}",
+                          name="encode", parse_mode="html")
                 return
 
             emoji = EMOJIS.get(method, "🔐")
-            await event.edit(
-                f"{emoji} **Encoded with `{method.upper()}`**\n"
-                f"🔹 Input: `{text}`\n\n"
-                f"```\n{encoded}\n```"
-            )
+            await say(event,
+                      f"{emoji} <b>Encoded with {method.upper()}</b>\n"
+                      f"Input · <code>{brand.esc(text)}</code>\n\n"
+                      f"<code>{brand.esc(encoded)}</code>",
+                      name="encode", parse_mode="html")
 
         except Exception as e:
-            await event.edit(f"❌ Error: {str(e)}")
+            await say(event, f"❌ <b>Error</b> · <code>{brand.esc(e)}</code>",
+                      name="encode", parse_mode="html")

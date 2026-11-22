@@ -23,6 +23,8 @@ except ImportError:  # pragma: no cover - depends on the interpreter build
     binhex = None
 from io import BytesIO
 from telethon import events
+from Com.core import brand
+from Com.core.reply import say
 
 __HELP__ = (
     "!decodecheck (reply/text) → Auto‑detect and decode text from common encodings.\n"
@@ -496,7 +498,9 @@ def setup(client, my_id):
                 reply_msg = await event.get_reply_message()
                 input_text = reply_msg.text or reply_msg.message
             if not input_text:
-                await event.edit("❌ Provide text to decode or reply to a message.")
+                await say(event,
+                          "❌ Provide text to decode or reply to a message.",
+                          name="decodecheck")
                 return
 
             input_text = input_text.strip()
@@ -507,18 +511,31 @@ def setup(client, my_id):
 
             method, decoded = decode_text(input_text)
             if method is None:
-                await event.edit(f"❌ Could not decode:\n{decoded}")
+                await say(event,
+                          f"❌ <b>Could not decode</b>\n"
+                          f"<i>{brand.esc(decoded)}</i>",
+                          name="decodecheck", parse_mode="html")
                 return
 
+            shown_input = input_text[:200]
+            if len(input_text) > 200:
+                shown_input += "..."
+            shown_result = decoded[:500]
+            if len(decoded) > 500:
+                shown_result += "..."
             response = (
-                f"🔍 **Decoded using:** `{method}`\n\n"
-                f"**Original:**\n```\n{input_text[:200]}{'...' if len(input_text) > 200 else ''}\n```\n"
-                f"**Result:**\n```\n{decoded[:500]}{'...' if len(decoded) > 500 else ''}\n```"
+                f"🔍 <b>Decoded with</b> <code>{brand.esc(method)}</code>\n\n"
+                f"<b>Original</b>\n"
+                f"<code>{brand.esc(shown_input)}</code>\n\n"
+                f"<b>Result</b>\n"
+                f"<code>{brand.esc(shown_result)}</code>"
             )
             if len(decoded) > 500:
-                response += f"\n\n⚠️ Output truncated (total length: {len(decoded)} chars)"
+                response += (f"\n\n<i>Output truncated "
+                             f"({len(decoded)} chars total)</i>")
 
-            await event.edit(response)
+            await say(event, response, name="decodecheck", parse_mode="html")
 
         except Exception as e:
-            await event.edit(f"❌ Error: {str(e)}")
+            await say(event, f"❌ <b>Error</b> · <code>{brand.esc(e)}</code>",
+                      name="decodecheck", parse_mode="html")

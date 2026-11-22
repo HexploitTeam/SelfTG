@@ -2,6 +2,8 @@
 from telethon import events
 from telethon.tl.types import MessageMediaDocument, MessageMediaPhoto
 import Com.core.tgsend as tgsend
+from Com.core import brand
+from Com.core.reply import say
 from io import BytesIO
 from PIL import Image
 import asyncio
@@ -54,7 +56,8 @@ def format_audio_tags(tags):
     used = 0
     omitted = 0
     for key, value in tags.items():
-        line = f"{key}: {short_tag_value(value)}"
+        line = (f"<b>{brand.esc(key)}</b> · "
+                f"{brand.esc(short_tag_value(value))}")
         if used + len(line) + 1 > MAX_BODY_CHARS:
             omitted += 1
             continue
@@ -89,13 +92,14 @@ def probe_video(path):
 
 def setup(client, my_id):
 
-    async def download_reply(event):
+    async def download_reply(event, command):
         if not event.is_reply:
-            await event.reply("❌ Please reply to a file or image.")
+            await say(event, "❌ Please reply to a file or image.",
+                      name=command)
             return None
         reply = await event.get_reply_message()
         if not reply.media:
-            await event.reply("❌ Replied message has no media.")
+            await say(event, "❌ Replied message has no media.", name=command)
             return None
         bio = BytesIO()
         await reply.download_media(file=bio)
@@ -106,26 +110,30 @@ def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!audiometa$"))
     async def audiometa(event):
         try:
-            result = await download_reply(event)
+            result = await download_reply(event, "audiometa")
             if not result:
                 return
             bio, reply = result
 
             audio = mutagen.File(bio)
             if not audio:
-                await event.reply("❌ Could not read audio metadata.")
+                await say(event, "❌ Could not read audio metadata.",
+                          name="audiometa")
                 return
 
-            await event.reply(f"🎵 Audio Metadata:\n{format_audio_tags(audio.tags)}")
+            await say(event,
+                      f"🎵 <b>Audio Metadata</b>\n{format_audio_tags(audio.tags)}",
+                      name="audiometa", parse_mode="html")
 
         except Exception as e:
-            await event.reply(f"❌ Error: {str(e)}")
+            await say(event, f"❌ <b>Error</b> · <code>{brand.esc(e)}</code>",
+                      name="audiometa", parse_mode="html")
 
     # Video metadata
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!videometa$"))
     async def videometa(event):
         try:
-            result = await download_reply(event)
+            result = await download_reply(event, "videometa")
             if not result:
                 return
             bio, reply = result
@@ -138,19 +146,21 @@ def setup(client, my_id):
             duration, width, height, fps = await asyncio.to_thread(
                 probe_video, temp_file.name
             )
-            info = (f"Duration: {duration:.2f} sec\n"
-                    f"Resolution: {width}x{height}\n"
-                    f"FPS: {fps}")
-            await event.reply(f"🎬 Video Metadata:\n{info}")
+            info = (f"Duration · <code>{duration:.2f} sec</code>\n"
+                    f"Resolution · <code>{width}x{height}</code>\n"
+                    f"FPS · <code>{fps}</code>")
+            await say(event, f"🎬 <b>Video Metadata</b>\n{info}",
+                      name="videometa", parse_mode="html")
             os.remove(temp_file.name)
 
         except Exception as e:
-            await event.reply(f"❌ Error: {str(e)}")
+            await say(event, f"❌ <b>Error</b> · <code>{brand.esc(e)}</code>",
+                      name="videometa", parse_mode="html")
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!convertpdf$"))
     async def convertpdf(event):
         try:
-            result = await download_reply(event)
+            result = await download_reply(event, "convertpdf")
             if not result:
                 return
             bio, reply = result
@@ -175,21 +185,23 @@ def setup(client, my_id):
                 with open(temp_out.name, "wb") as f:
                     writer.write(f)
 
-            await client.send_file(await tgsend.peer(event),
-                                   temp_out.name,
-                                   caption="📄 Converted to PDF",
-                                   reply_to=reply.id)
+            await client.send_file(
+                await tgsend.peer(event),
+                temp_out.name,
+                caption=brand.sign("📄 <b>Converted to PDF</b>", "convertpdf"),
+                reply_to=reply.id, parse_mode="html")
             os.remove(temp_in.name)
             os.remove(temp_out.name)
 
         except Exception as e:
-            await event.reply(f"❌ Error: {str(e)}")
+            await say(event, f"❌ <b>Error</b> · <code>{brand.esc(e)}</code>",
+                      name="convertpdf", parse_mode="html")
 
     # PDF info
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!pdfinfo$"))
     async def pdfinfo(event):
         try:
-            result = await download_reply(event)
+            result = await download_reply(event, "pdfinfo")
             if not result:
                 return
             bio, reply = result
@@ -201,15 +213,18 @@ def setup(client, my_id):
             reader = PyPDF2.PdfReader(temp_file.name)
             pages = len(reader.pages)
             metadata = reader.metadata
-            info = f"Pages: {pages}\n"
+            info = f"Pages · <b>{pages}</b>"
             for k, v in metadata.items():
-                info += f"{k[1:]}: {v}\n"  # remove leading /
+                # k[1:] drops the leading /
+                info += f"\n{brand.esc(k[1:])} · <code>{brand.esc(v)}</code>"
 
-            await event.reply(f"📄 PDF Info:\n{info}")
+            await say(event, f"📄 <b>PDF Info</b>\n{info}",
+                      name="pdfinfo", parse_mode="html")
             os.remove(temp_file.name)
 
         except Exception as e:
-            await event.reply(f"❌ Error: {str(e)}")
+            await say(event, f"❌ <b>Error</b> · <code>{brand.esc(e)}</code>",
+                      name="pdfinfo", parse_mode="html")
 
     # Image resize
     @client.on(
@@ -219,7 +234,7 @@ def setup(client, my_id):
         try:
             w, h = int(event.pattern_match.group(1)), int(
                 event.pattern_match.group(2))
-            result = await download_reply(event)
+            result = await download_reply(event, "imgresize")
             if not result:
                 return
             bio, reply = result
@@ -229,13 +244,17 @@ def setup(client, my_id):
             out = BytesIO()
             img.save(out, format=img.format)
             out.seek(0)
-            await client.send_file(await tgsend.peer(event),
-                                   out,
-                                   caption=f"🖼 Image resized to {w}x{h}",
-                                   reply_to=reply.id)
+            await client.send_file(
+                await tgsend.peer(event),
+                out,
+                caption=brand.sign(
+                    f"🖼 <b>Image resized</b> · <code>{w}x{h}</code>",
+                    "imgresize"),
+                reply_to=reply.id, parse_mode="html")
 
         except Exception as e:
-            await event.reply(f"❌ Error: {str(e)}")
+            await say(event, f"❌ <b>Error</b> · <code>{brand.esc(e)}</code>",
+                      name="imgresize", parse_mode="html")
 
     # Image rotate
     @client.on(
@@ -243,7 +262,7 @@ def setup(client, my_id):
     async def imgrotate(event):
         try:
             deg = int(event.pattern_match.group(1))
-            result = await download_reply(event)
+            result = await download_reply(event, "imgrotate")
             if not result:
                 return
             bio, reply = result
@@ -253,19 +272,23 @@ def setup(client, my_id):
             out = BytesIO()
             img.save(out, format=img.format)
             out.seek(0)
-            await client.send_file(await tgsend.peer(event),
-                                   out,
-                                   caption=f"🖼 Image rotated {deg}°",
-                                   reply_to=reply.id)
+            await client.send_file(
+                await tgsend.peer(event),
+                out,
+                caption=brand.sign(
+                    f"🖼 <b>Image rotated</b> · <code>{deg}°</code>",
+                    "imgrotate"),
+                reply_to=reply.id, parse_mode="html")
 
         except Exception as e:
-            await event.reply(f"❌ Error: {str(e)}")
+            await say(event, f"❌ <b>Error</b> · <code>{brand.esc(e)}</code>",
+                      name="imgrotate", parse_mode="html")
 
     # Image compress
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!imgcompress$"))
     async def imgcompress(event):
         try:
-            result = await download_reply(event)
+            result = await download_reply(event, "imgcompress")
             if not result:
                 return
             bio, reply = result
@@ -274,13 +297,15 @@ def setup(client, my_id):
             out = BytesIO()
             img.save(out, format=img.format, optimize=True, quality=70)
             out.seek(0)
-            await client.send_file(await tgsend.peer(event),
-                                   out,
-                                   caption="🖼 Image compressed",
-                                   reply_to=reply.id)
+            await client.send_file(
+                await tgsend.peer(event),
+                out,
+                caption=brand.sign("🖼 <b>Image compressed</b>", "imgcompress"),
+                reply_to=reply.id, parse_mode="html")
 
         except Exception as e:
-            await event.reply(f"❌ Error: {str(e)}")
+            await say(event, f"❌ <b>Error</b> · <code>{brand.esc(e)}</code>",
+                      name="imgcompress", parse_mode="html")
 
     # Image format conversion
     @client.on(
@@ -288,7 +313,7 @@ def setup(client, my_id):
     async def imgformat(event):
         try:
             fmt = event.pattern_match.group(1).upper()
-            result = await download_reply(event)
+            result = await download_reply(event, "imgformat")
             if not result:
                 return
             bio, reply = result
@@ -297,10 +322,14 @@ def setup(client, my_id):
             out = BytesIO()
             img.save(out, format=fmt)
             out.seek(0)
-            await client.send_file(await tgsend.peer(event),
-                                   out,
-                                   caption=f"🖼 Image converted to {fmt}",
-                                   reply_to=reply.id)
+            await client.send_file(
+                await tgsend.peer(event),
+                out,
+                caption=brand.sign(
+                    f"🖼 <b>Image converted</b> · <code>{fmt}</code>",
+                    "imgformat"),
+                reply_to=reply.id, parse_mode="html")
 
         except Exception as e:
-            await event.reply(f"❌ Error: {str(e)}")
+            await say(event, f"❌ <b>Error</b> · <code>{brand.esc(e)}</code>",
+                      name="imgformat", parse_mode="html")

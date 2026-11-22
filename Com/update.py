@@ -6,6 +6,8 @@ import asyncio
 import logging
 from telethon import events
 import Com.core.tgsend as tgsend
+from Com.core import brand
+from Com.core.reply import say
 
 from Com.core.storage import load_json, save_json
 
@@ -57,12 +59,14 @@ def get_changes(old, new):
     changes = []
     for fname, hval in new.items():
         if fname not in old:
-            changes.append(f"🟢 Added `{fname[:-3]}`")
+            changes.append(f"🟢 <b>Added</b> · <code>{brand.esc(fname[:-3])}</code>")
         elif old[fname] != hval:
-            changes.append(f"✏️ Changed `{fname[:-3]}`")
+            changes.append(
+                f"✏️ <b>Changed</b> · <code>{brand.esc(fname[:-3])}</code>")
     for fname in old:
         if fname not in new:
-            changes.append(f"❌ Removed `{fname[:-3]}`")
+            changes.append(
+                f"❌ <b>Removed</b> · <code>{brand.esc(fname[:-3])}</code>")
     return changes
 
 
@@ -93,15 +97,18 @@ def setup(client, my_id):
         changes = get_changes(old_hashes, new_hashes)
 
         if not changes:
-            report = "✅ No command changes detected."
+            report = brand.sign("✅ <b>No command changes detected</b>",
+                                "update")
         else:
-            report = "📋 **Command changes after restart:**\n" + "\n".join(changes)
+            report = brand.sign(
+                "📋 <b>Command changes after restart</b>\n" + "\n".join(changes),
+                "update")
 
         try:
-            await client.send_message(peer or "me", report)
+            await client.send_message(peer or "me", report, parse_mode="html")
         except Exception:
             try:
-                await client.send_message("me", report)
+                await client.send_message("me", report, parse_mode="html")
             except Exception:  # noqa: BLE001 - the report is informational
                 log.info("update: post-restart report could not be delivered")
 
@@ -128,7 +135,8 @@ def setup(client, my_id):
         save_json(RESTART_FILE, restart_data)
         save_json(HASH_FILE, new_hashes)
 
-        await event.edit("🔄 Restarting session...")
+        await say(event, "🔄 <b>Restarting session</b>…", name="update",
+                  parse_mode="html")
 
         try:
             os.execv(sys.executable, [sys.executable] + sys.argv)
@@ -138,4 +146,6 @@ def setup(client, my_id):
                 os.remove(RESTART_FILE)
             except OSError:
                 pass
-            await event.edit(f"❌ Restart failed: {e}")
+            await say(event,
+                      f"❌ <b>Restart failed</b> · <code>{brand.esc(e)}</code>",
+                      name="update", parse_mode="html")
