@@ -51,6 +51,7 @@ import re
 from telethon import events
 
 import Com.core.registry as registry
+from Com.core import brand
 from Com.core.fonts import script
 from Com.core.reply import say
 from Com.core.storage import load_store, save_json
@@ -218,8 +219,8 @@ def setup(client, my_id):
                 )
                 return
 
-            # The rendered help is registry markdown, not HTML
-            await _say(event, "📖 " + __HELP__, parse_mode=None)
+            # The rendered help is plain text: escape it into the HTML body
+            await _say(event, "📖 " + brand.esc(__HELP__))
 
         except Exception:  # noqa: BLE001 - never take the client down
             log.exception("creator: command failed")

@@ -45,7 +45,8 @@ from telethon.tl.types import (
     MessageEntityUnderline,
 )
 
-from Com.core import flood
+from Com.core import brand, flood
+from Com.core.reply import say
 from Com.core.storage import load_json, save_json
 
 __HELP__ = (
@@ -210,9 +211,8 @@ def setup(client, my_id):
             await _reply(event, f"❌ {type(exc).__name__}: {exc}")
 
     async def _reply(event, text):
-        try:
-            await event.reply(text)
-        except Exception:
+        """Text answers use the shared delivery: edit, else reply, signed."""
+        if not await say(event, text, name="chat", parse_mode="html"):
             log.info("chat: could not deliver %r", text[:60])
 
     async def _target_text(event, rest):
@@ -232,7 +232,7 @@ def setup(client, my_id):
 
         args = (event.pattern_match.group(1) or "").strip()
         if not args:
-            await _edit(event, "📖 **Chat formatting**\n" + __HELP__)
+            await _reply(event, "📖 <b>Chat formatting</b>\n" + brand.esc(__HELP__))
             return
 
         head, _, rest = args.partition(" ")
@@ -242,18 +242,22 @@ def setup(client, my_id):
         if head_l == "status":
             style = get_chat_style(event.chat_id)
             if style:
-                await _edit(event, f"🎨 Auto-format in this chat: **{style}**")
+                await _reply(
+                    event,
+                    f"🎨 <b>Auto-format in this chat</b> · "
+                    f"<code>{brand.esc(style)}</code>",
+                )
             else:
-                await _edit(event, "🎨 Auto-format is off in this chat.")
+                await _reply(event, "🎨 <b>Auto-format is off in this chat.</b>")
             return
 
         if head_l == "off" and not rest:
             set_chat_style(event.chat_id, None)
-            await _edit(event, "🎨 Auto-format disabled in this chat.")
+            await _reply(event, "🎨 <b>Auto-format disabled in this chat.</b>")
             return
 
         if head_l == "help":
-            await _edit(event, "📖 **Chat formatting**\n" + __HELP__)
+            await _reply(event, "📖 <b>Chat formatting</b>\n" + brand.esc(__HELP__))
             return
 
         # `!chat <style> on|off` and `!chat <style> all <text>`
@@ -265,22 +269,29 @@ def setup(client, my_id):
             try:
                 build_entities(head_l, "x")  # validates the style name
             except ValueError as exc:
-                await _edit(event, f"❌ {exc}")
+                await _reply(event, f"❌ {brand.esc(exc)}")
                 return
             if keyword == "on":
                 set_chat_style(event.chat_id, head_l)
-                await _edit(
+                await _reply(
                     event,
-                    f"🎨 Auto-format **{head_l}** enabled. Every plain message you "
-                    "send here will be rewritten in that style. Use `!chat off` to stop.",
+                    f"🎨 <b>Auto-format</b> <code>{brand.esc(head_l)}</code> "
+                    "enabled. Every plain message you send here will be rewritten "
+                    "in that style. Use <code>!chat off</code> to stop.",
                 )
             else:
                 if get_chat_style(event.chat_id) == head_l:
                     set_chat_style(event.chat_id, None)
-                    await _edit(event, f"🎨 Auto-format **{head_l}** disabled.")
+                    await _reply(
+                        event,
+                        f"🎨 <b>Auto-format</b> "
+                        f"<code>{brand.esc(head_l)}</code> disabled.",
+                    )
                 else:
-                    await _edit(
-                        event, f"ℹ️ Auto-format is not set to **{head_l}** in this chat."
+                    await _reply(
+                        event,
+                        f"ℹ️ Auto-format is not set to "
+                        f"<code>{brand.esc(head_l)}</code> in this chat.",
                     )
             return
 
@@ -290,17 +301,19 @@ def setup(client, my_id):
             text = await _target_text(event, rest)
 
         if not text:
-            await _edit(
+            await _reply(
                 event,
-                f"Usage: `!chat {head_l} <text>` (or reply to a message, or "
-                f"`!chat {head_l} on` for auto-mode, `!chat {head_l} all <text>`).",
+                f"Usage · <code>!chat {brand.esc(head_l)} &lt;text&gt;</code> "
+                "(or reply to a message, or "
+                f"<code>!chat {brand.esc(head_l)} on</code> for auto-mode, "
+                f"<code>!chat {brand.esc(head_l)} all &lt;text&gt;</code>).",
             )
             return
 
         try:
             entities = build_entities(head_l, text)
         except ValueError as exc:
-            await _edit(event, f"❌ {exc}")
+            await _reply(event, f"❌ {brand.esc(exc)}")
             return
         await _edit(event, text, entities=entities, style_label=head_l)
 

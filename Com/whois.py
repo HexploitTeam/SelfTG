@@ -65,8 +65,13 @@ def setup(client, my_id):
         await event.delete()  # Delete command
 
         if not os.path.exists(WHOIS_FILE):
-            await event.respond(
-                "❌ Please set the bot first with !whois set @BotUsername")
+            await say(
+                event,
+                "❌ <b>Please set the bot first</b> with "
+                "<code>!whois set @BotUsername</code>",
+                name="whois",
+                parse_mode="html",
+            )
             return
         with open(WHOIS_FILE, "r", encoding="utf-8") as f:
             bot_username = f.read().strip()
@@ -81,13 +86,21 @@ def setup(client, my_id):
                 user_entity = await client.get_entity(target)
                 user_to_query = user_entity.id
             except Exception:
-                await event.respond("❌ Could not find the user.")
+                await say(event, "❌ <b>Could not find the user.</b>",
+                          name="whois", parse_mode="html")
                 return
         elif reply:
             # Reply: use that sender
             user_to_query = reply.sender_id
         else:
-            await event.respond("❌ Usage: !whois (reply to a message) OR !whois @Username/ID OR !whois here (reply)")
+            await say(
+                event,
+                "❌ Usage · <code>!whois</code> (reply to a message) OR "
+                "<code>!whois @Username/ID</code> OR "
+                "<code>!whois here</code> (reply)",
+                name="whois",
+                parse_mode="html",
+            )
             return
 
         await client.send_message(bot_entity, str(user_to_query))
@@ -101,7 +114,8 @@ def setup(client, my_id):
 
         new_msgs = await client.get_messages(bot_entity, min_id=old_id, limit=1)
         if not new_msgs:
-            await event.respond("❌ Bot did not respond.")
+            await say(event, "❌ <b>The whois bot did not respond.</b>",
+                      name="whois", parse_mode="html")
             return
 
         raw_text = new_msgs[0].message
@@ -116,14 +130,14 @@ def setup(client, my_id):
         clean_lines = [line.translate(FONT_MAP) for line in lines]
 
         final_lines = []
-        final_lines.append("📊 Whois Information:\n")
+        final_lines.append("📊 <b>Whois information</b>\n")
         for line in clean_lines:
             if line.strip():
-                final_lines.append(line)
+                final_lines.append(brand.esc(line))
 
         # Append Tehran timestamp at bottom
         now = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
-        final_lines.append(f"\nFetched at Tehran time: {now}")
+        final_lines.append(f"\n<i>Fetched at Tehran time · {now}</i>")
 
         final_msg = "\n".join(final_lines)
-        await event.respond(final_msg)
+        await say(event, final_msg, name="whois", parse_mode="html")

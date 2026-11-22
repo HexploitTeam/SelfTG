@@ -24,7 +24,7 @@ import time
 from telethon import events
 
 import Com.core.registry as registry
-from Com.core import confirm
+from Com.core import brand, confirm
 from Com.core.reply import say
 from Com.core.storage import load_store, save_json
 
@@ -137,7 +137,7 @@ def setup(client, my_id):
 
         args = (event.pattern_match.group(1) or "").strip()
         if not args:
-            await _say(event, "📖 " + __HELP__)
+            await _say(event, "📖 " + brand.esc(__HELP__))
             return
 
         head, _, rest = args.partition(" ")
@@ -146,7 +146,7 @@ def setup(client, my_id):
         try:
             global_scope, tokens = _parse_flags(rest)
         except ValueError as exc:
-            await _say(event, f"❌ Could not parse arguments: {exc}")
+            await _say(event, f"❌ Could not parse arguments · {brand.esc(exc)}")
             return
 
         try:
@@ -163,30 +163,36 @@ def setup(client, my_id):
             elif sub == "clear":
                 await _cmd_clear(event, rest if not tokens else " ".join(tokens), global_scope)
             else:
-                await _say(event, "📖 " + __HELP__)
+                await _say(event, "📖 " + brand.esc(__HELP__))
         except Exception:  # noqa: BLE001
             log.exception("note: command failed")
-            await _say(event, "❌ Note command failed; see the Replit log.")
+            await _say(event, "❌ <b>Note command failed.</b> See the Replit log.")
 
     async def _cmd_save(event, tokens, global_scope):
         if not tokens:
-            await _say(event, "Usage: `!note save [-g] <name> <text>`")
+            await _say(
+                event,
+                "Usage · <code>!note save [-g] &lt;name&gt; &lt;text&gt;</code>",
+            )
             return
         try:
             name = normalize_name(tokens[0])
         except ValueError as exc:
-            await _say(event, f"❌ {exc}")
+            await _say(event, f"❌ {brand.esc(exc)}")
             return
 
         text = " ".join(tokens[1:]).strip()
         if not text:
             if not event.is_reply:
-                await _say(event, "❌ Give the note text, or reply to a message with it.")
+                await _say(
+                    event,
+                    "❌ <b>Give the note text</b>, or reply to a message with it.",
+                )
                 return
             reply = await event.get_reply_message()
             text = (reply.raw_text or "").strip() if reply else ""
             if not text:
-                await _say(event, "❌ The replied message has no text to save.")
+                await _say(event, "❌ <b>The replied message has no text to save.</b>")
                 return
 
         state = load_state()
@@ -194,21 +200,25 @@ def setup(client, my_id):
         existed = name in scope
         scope[name] = {"text": text, "updated": time.time()}
         if not save_state(state):
-            await _say(event, "❌ Could not write the note store.")
+            await _say(event, "❌ <b>Could not write the note store.</b>")
             return
 
         where = "global" if global_scope else "this chat"
         verb = "overwritten" if existed else "saved"
-        await _say(event, f"📝 Note `{name}` {verb} in {where} ({len(text)} chars).")
+        await _say(
+            event,
+            f"📝 <b>Note</b> <code>{brand.esc(name)}</code> {verb} in {where} "
+            f"<i>({len(text)} chars)</i>",
+        )
 
     async def _cmd_get(event, tokens, global_scope):
         if not tokens:
-            await _say(event, "Usage: `!note get [-g] <name>`")
+            await _say(event, "Usage · <code>!note get [-g] &lt;name&gt;</code>")
             return
         try:
             name = normalize_name(tokens[0])
         except ValueError as exc:
-            await _say(event, f"❌ {exc}")
+            await _say(event, f"❌ {brand.esc(exc)}")
             return
 
         state = load_state()
@@ -224,13 +234,22 @@ def setup(client, my_id):
         if note is None:
             await _say(
                 event,
-                f"❌ No note `{name}` in {'global scope' if global_scope else 'this chat or global'}.",
+                f"❌ <b>No note</b> <code>{brand.esc(name)}</code> in "
+                f"{'global scope' if global_scope else 'this chat or global'}.",
             )
             return
 
         updated = note.get("updated")
-        stamp = f"\n\n_updated {time.strftime('%Y-%m-%d %H:%M', time.localtime(updated))}_" if updated else ""
-        await _say(event, f"📄 `{name}` ({scope_label})\n\n{note['text']}{stamp}")
+        stamp = (
+            "\n\n<i>updated "
+            + time.strftime('%Y-%m-%d %H:%M', time.localtime(updated))
+            + "</i>"
+        ) if updated else ""
+        await _say(
+            event,
+            f"📄 <code>{brand.esc(name)}</code> <i>({scope_label})</i>\n\n"
+            + brand.esc(note['text']) + stamp,
+        )
 
     async def _cmd_list(event, global_scope):
         state = load_state()
@@ -239,61 +258,86 @@ def setup(client, my_id):
 
         if global_scope:
             source = state["global"]
-            lines.append(f"🌍 **Global notes** ({len(source)})")
+            lines.append(f"🌍 <b>Global notes</b> · {len(source)}")
             scopes = [("", source)]
         else:
-            lines.append(f"📒 **Notes here** ({len(chat_notes)}) · global: {len(state['global'])}")
+            lines.append(
+                f"📒 <b>Notes here</b> · {len(chat_notes)} · "
+                f"global · {len(state['global'])}"
+            )
             scopes = [("", chat_notes), ("🌍 ", state["global"])]
             if not chat_notes and not state["global"]:
-                await _say(event, "📭 No notes yet. Use `!note save <name> <text>`.")
+                await _say(
+                    event,
+                    "📭 <b>No notes yet.</b> Use "
+                    "<code>!note save &lt;name&gt; &lt;text&gt;</code>.",
+                )
                 return
 
         for prefix, source in scopes:
             for name in sorted(source):
-                lines.append(f"• {prefix}`{name}` — {_preview(source[name].get('text'))}")
+                lines.append(
+                    f"• {prefix}<code>{brand.esc(name)}</code> · "
+                    f"{brand.esc(_preview(source[name].get('text')))}"
+                )
         await _say(event, "\n".join(lines))
 
     async def _cmd_delete(event, tokens, global_scope):
         if not tokens:
-            await _say(event, "Usage: `!note delete [-g] <name>`")
+            await _say(event, "Usage · <code>!note delete [-g] &lt;name&gt;</code>")
             return
         try:
             name = normalize_name(tokens[0])
         except ValueError as exc:
-            await _say(event, f"❌ {exc}")
+            await _say(event, f"❌ {brand.esc(exc)}")
             return
 
         state = load_state()
         scope = _scope(state, global_scope, event.chat_id)
         if name not in scope:
-            await _say(event, f"❌ No note `{name}` in {'global' if global_scope else 'this chat'}.")
+            await _say(
+                event,
+                f"❌ <b>No note</b> <code>{brand.esc(name)}</code> in "
+                f"{'global' if global_scope else 'this chat'}.",
+            )
             return
         scope.pop(name)
         save_state(state)
-        await _say(event, f"🗑️ Deleted note `{name}`.")
+        await _say(event, f"🗑️ <b>Deleted note</b> <code>{brand.esc(name)}</code>.")
 
     async def _cmd_rename(event, tokens, global_scope):
         if len(tokens) < 2:
-            await _say(event, "Usage: `!note rename [-g] <old> <new>`")
+            await _say(
+                event,
+                "Usage · <code>!note rename [-g] &lt;old&gt; &lt;new&gt;</code>",
+            )
             return
         try:
             old = normalize_name(tokens[0])
             new = normalize_name(tokens[1])
         except ValueError as exc:
-            await _say(event, f"❌ {exc}")
+            await _say(event, f"❌ {brand.esc(exc)}")
             return
 
         state = load_state()
         scope = _scope(state, global_scope, event.chat_id)
         if old not in scope:
-            await _say(event, f"❌ No note `{old}`.")
+            await _say(event, f"❌ <b>No note</b> <code>{brand.esc(old)}</code>.")
             return
         if new in scope:
-            await _say(event, f"❌ `{new}` already exists; delete it first.")
+            await _say(
+                event,
+                f"❌ <code>{brand.esc(new)}</code> <b>already exists;</b> "
+                "delete it first.",
+            )
             return
         scope[new] = scope.pop(old)
         save_state(state)
-        await _say(event, f"✏️ Renamed `{old}` → `{new}`.")
+        await _say(
+            event,
+            f"✏️ <b>Renamed</b> <code>{brand.esc(old)}</code> → "
+            f"<code>{brand.esc(new)}</code>",
+        )
 
     async def _cmd_clear(event, rest, global_scope):
         text = (rest or "").strip()
@@ -307,11 +351,15 @@ def setup(client, my_id):
             else:
                 state["chats"][str(event.chat_id)] = {}
             save_state(state)
-            await _say(event, f"🗑️ Deleted {count} note(s) in {where}.")
+            await _say(event, f"🗑️ <b>Deleted</b> {count} note(s) in {where}.")
             return
 
         if text and text.split()[0].lower() == "confirm":
-            await _say(event, "❌ That confirmation token is wrong or expired. Run `!note clear` again.")
+            await _say(
+                event,
+                "❌ <b>That confirmation token is wrong or expired.</b> Run "
+                "<code>!note clear</code> again.",
+            )
             return
 
         prompt = confirm.request(
@@ -321,4 +369,4 @@ def setup(client, my_id):
 
     async def _say(event, text):
         # Edit-then-reply is shared: see Com/core/reply.py.
-        await say(event, text, name="note")
+        await say(event, text, name="note", parse_mode="html")

@@ -211,8 +211,8 @@ def setup(client, my_id):
         try:
             arg_str = event.pattern_match.group(1)
             if not arg_str and not event.is_reply:
-                await say(event, "📖 Summarize Help\n\n" + __HELP__,
-                          name="summarize")
+                await say(event, "📖 <b>Summarize Help</b>\n\n" + brand.esc(__HELP__),
+                          name="summarize", parse_mode="html")
                 return
 
             # Chat summarization

@@ -12,6 +12,8 @@ import aiohttp
 from telethon import events
 
 import Com.core.api as api
+from Com.core import brand
+from Com.core.reply import say
 
 __HELP__ = "!decodeqr → Decode a QR code from a replied image (free, keyless API)"
 __CATEGORY__ = "Utilities"
@@ -48,19 +50,19 @@ def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!decodeqr$"))
     async def decode_qr(event):
         if not event.is_reply:
-            await _reply(event, "❌ Reply to an image containing a QR code.")
+            await _reply(event, "❌ <b>Reply to an image containing a QR code.</b>")
             return
 
         reply = await event.get_reply_message()
         if not reply or not reply.media:
-            await _reply(event, "❌ The replied message has no media.")
+            await _reply(event, "❌ <b>The replied message has no media.</b>")
             return
 
         bio = BytesIO()
         try:
             await reply.download_media(file=bio)
         except Exception as exc:  # noqa: BLE001
-            await _reply(event, f"❌ Could not download the image: {exc}")
+            await _reply(event, f"❌ Could not download the image · {brand.esc(exc)}")
             return
         bio.seek(0)
 
@@ -68,26 +70,29 @@ def setup(client, my_id):
             decoded = await decode(bio.read())
         except api.RateLimited as exc:
             wait = exc.retry_after or 30
-            await _reply(event, f"⏳ QR service is rate limiting this IP — retry in ~{wait}s.")
+            await _reply(
+                event,
+                f"⏳ <b>QR service is rate limiting this IP</b> · retry in ~"
+                f"<code>{wait}s</code>.",
+            )
             return
         except api.APIError as exc:
-            await _reply(event, f"❌ QR decode failed ({exc.describe()}).")
+            await _reply(event, f"❌ QR decode failed · {brand.esc(exc.describe())}")
             return
         except Exception as exc:  # noqa: BLE001
             log.exception("decodeqr: unexpected failure")
-            await _reply(event, f"❌ {type(exc).__name__}: {exc}")
+            await _reply(event, f"❌ <code>{brand.esc(type(exc).__name__)}</code> · {brand.esc(exc)}")
             return
 
         if not decoded:
-            await _reply(event, "❌ No QR code found in that image.")
+            await _reply(event, "❌ <b>No QR code found in that image.</b>")
             return
-        await _reply(event, "🔓 Decoded QR Code:\n" + "\n".join(decoded))
+        await _reply(
+            event,
+            "🔓 <b>Decoded QR code</b>\n"
+            + "\n".join(f"<code>{brand.esc(item)}</code>" for item in decoded),
+        )
 
     async def _reply(event, text):
-        try:
-            await event.reply(text)
-        except Exception:
-            try:
-                await event.edit(text)
-            except Exception:
-                log.info("decodeqr: response could not be delivered")
+        # Edit-then-reply is shared: see Com/core/reply.py.
+        await say(event, text, name="decodeqr", parse_mode="html")

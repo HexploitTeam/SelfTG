@@ -16,6 +16,8 @@ import logging
 from telethon import events
 
 import Com.core.api as api
+from Com.core import brand
+from Com.core.reply import say
 
 __HELP__ = "!crypto <coin> → Show crypto price and 24h changes (CoinGecko → CoinPaprika)"
 __CATEGORY__ = "Utilities"
@@ -71,13 +73,14 @@ def _fmt_big(value):
 def render(name, symbol, price, change_1h, change_24h, change_7d,
            market_cap, volume_24h, source):
     lines = [
-        f"💰 **{name} ({symbol})**",
-        f"💵 Price: `${_fmt_price(price)}`",
-        f"📈 1h: `{_fmt_change(change_1h)}` • 24h: `{_fmt_change(change_24h)}`"
-        f" • 7d: `{_fmt_change(change_7d)}`",
-        f"🏦 Market Cap: `${_fmt_big(market_cap)}`",
-        f"📊 24h Volume: `${_fmt_big(volume_24h)}`",
-        f"_source: {source}, cached {CACHE_TTL}s_",
+        f"💰 <b>{brand.esc(name)} ({brand.esc(symbol)})</b>",
+        f"💵 Price · <code>{_fmt_price(price)}</code>",
+        f"📈 1h · <code>{_fmt_change(change_1h)}</code> · "
+        f"24h · <code>{_fmt_change(change_24h)}</code> · "
+        f"7d · <code>{_fmt_change(change_7d)}</code>",
+        f"🏦 Market cap · <code>{_fmt_big(market_cap)}</code>",
+        f"📊 24h volume · <code>{_fmt_big(volume_24h)}</code>",
+        f"<i>source: {brand.esc(source)}, cached {CACHE_TTL}s</i>",
     ]
     return "\n".join(lines)
 
@@ -160,22 +163,18 @@ def setup(client, my_id):
         except api.APIError as exc:
             await _reply(
                 event,
-                f"❌ Could not get a price for `{ticker}`.\n"
-                f"Both free providers failed: {exc}\n"
-                f"Known tickers: {', '.join(sorted(COINS))}",
+                f"❌ <b>Could not get a price for</b> "
+                f"<code>{brand.esc(ticker)}</code>\n"
+                f"Both free providers failed · {brand.esc(exc)}\n"
+                f"Known tickers · {', '.join(sorted(COINS))}",
             )
             return
         except Exception as exc:  # noqa: BLE001
             log.exception("crypto: unexpected failure")
-            await _reply(event, f"❌ {type(exc).__name__}: {exc}")
+            await _reply(event, f"❌ <code>{brand.esc(type(exc).__name__)}</code> · {brand.esc(exc)}")
             return
         await _reply(event, message)
 
     async def _reply(event, text):
-        try:
-            await event.reply(text)
-        except Exception:
-            try:
-                await event.edit(text)
-            except Exception:
-                log.info("crypto: response could not be delivered")
+        # Edit-then-reply is shared: see Com/core/reply.py.
+        await say(event, text, name="crypto", parse_mode="html")

@@ -29,7 +29,7 @@ from telethon.errors import (
     UsernameNotOccupiedError,
 )
 
-from Com.core import flood
+from Com.core import brand, flood
 import Com.core.tgsend as tgsend
 from Com.core.reply import say
 
@@ -75,7 +75,8 @@ def setup(client, my_id):
 
         identity, text = split_args(event.pattern_match.group(1))
         if not identity:
-            await say(event, "📖 **Send as**\n" + __HELP__, name="sendas")
+            await say(event, "📖 <b>Send as</b>\n" + brand.esc(__HELP__),
+                      name="sendas", parse_mode="html")
             return
 
         if not text and event.is_reply:
@@ -84,8 +85,10 @@ def setup(client, my_id):
         if not text:
             await say(
                 event,
-                "❌ Nothing to send. Add text, or reply to a text message.",
+                "❌ <b>Nothing to send.</b> Add text, or reply to a text "
+                "message.",
                 name="sendas",
+                parse_mode="html",
             )
             return
 
@@ -93,8 +96,13 @@ def setup(client, my_id):
             channel = await _resolve_identity(client, identity)
         except (ValueError, UsernameInvalidError, UsernameNotOccupiedError,
                 PeerIdInvalidError) as exc:
-            await say(event, f"❌ Could not resolve `{identity}`: {exc}",
-                      name="sendas")
+            await say(
+                event,
+                f"❌ Could not resolve <code>{brand.esc(identity)}</code> · "
+                f"{brand.esc(exc)}",
+                name="sendas",
+                parse_mode="html",
+            )
             return
 
         try:
@@ -103,38 +111,48 @@ def setup(client, my_id):
             )
         except flood.FLOOD_ERRORS as exc:
             left = flood.note_flood(exc.seconds)
-            message = f"⏳ Telegram rate limit: wait {exc.seconds}s."
+            message = (
+                f"⏳ <b>Telegram rate limit</b> · wait "
+                f"<code>{exc.seconds}s</code>."
+            )
             if left:
                 message += "\n" + flood.describe(left)
-            await say(event, message, name="sendas")
+            await say(event, message, name="sendas", parse_mode="html")
             return
         except SendAsPeerInvalidError:
             await say(
                 event,
-                f"❌ Telegram will not accept `{identity}` as the sender here. "
-                "The channel has to be an admin of this chat.",
+                f"❌ <b>Telegram will not accept</b> "
+                f"<code>{brand.esc(identity)}</code> as the sender here. The "
+                "channel has to be an admin of this chat.",
                 name="sendas",
+                parse_mode="html",
             )
             return
         except ChatAdminRequiredError:
-            await say(event, "❌ Posting as that channel needs an admin right "
-                             "the account does not have.", name="sendas")
+            await say(event, "❌ <b>Posting as that channel needs an admin "
+                             "right</b> the account does not have.",
+                      name="sendas", parse_mode="html")
             return
         except ChatWriteForbiddenError:
-            await say(event, "❌ The account cannot post in this chat.",
-                      name="sendas")
+            await say(event, "❌ <b>The account cannot post in this chat.</b>",
+                      name="sendas", parse_mode="html")
             return
         except ChannelPrivateError:
-            await say(event, "❌ That channel is private or the account is not "
-                             "a member.", name="sendas")
+            await say(event, "❌ <b>That channel is private</b> or the account "
+                             "is not a member.",
+                      name="sendas", parse_mode="html")
             return
         except errors.RPCError as exc:
-            await say(event, f"❌ Telegram error ({type(exc).__name__}).",
-                      name="sendas")
+            await say(event, f"❌ Telegram error "
+                             f"(<code>{brand.esc(type(exc).__name__)}</code>).",
+                      name="sendas", parse_mode="html")
             return
         except Exception as exc:  # noqa: BLE001 - report, never raise
             log.exception("sendas: send failed")
-            await say(event, f"❌ {type(exc).__name__}: {exc}", name="sendas")
+            await say(event, f"❌ <code>{brand.esc(type(exc).__name__)}</code> · "
+                             f"{brand.esc(exc)}",
+                      name="sendas", parse_mode="html")
             return
 
         log.info("sendas: sent one message as %s in %s", identity, event.chat_id)

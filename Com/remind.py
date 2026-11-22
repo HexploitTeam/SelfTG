@@ -31,7 +31,7 @@ import pytz
 from telethon import events
 
 import Com.core.registry as registry
-from Com.core import confirm, scheduler
+from Com.core import brand, confirm, scheduler
 from Com.core.durations import format_duration, parse_duration
 from Com.core.reply import say
 from Com.core.storage import load_store, save_json
@@ -182,13 +182,18 @@ async def tick(client):
         due_at = float(item.get("due_at", 0))
         late = due_at < (startup - LATE_GRACE)
         prefix = (
-            f"⏰ **Missed while offline** (was due {_fmt_due(due_at, tz)})\n"
+            f"⏰ <b>Missed while offline</b> "
+            f"<i>(was due {brand.esc(_fmt_due(due_at, tz))})</i>\n"
             if late
-            else "⏰ **Reminder**\n"
+            else "⏰ <b>Reminder</b>\n"
         )
         target = item.get("chat_id") or "me"
         try:
-            await client.send_message(target, f"{prefix}{item.get('text', '')}")
+            await client.send_message(
+                target,
+                brand.sign(prefix + brand.esc(item.get('text', '')), "remind"),
+                parse_mode="html",
+            )
         except Exception as exc:  # noqa: BLE001
             log.warning(
                 "remind: could not deliver #%s to %s (%s)",
@@ -205,7 +210,7 @@ def parse_at_time(tokens, tz):
     if tz is None:
         raise ValueError(
             "no timezone configured — set OWNER_TZ in Replit Secrets or run "
-            "`!remind tz Asia/Tehran` first"
+            "!remind tz Asia/Tehran first"
         )
     if not tokens:
         raise ValueError("usage: !remind at <HH:MM> [YYYY-MM-DD] <text>")
@@ -257,7 +262,7 @@ def setup(client, my_id):
 
         args = (event.pattern_match.group(1) or "").strip()
         if not args:
-            await _say(event, "📖 " + __HELP__)
+            await _say(event, "📖 " + brand.esc(__HELP__))
             return
 
         head, _, rest = args.partition(" ")
@@ -281,20 +286,27 @@ def setup(client, my_id):
                 await _cmd_duration(event, args, here=False)
         except Exception:  # noqa: BLE001
             log.exception("remind: command failed")
-            await _say(event, "❌ Reminder command failed; see the Replit log.")
+            await _say(event, "❌ <b>Reminder command failed.</b> See the Replit log.")
 
     async def _cmd_duration(event, args, here):
         duration_raw, _, text = args.partition(" ")
         if not duration_raw:
-            await _say(event, "Usage: `!remind <10m|2h|1d> <text>`")
+            await _say(
+                event,
+                "Usage · <code>!remind &lt;10m|2h|1d&gt; &lt;text&gt;</code>",
+            )
             return
         try:
             seconds = parse_duration(duration_raw, minimum=MIN_DELAY, maximum=MAX_DELAY)
         except ValueError as exc:
-            await _say(event, f"❌ {exc}")
+            await _say(event, f"❌ {brand.esc(exc)}")
             return
         if not text.strip():
-            await _say(event, "Usage: `!remind <duration> <text>` — e.g. `!remind 10m tea`")
+            await _say(
+                event,
+                "Usage · <code>!remind &lt;duration&gt; &lt;text&gt;</code> — "
+                "e.g. <code>!remind 10m tea</code>",
+            )
             return
         await _store(event, seconds, text.strip(), here)
 
@@ -308,18 +320,21 @@ def setup(client, my_id):
         try:
             due_at, text = parse_at_time(tokens, tz)
         except ValueError as exc:
-            await _say(event, f"❌ {exc}")
+            await _say(event, f"❌ {brand.esc(exc)}")
             return
         delay = due_at - time.time()
         if delay < 0:
-            await _say(event, "❌ That time is in the past.")
+            await _say(event, "❌ <b>That time is in the past.</b>")
             return
         await _store(event, None, text, here, due_at=due_at, tz_used=tz_name)
 
     async def _store(event, seconds, text, here, due_at=None, tz_used=None):
         state = load_state()
         if len(state["items"]) >= MAX_REMINDERS:
-            await _say(event, f"❌ {MAX_REMINDERS} reminders are already pending.")
+            await _say(
+                event,
+                f"❌ <b>{MAX_REMINDERS} reminders are already pending.</b>",
+            )
             return
 
         if due_at is None:
@@ -334,50 +349,67 @@ def setup(client, my_id):
             "chat_id": event.chat_id if here else None,
         })
         if not save_state(state):
-            await _say(event, "❌ Could not save the reminder (storage unavailable).")
+            await _say(
+                event,
+                "❌ <b>Could not save the reminder</b> (storage unavailable).",
+            )
             return
 
         tz, _ = owner_timezone()
         when = _fmt_due(due_at, tz)
         left = max(0, due_at - time.time())
         where = "this chat" if here else "Saved Messages"
-        extra = f" · timezone {tz_used}" if tz_used else ""
+        extra = f" · timezone {brand.esc(tz_used)}" if tz_used else ""
         await _say(
             event,
-            f"⏰ Reminder `#{item_id}` in {format_duration(left)} ({when}) → {where}{extra}\n"
-            f"_{text[:120]}_",
+            f"⏰ <b>Reminder</b> <code>#{item_id}</code> in "
+            f"<code>{format_duration(left)}</code> "
+            f"<i>({brand.esc(when)})</i> → {where}{extra}\n"
+            f"<i>{brand.esc(text[:120])}</i>",
         )
 
     async def _cmd_list(event):
         state = load_state()
         if not state["items"]:
-            await _say(event, "📭 No pending reminders.")
+            await _say(event, "📭 <b>No pending reminders.</b>")
             return
         tz, _ = owner_timezone()
-        lines = ["⏰ **Pending reminders**"]
+        lines = ["⏰ <b>Pending reminders</b>"]
         for item in sorted(state["items"], key=lambda entry: float(entry.get("due_at", 0))):
             left = max(0, float(item["due_at"]) - time.time())
             where = "here" if item.get("chat_id") else "Saved Messages"
             lines.append(
-                f"• `#{item['id']}` in {format_duration(left)} "
-                f"({_fmt_due(float(item['due_at']), tz)}, {where}) — {item.get('text', '')[:80]}"
+                f"• <code>#{item['id']}</code> in "
+                f"<code>{format_duration(left)}</code> "
+                f"<i>({brand.esc(_fmt_due(float(item['due_at']), tz))}, "
+                f"{where})</i> · {brand.esc(item.get('text', '')[:80])}"
             )
         await _say(event, "\n".join(lines))
 
     async def _cmd_cancel(event, rest):
         raw = rest.strip().lstrip("#")
         if not raw.isdigit():
-            await _say(event, "Usage: `!remind cancel <id>` (see `!remind list`)")
+            await _say(
+                event,
+                "Usage · <code>!remind cancel &lt;id&gt;</code> "
+                "(see <code>!remind list</code>)",
+            )
             return
         target = int(raw)
         state = load_state()
         kept = [item for item in state["items"] if int(item.get("id", -1)) != target]
         if len(kept) == len(state["items"]):
-            await _say(event, f"❌ No pending reminder `#{target}`.")
+            await _say(
+                event,
+                f"❌ <b>No pending reminder</b> <code>#{target}</code>.",
+            )
             return
         state["items"] = kept
         save_state(state)
-        await _say(event, f"✅ Reminder `#{target}` cancelled.")
+        await _say(
+            event,
+            f"✅ <b>Reminder</b> <code>#{target}</code> cancelled.",
+        )
 
     async def _cmd_clear(event, rest):
         if confirm.check(event.chat_id, ACTION_CLEAR, rest):
@@ -385,10 +417,14 @@ def setup(client, my_id):
             count = len(state["items"])
             state["items"] = []
             save_state(state)
-            await _say(event, f"🗑️ Cancelled {count} reminder(s).")
+            await _say(event, f"🗑️ <b>Cancelled</b> {count} reminder(s).")
             return
         if rest.strip().lower().startswith("confirm"):
-            await _say(event, "❌ Wrong or expired token. Run `!remind clear` again.")
+            await _say(
+                event,
+                "❌ <b>Wrong or expired token.</b> Run "
+                "<code>!remind clear</code> again.",
+            )
             return
         prompt = confirm.request(
             event.chat_id, ACTION_CLEAR, "This cancels every pending reminder."
@@ -400,21 +436,28 @@ def setup(client, my_id):
             tz, name = owner_timezone()
             await _say(
                 event,
-                f"🕐 Timezone: `{name}`" if tz else
-                "🕐 No timezone set. Use `!remind tz Asia/Tehran` or set OWNER_TZ.",
+                f"🕐 <b>Timezone</b> · <code>{brand.esc(name)}</code>" if tz else
+                "🕐 <b>No timezone set.</b> Use "
+                "<code>!remind tz Asia/Tehran</code> or set OWNER_TZ.",
             )
             return
         try:
             pytz.timezone(rest)
         except Exception:  # noqa: BLE001
-            await _say(event, f"❌ `{rest}` is not a known timezone (e.g. Asia/Tehran, Europe/Berlin).")
+            await _say(
+                event,
+                f"❌ <code>{brand.esc(rest)}</code> is not a known timezone "
+                "(e.g. Asia/Tehran, Europe/Berlin).",
+            )
             return
         settings = load_settings()
         settings["timezone"] = rest
         settings.setdefault("_version", 1)
         save_settings(settings)
-        await _say(event, f"🕐 Timezone set to `{rest}`.")
+        await _say(
+            event, f"🕐 <b>Timezone set to</b> <code>{brand.esc(rest)}</code>."
+        )
 
     async def _say(event, text):
         # Com/core/reply.py
-        await say(event, text, name="remind")
+        await say(event, text, name="remind", parse_mode="html")

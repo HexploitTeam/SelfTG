@@ -79,7 +79,8 @@ def setup(client, my_id):
             options = {'lang': 'en', 'tld': 'com', 'voice_note': False}
 
             if not arg_str and not event.is_reply:
-                await say(event, "📖 TTS Help\n\n" + __HELP__, name="tts")
+                await say(event, "📖 <b>TTS Help</b>\n\n" + brand.esc(__HELP__),
+                          name="tts", parse_mode="html")
                 return
 
             if arg_str:

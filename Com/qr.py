@@ -22,7 +22,11 @@ def setup(client, my_id):
             qr_img.save(bio, "PNG")
             bio.seek(0)
 
-            await event.reply(file=bio)
+            await event.reply(
+                file=bio,
+                caption=brand.sign("🔳 <b>QR code</b>", "qr"),
+                parse_mode="html",
+            )
         except Exception as e:
             await say(
                 event,

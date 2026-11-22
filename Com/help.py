@@ -240,9 +240,10 @@ def setup(client, my_id):
             log.warning("help: file delivery failed (%s), sending text chunks",
                         type(exc).__name__)
 
-        for start in range(0, len(content), CHUNK):
+        plain = brand.plain(content)
+        for start in range(0, len(plain), CHUNK):
             try:
-                await event.reply(content[start:start + CHUNK])
+                await event.reply(plain[start:start + CHUNK])
             except Exception:  # noqa: BLE001
                 log.warning("help: could not deliver help chunk at offset %d", start)
                 return
@@ -297,7 +298,9 @@ def setup(client, my_id):
 
             # a command family from the registry
             if registry.get(arg):
-                await deliver(event, "📖 " + registry.render(arg))
+                await deliver(
+                    event, "📖 " + brand.esc(registry.render(arg))
+                )
                 return
 
             # a category

@@ -25,7 +25,7 @@ __HELP__ = (
     "!reaction <@Username/ID> <Emoji/alias> → React with emoji to all future messages from the user\n"
     "!reaction (reply) <Emoji/alias> → React to messages of replied user\n"
     "!reaction stop <ID> → Stop the reaction task\n\n"
-    "💡 `!react list` → every supported reaction and its aliases\n"
+    "💡 !react list → every supported reaction and its aliases\n"
     "👍 like · 👎 dislike · ❤️ heart · 🔥 fire · 🩷 pinkheart · ❤️‍🔥 fireheart\n"
     "🎉 party · 🤣 laugh · 💯 100 · 🤝 handshake · 🫡 salute · 🫶 lovehand"
 )

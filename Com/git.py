@@ -18,6 +18,7 @@ import re
 
 from telethon import events
 
+from Com.core import brand
 from Com.core.reply import say
 
 log = logging.getLogger("selftg.git")
@@ -62,7 +63,8 @@ async def _git(*args):
             await proc.wait()
         except ProcessLookupError:
             pass
-        return False, f"`git {' '.join(args)}` timed out after {TIMEOUT}s"
+        return False, (f"❌ <code>git {brand.esc(' '.join(args))}</code> timed out "
+                       f"after {TIMEOUT}s")
 
     text = out.decode("utf-8", "replace").strip()
     return proc.returncode == 0, text
@@ -81,36 +83,37 @@ async def pull(branch=BRANCH):
     smuggle an option into git's argv.
     """
     if not BRANCH_RE.match(branch or ""):
-        return False, f"❌ `{branch!r}` is not a branch name."
+        return False, f"❌ <code>{brand.esc(branch)}</code> is not a branch name."
 
     before = await _head()
 
     ok, out = await _git("fetch", "--prune", "origin", branch)
     if not ok:
         log.warning("git: fetch failed: %s", out[:400])
-        return False, (f"❌ `git fetch origin {branch}` failed:\n"
-                       + (out or "no output"))
+        return False, (f"❌ <b><code>git fetch origin {brand.esc(branch)}</code> "
+                       f"failed</b>\n{brand.esc(out or 'no output')}")
 
     ok, out = await _git("reset", "--hard", "FETCH_HEAD")
     if not ok:
         log.warning("git: reset failed: %s", out[:400])
-        return False, "❌ Fetch worked but the reset failed:\n" + (out or "no output")
+        return False, ("❌ <b>Fetch worked but the reset failed</b>\n"
+                       + brand.esc(out or "no output"))
 
     after = await _head()
     tail = out.splitlines()[-1] if out else ""
     lines = [
-        "✅ Pulled `origin/" + branch + "`.",
+        f"✅ <b>Pulled</b> <code>origin/{brand.esc(branch)}</code>",
         "",
-        "Before: `" + before + "`",
-        "Now: `" + after + "`",
+        f"Before · <code>{brand.esc(before)}</code>",
+        f"Now · <code>{brand.esc(after)}</code>",
     ]
     if after == before:
-        lines.append("_Already up to date._")
+        lines.append("<i>Already up to date.</i>")
     if tail:
         lines.append("")
-        lines.append("`" + tail + "`")
+        lines.append(f"<code>{brand.esc(tail)}</code>")
     lines.append("")
-    lines.append("Send `!update` to restart on the new code.")
+    lines.append("Send <code>!update</code> to restart on the new code.")
     return True, "\n".join(lines)
 
 
@@ -123,25 +126,28 @@ def setup(client, my_id):
             return
         branch = (event.pattern_match.group(1) or BRANCH).strip()
         if not BRANCH_RE.match(branch):
-            await say(event, f"❌ `{branch}` is not a branch name.", name="git")
+            await say(event, f"❌ <code>{brand.esc(branch)}</code> is not a branch name.",
+                      name="git", parse_mode="html")
             return
-        await say(event, "⏳ Pulling `" + branch + "`…", name="git")
+        await say(event, f"⏳ <b>Pulling</b> <code>{brand.esc(branch)}</code>…",
+                  name="git", parse_mode="html")
         ok, text = await pull(branch)
         if not ok:
             log.info("git: pull failed")
-        await say(event, text, name="git")
+        await say(event, text, name="git", parse_mode="html")
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!git\s+push\s*$"))
     async def git_push(event):
         if not event.out or event.sender_id != my_id:
             return
         await say(event,
-                  "🚧 `!git push` is not wired up yet. The Repl has no push "
-                  "credentials, so pushes stay manual for now.",
-                  name="git")
+                  "🚧 <code>!git push</code> is not wired up yet. The Repl has "
+                  "no push credentials, so pushes stay manual for now.",
+                  name="git", parse_mode="html")
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!git\s*$"))
     async def git_help(event):
         if not event.out or event.sender_id != my_id:
             return
-        await say(event, "📖 **Git**\n" + __HELP__, name="git")
+        await say(event, "📖 <b>Git</b>\n" + brand.esc(__HELP__), name="git",
+                  parse_mode="html")

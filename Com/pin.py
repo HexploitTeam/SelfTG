@@ -17,7 +17,7 @@ from telethon import errors, events
 from telethon.tl.types import InputMessagesFilterPinned, User
 
 import Com.core.registry as registry
-from Com.core import flood
+from Com.core import brand, flood
 from Com.core.reply import say
 import Com.core.tgsend as tgsend
 
@@ -45,9 +45,10 @@ __CATEGORY__ = "Utilities"
 def _preview(message, limit=160):
     text = (message.raw_text or "").strip() if message else ""
     if not text:
-        return "_(no text: media or service message)_"
+        return "<i>(no text: media or service message)</i>"
     text = " ".join(text.split())
-    return text if len(text) <= limit else text[: limit - 1] + "…"
+    text = text if len(text) <= limit else text[: limit - 1] + "…"
+    return brand.esc(text)
 
 
 #------------------------------
@@ -74,25 +75,27 @@ def setup(client, my_id):
             elif not args:
                 await _pin(event, notify=True)
             else:
-                await _say(event, "📖 " + __HELP__)
+                await _say(event, "📖 " + brand.esc(__HELP__))
         except errors.ChatAdminRequiredError:
-            await _say(event, "❌ The account needs admin rights (and the 'pin messages' right) here.")
+            await _say(event, "❌ <b>The account needs admin rights</b> (and the "
+                             "'pin messages' right) here.")
         except errors.ChatNotModifiedError:
-            await _say(event, "ℹ️ That message is already the pinned one.")
+            await _say(event, "ℹ️ <b>That message is already the pinned one.</b>")
         except errors.MessageNotModifiedError:
-            await _say(event, "ℹ️ Nothing changed.")
+            await _say(event, "ℹ️ <b>Nothing changed.</b>")
         except errors.MessageIdInvalidError:
-            await _say(event, "❌ That message no longer exists.")
+            await _say(event, "❌ <b>That message no longer exists.</b>")
         except flood.FLOOD_ERRORS as exc:
-            await _say(event, f"⏳ Telegram rate limit: wait {exc.seconds}s.")
+            await _say(event, f"⏳ <b>Telegram rate limit</b> · wait <code>{exc.seconds}s</code>.")
         except errors.ChatWriteForbiddenError:
-            await _say(event, "❌ The account cannot post in this chat any more.")
+            await _say(event, "❌ <b>The account cannot post in this chat any more.</b>")
         except errors.RPCError as exc:
-            await _say(event, f"❌ Telegram error ({type(exc).__name__}); see the Replit log.")
+            await _say(event, f"❌ Telegram error (<code>{brand.esc(type(exc).__name__)}</code>); "
+                             "see the Replit log.")
             log.warning("pin: RPC failure %s", type(exc).__name__)
         except Exception:  # noqa: BLE001
             log.exception("pin: unexpected failure")
-            await _say(event, "❌ Pin command failed; see the Replit log.")
+            await _say(event, "❌ <b>Pin command failed.</b> See the Replit log.")
 
     async def _chat(event):
         return await event.get_chat()
@@ -108,13 +111,13 @@ def setup(client, my_id):
         else:
             latest = await client.get_messages(await tgsend.peer(event), limit=1)
             if not latest:
-                await _say(event, "❌ This chat has no messages to pin.")
+                await _say(event, "❌ <b>This chat has no messages to pin.</b>")
                 return
             target = latest[0].id
             preview = _preview(latest[0])
 
         if target is None:
-            await _say(event, "❌ Could not determine which message to pin.")
+            await _say(event, "❌ <b>Could not determine which message to pin.</b>")
             return
 
         await client.pin_message(
@@ -122,11 +125,13 @@ def setup(client, my_id):
         )
 
         bits = [
-            f"📌 Pinned message `{target}`.",
-            "_notification sent_" if notify else "_silent_",
+            f"📌 <b>Pinned message</b> <code>{target}</code>",
+            "<i>notification sent</i>" if notify else "<i>silent</i>",
         ]
         if private:
-            bits.append("_private chat: pinned on your side only (pm_oneside)_")
+            bits.append(
+                "<i>private chat: pinned on your side only (pm_oneside)</i>"
+            )
         bits.append(preview)
         await _say(event, "\n".join(bits))
 
@@ -136,27 +141,30 @@ def setup(client, my_id):
             peer, limit=1, filter=InputMessagesFilterPinned
         )
         if not pinned:
-            await _say(event, "📭 Nothing is pinned in this chat.")
+            await _say(event, "📭 <b>Nothing is pinned in this chat.</b>")
             return
         await client.unpin_message(peer, pinned[0].id)
-        await _say(event, f"📌 Unpinned message `{pinned[0].id}`.")
+        await _say(event, f"📌 <b>Unpinned message</b> <code>{pinned[0].id}</code>.")
 
     async def _list(event):
         pinned = await client.get_messages(
             event.chat_id, limit=5, filter=InputMessagesFilterPinned
         )
         if not pinned:
-            await _say(event, "📭 Nothing is pinned in this chat.")
+            await _say(event, "📭 <b>Nothing is pinned in this chat.</b>")
             return
-        lines = ["📌 **Pinned messages**"]
+        lines = ["📌 <b>Pinned messages</b>"]
         for message in pinned:
             sender = ""
             if message.sender_id:
-                sender = f" · from `{message.sender_id}`"
+                sender = f" · from <code>{message.sender_id}</code>"
             date = message.date.strftime("%Y-%m-%d %H:%M") if message.date else ""
-            lines.append(f"• `{message.id}`{sender} · {date}\n  {_preview(message, 120)}")
+            lines.append(
+                f"• <code>{message.id}</code>{sender} · {date}\n"
+                f"  {_preview(message, 120)}"
+            )
         await _say(event, "\n".join(lines))
 
     async def _say(event, text):
         # Edit-then-reply is shared: see Com/core/reply.py.
-        await say(event, text, name="pin")
+        await say(event, text, name="pin", parse_mode="html")

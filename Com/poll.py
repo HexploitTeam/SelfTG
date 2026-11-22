@@ -51,7 +51,7 @@ from telethon.tl.types import (
 import Com.core.tgsend as tgsend
 
 import Com.core.registry as registry
-from Com.core import flood
+from Com.core import brand, flood
 from Com.core.reply import say
 from Com.core.storage import load_store, save_json
 
@@ -153,7 +153,7 @@ def build_poll(question, options, *, quiz=False, multiple=False, public=False,
 
 
 def render_results(question, options, results, total, chosen=None):
-    lines = [f"📊 **{question}**"]
+    lines = [f"📊 <b>{brand.esc(question)}</b>"]
     seen = 0
     for answer in results or []:
         index = answer.option[0] if answer.option else -1
@@ -163,10 +163,20 @@ def render_results(question, options, results, total, chosen=None):
         share = (voters / total * 100) if total else 0
         bar = "█" * max(0, min(20, round(share / 5)))
         mark = " ✅" if getattr(answer, "correct", False) else ""
-        lines.append(f"{label}{mark}\n`{bar}` {voters} ({share:.0f}%)")
+        lines.append(
+            f"{brand.esc(label)}{mark}\n"
+            f"<code>{bar}</code> {voters} <i>({share:.0f}%)</i>"
+        )
     if not lines[1:]:
-        lines.append("_Telegram returned no tallies yet (no votes, or the poll was just closed)._")
-    lines.append(f"\n_{total if total is not None else seen} voter(s) · {datetime.now(timezone.utc).strftime('%H:%M UTC')}_")
+        lines.append(
+            "<i>Telegram returned no tallies yet (no votes, or the poll was "
+            "just closed).</i>"
+        )
+    count = total if total is not None else seen
+    lines.append(
+        f"\n<i>{count} voter(s) · "
+        f"{datetime.now(timezone.utc).strftime('%H:%M UTC')}</i>"
+    )
     return "\n".join(lines)
 
 
@@ -234,7 +244,7 @@ def setup(client, my_id):
 
         raw = (event.pattern_match.group(1) or "").strip()
         if not raw or raw.lower() in ("help", "?"):
-            await _say(event, "📖 " + __HELP__)
+            await _say(event, "📖 " + brand.esc(__HELP__))
             return
 
         head, _, rest = raw.partition(" ")
@@ -251,7 +261,7 @@ def setup(client, my_id):
                 await _create(event, raw)
         except Exception:  # noqa: BLE001
             log.exception("poll: command failed")
-            await _say(event, "❌ Poll command failed; see the Replit log.")
+            await _say(event, "❌ <b>Poll command failed.</b> See the Replit log.")
 
     async def _create(event, raw):
         quiz = multiple = public = False
@@ -276,8 +286,9 @@ def setup(client, my_id):
         if len(parts) < 2:
             await _say(
                 event,
-                "❌ Need a question and at least one option, separated by `|`.\n"
-                "Example: `!poll Best language? | Python | Rust`",
+                "❌ <b>Need a question and at least one option</b>, separated "
+                "by <code>|</code>.\nExample · "
+                "<code>!poll Best language? | Python | Rust</code>",
             )
             return
 
@@ -296,7 +307,8 @@ def setup(client, my_id):
             if len(body) < 3:
                 await _say(
                     event,
-                    "❌ Quiz form: `!poll quiz <question> | <correct answer> | <opt1> | <opt2>`",
+                    "❌ Quiz form · <code>!poll quiz &lt;question&gt; | "
+                    "&lt;correct answer&gt; | &lt;opt1&gt; | &lt;opt2&gt;</code>",
                 )
                 return
             correct_token = body[0]
@@ -304,13 +316,19 @@ def setup(client, my_id):
             if correct_token.isdigit():
                 candidate = int(correct_token) - 1
                 if not 0 <= candidate < len(options):
-                    await _say(event, "❌ The correct-answer index is out of range.")
+                    await _say(
+                        event,
+                        "❌ <b>The correct-answer index is out of range.</b>",
+                    )
                     return
                 correct_index = candidate
             else:
                 matches = [i for i, option in enumerate(options) if option.lower() == correct_token.lower()]
                 if not matches:
-                    await _say(event, "❌ The correct answer must be one of the options.")
+                    await _say(
+                        event,
+                        "❌ <b>The correct answer must be one of the options.</b>",
+                    )
                     return
                 correct_index = matches[0]
         else:
@@ -322,7 +340,7 @@ def setup(client, my_id):
                 correct_index=correct_index, explanation=explanation,
             )
         except ValueError as exc:
-            await _say(event, f"❌ {exc}")
+            await _say(event, f"❌ {brand.esc(exc)}")
             return
 
         peer = await tgsend.peer(event)
@@ -355,34 +373,50 @@ def setup(client, my_id):
         try:
             result = await _send()
         except errors.ChatWriteForbiddenError:
-            await _say(event, "❌ The account cannot post in this chat.")
+            await _say(event, "❌ <b>The account cannot post in this chat.</b>")
             return
         except errors.ChatSendMediaForbiddenError:
-            await _say(event, "❌ The account is not allowed to send media (polls) in this chat.")
+            await _say(
+                event,
+                "❌ <b>The account is not allowed to send media (polls) here.</b>",
+            )
             return
         except errors.ChatSendPollForbiddenError:
-            await _say(event, "❌ Polls are not allowed in this chat.")
+            await _say(event, "❌ <b>Polls are not allowed in this chat.</b>")
             return
         except errors.ChatAdminRequiredError:
-            await _say(event, "❌ Admin rights are required to create a poll here.")
+            await _say(
+                event, "❌ <b>Admin rights are required to create a poll here.</b>"
+            )
             return
         except errors.PollOptionInvalidError:
-            await _say(event, "❌ Telegram rejected an option (duplicate or too long).")
+            await _say(
+                event,
+                "❌ <b>Telegram rejected an option</b> (duplicate or too long).",
+            )
             return
         except flood.FLOOD_ERRORS as exc:
-            await _say(event, f"⏳ Telegram rate limit: wait {exc.seconds}s.")
+            await _say(
+                event,
+                f"⏳ <b>Telegram rate limit</b> · wait <code>{exc.seconds}s</code>.",
+            )
             return
         except errors.MediaInvalidError:
             await _say(
                 event,
-                "❌ Telegram rejected the poll media (MEDIA_INVALID). Polls cannot "
-                "be created in secret chats or channel direct-message chats; "
-                "post it in a group, a channel or Saved Messages.",
+                "❌ <b>Telegram rejected the poll media</b> (MEDIA_INVALID). "
+                "Polls cannot be created in secret chats or channel "
+                "direct-message chats; post it in a group, a channel or Saved "
+                "Messages.",
             )
             return
         except errors.RPCError as exc:
             log.warning("poll: send failed %s", type(exc).__name__)
-            await _say(event, f"❌ Telegram refused the poll ({type(exc).__name__}).")
+            await _say(
+                event,
+                "❌ <b>Telegram refused the poll</b> "
+                f"(<code>{brand.esc(type(exc).__name__)}</code>).",
+            )
             return
 
         msg_id = _message_id_from(result)
@@ -393,9 +427,12 @@ def setup(client, my_id):
             )
 
         kind = "quiz" if quiz else ("multi" if multiple else "poll")
-        bits = [f"✅ Created a {kind} poll."]
+        bits = [f"✅ <b>Created a {kind} poll</b>"]
         if msg_id:
-            bits.append(f"`!poll results` = #`{msg_id}` · `!poll close` closes it")
+            bits.append(
+                f"<code>!poll results</code> = "
+                f"<code>#{msg_id}</code> · <code>!poll close</code> closes it"
+            )
         await event.delete()
         await _say(event, "\n".join(bits))
 
@@ -422,7 +459,11 @@ def setup(client, my_id):
     async def _results(event):
         msg_id, meta = await _resolve_target(event)
         if not msg_id:
-            await _say(event, "❌ No poll to inspect. Reply to a poll or create one here first.")
+            await _say(
+                event,
+                "❌ <b>No poll to inspect.</b> Reply to a poll or create one "
+                "here first.",
+            )
             return
 
         peer = await tgsend.peer(event)
@@ -435,10 +476,12 @@ def setup(client, my_id):
             log.info("poll: results failed (%s)", type(exc).__name__)
             await _say(
                 event,
-                f"❌ Telegram did not return results for message `{msg_id}` "
-                f"({type(exc).__name__}). This version exposes "
-                "`messages.GetPollResults`, so the usual causes are a deleted poll, "
-                "a non-poll message id, or a chat where the account may not read results.",
+                f"❌ <b>Telegram did not return results for message</b> "
+                f"<code>{msg_id}</code> "
+                f"(<code>{brand.esc(type(exc).__name__)}</code>). This version "
+                "exposes <code>messages.GetPollResults</code>, so the usual "
+                "causes are a deleted poll, a non-poll message id, or a chat "
+                "where the account may not read results.",
             )
             return
 
@@ -465,16 +508,22 @@ def setup(client, my_id):
     async def _close(event):
         msg_id, meta = await _resolve_target(event)
         if not msg_id:
-            await _say(event, "❌ No poll to close. Reply to a poll or create one here first.")
+            await _say(
+                event,
+                "❌ <b>No poll to close.</b> Reply to a poll or create one here "
+                "first.",
+            )
             return
 
         message = await client.get_messages(await tgsend.peer(event), ids=msg_id)
         if not message or not isinstance(message.media, MessageMediaPoll):
-            await _say(event, f"❌ Message `{msg_id}` is not a poll.")
+            await _say(
+                event, f"❌ <b>Message</b> <code>{msg_id}</code> is not a poll."
+            )
             return
         poll = message.media.poll
         if poll.closed:
-            await _say(event, "ℹ️ That poll is already closed.")
+            await _say(event, "ℹ️ <b>That poll is already closed.</b>")
             return
 
         closed = Poll(
@@ -502,23 +551,27 @@ def setup(client, my_id):
         try:
             await client(EditMessageRequest(peer=peer, id=msg_id, media=media))
         except errors.MessageNotModifiedError:
-            await _say(event, "ℹ️ Telegram reports the poll unchanged.")
+            await _say(event, "ℹ️ <b>Telegram reports the poll unchanged.</b>")
             return
         except errors.ChatAdminRequiredError:
-            await _say(event, "❌ Admin rights are required to close this poll.")
+            await _say(
+                event, "❌ <b>Admin rights are required to close this poll.</b>"
+            )
             return
         except errors.RPCError as exc:
             log.info("poll: close failed (%s)", type(exc).__name__)
             await _say(
                 event,
-                f"❌ Telegram refused to close poll `{msg_id}` ({type(exc).__name__}). "
-                "Editing a poll this way is the documented close path, but some "
-                "chats restrict it.",
+                f"❌ <b>Telegram refused to close poll</b> "
+                f"<code>{msg_id}</code> "
+                f"(<code>{brand.esc(type(exc).__name__)}</code>). Editing a poll "
+                "this way is the documented close path, but some chats restrict "
+                "it.",
             )
             return
 
-        await _say(event, f"🔒 Closed poll `{msg_id}`.")
+        await _say(event, f"🔒 <b>Closed poll</b> <code>{msg_id}</code>.")
 
     async def _say(event, text):
         # Edit-then-reply is shared: see Com/core/reply.py.
-        await say(event, text, name="poll")
+        await say(event, text, name="poll", parse_mode="html")

@@ -268,7 +268,10 @@ def _register_handlers(client, owner_id):
         if handler is None:
             log.error("bot: /%s maps to unknown handler %s",
                       event.pattern_match.group(1), key)
-            await event.respond("That command is registered but not wired.")
+            await event.respond(
+                brand.sign("That command is registered but not wired."),
+                parse_mode="html",
+            )
             return
         await handler(event)
 
@@ -313,7 +316,10 @@ def _register_handlers(client, owner_id):
             await botui.on_text(ctx, event)
         except Exception:  # noqa: BLE001 - never let a flow kill the bot
             log.exception("bot: text flow failed")
-            await event.respond("❌ That step failed; /cancel and try again.")
+            await event.respond(
+                brand.sign("❌ <b>That step failed;</b> /cancel and try again."),
+                parse_mode="html",
+            )
 
     # Scriptable interface to the same state the buttons edit
     @client.on(events.NewMessage(pattern=r"^/add_enemy\s+(-?\d+)\s+(\d+)(?:\s+(\w+))?(?:\s+(.+))?$"))
@@ -330,13 +336,22 @@ def _register_handlers(client, owner_id):
         if chat_id not in enemies:
             enemies[chat_id] = []
         if any(u.get("user_id") == user_id for u in enemies[chat_id]):
-            await event.respond(f"User {user_id} already in enemy list.")
+            await event.respond(
+                brand.sign(f"User <code>{user_id}</code> already in enemy list."),
+                parse_mode="html",
+            )
             return
         enemies[chat_id].append(
             {"user_id": user_id, "category": category, "custom_text": custom_text}
         )
         save_json(ENEMY_FILE, enemies)
-        await event.respond(f"✅ Added enemy: Chat {chat_id}, User {user_id}")
+        await event.respond(
+            brand.sign(
+                f"✅ <b>Added enemy</b> · chat <code>{brand.esc(chat_id)}</code> · "
+                f"user <code>{user_id}</code>"
+            ),
+            parse_mode="html",
+        )
 
     @client.on(events.NewMessage(pattern=r"^/remove_enemy\s+(-?\d+)\s+(\d+)$"))
     async def remove_enemy_cmd(event):
@@ -346,15 +361,27 @@ def _register_handlers(client, owner_id):
         user_id = int(event.pattern_match.group(2))
         enemies = load_json(ENEMY_FILE)
         if not isinstance(enemies, dict) or chat_id not in enemies:
-            await event.respond(f"Chat {chat_id} not found.")
+            await event.respond(
+                brand.sign(f"Chat <code>{brand.esc(chat_id)}</code> not found."),
+                parse_mode="html",
+            )
             return
         new_users = [u for u in enemies[chat_id] if u.get("user_id") != user_id]
         if len(new_users) == len(enemies[chat_id]):
-            await event.respond(f"User {user_id} not found.")
+            await event.respond(
+                brand.sign(f"User <code>{user_id}</code> not found."),
+                parse_mode="html",
+            )
             return
         enemies[chat_id] = new_users
         save_json(ENEMY_FILE, enemies)
-        await event.respond(f"✅ Removed enemy: Chat {chat_id}, User {user_id}")
+        await event.respond(
+            brand.sign(
+                f"✅ <b>Removed enemy</b> · chat <code>{brand.esc(chat_id)}</code> · "
+                f"user <code>{user_id}</code>"
+            ),
+            parse_mode="html",
+        )
 
     @client.on(events.NewMessage(pattern=r"^/set_warn\s+(-?\d+)\s+(\d+)$"))
     async def set_warn_cmd(event):
@@ -370,7 +397,13 @@ def _register_handlers(client, owner_id):
         else:
             warns[chat_id]["limit"] = limit
         save_json(WARN_FILE, warns)
-        await event.respond(f"✅ Warn limit for chat {chat_id} set to {limit}")
+        await event.respond(
+            brand.sign(
+                f"✅ <b>Warn limit</b> · chat <code>{brand.esc(chat_id)}</code> · "
+                f"<code>{limit}</code>"
+            ),
+            parse_mode="html",
+        )
 
     @client.on(events.NewMessage(pattern=r"^/add_mute\s+(-?\d+)\s+(\d+)(?:\s+(\w+))?$"))
     async def add_mute_cmd(event):
@@ -385,11 +418,20 @@ def _register_handlers(client, owner_id):
         if chat_id not in mutes:
             mutes[chat_id] = []
         if any(u.get("user_id") == user_id for u in mutes[chat_id]):
-            await event.respond(f"User {user_id} already muted.")
+            await event.respond(
+                brand.sign(f"User <code>{user_id}</code> already muted."),
+                parse_mode="html",
+            )
             return
         mutes[chat_id].append({"user_id": user_id, "mode": mode})
         save_json(MUTE_FILE, mutes)
-        await event.respond(f"✅ Muted: Chat {chat_id}, User {user_id}")
+        await event.respond(
+            brand.sign(
+                f"✅ <b>Muted</b> · chat <code>{brand.esc(chat_id)}</code> · "
+                f"user <code>{user_id}</code>"
+            ),
+            parse_mode="html",
+        )
 
     @client.on(events.NewMessage(pattern=r"^/remove_mute\s+(-?\d+)\s+(\d+)$"))
     async def remove_mute_cmd(event):
@@ -399,15 +441,27 @@ def _register_handlers(client, owner_id):
         user_id = int(event.pattern_match.group(2))
         mutes = load_json(MUTE_FILE)
         if not isinstance(mutes, dict) or chat_id not in mutes:
-            await event.respond(f"Chat {chat_id} not found.")
+            await event.respond(
+                brand.sign(f"Chat <code>{brand.esc(chat_id)}</code> not found."),
+                parse_mode="html",
+            )
             return
         new_users = [u for u in mutes[chat_id] if u.get("user_id") != user_id]
         if len(new_users) == len(mutes[chat_id]):
-            await event.respond(f"User {user_id} not found.")
+            await event.respond(
+                brand.sign(f"User <code>{user_id}</code> not found."),
+                parse_mode="html",
+            )
             return
         mutes[chat_id] = new_users
         save_json(MUTE_FILE, mutes)
-        await event.respond(f"✅ Unmuted: Chat {chat_id}, User {user_id}")
+        await event.respond(
+            brand.sign(
+                f"✅ <b>Unmuted</b> · chat <code>{brand.esc(chat_id)}</code> · "
+                f"user <code>{user_id}</code>"
+            ),
+            parse_mode="html",
+        )
 
 
 #------------------------------
@@ -437,7 +491,11 @@ async def _alert_loop(ctx):
                 continue
             for event in interop.pending_events():
                 await ctx.client.send_message(
-                    ctx.owner_id, f"🔔 {event.get('text', '')}", parse_mode="html"
+                    ctx.owner_id,
+                    brand.sign(
+                        f"🔔 {brand.esc(event.get('text', ''))}"
+                    ),
+                    parse_mode="html",
                 )
                 interop.ack_event(event.get("id"))
             if not interop.is_online("selfbot"):
@@ -446,9 +504,12 @@ async def _alert_loop(ctx):
                     last_stale_alert = now
                     await ctx.client.send_message(
                         ctx.owner_id,
-                        "⚠️ The self-bot has not written a heartbeat for over "
-                        f"{interop.HEARTBEAT_STALE}s. Check the Replit log; "
-                        "queued actions will wait.",
+                        brand.sign(
+                            "⚠️ <b>The self-bot has not written a heartbeat for "
+                            f"over {interop.HEARTBEAT_STALE}s.</b> Check the "
+                            "Replit log; queued actions will wait."
+                        ),
+                        parse_mode="html",
                     )
             else:
                 last_stale_alert = 0.0

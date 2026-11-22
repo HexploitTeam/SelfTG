@@ -34,7 +34,7 @@ from telethon.errors import (
     UsernameNotOccupiedError,
 )
 
-from Com.core import flood
+from Com.core import brand, flood
 import Com.core.tgsend as tgsend
 from Com.core.reply import say
 
@@ -94,22 +94,25 @@ def setup(client, my_id):
 
         flags, target = parse_args(event.pattern_match.group(1))
         if not flags and target is None and not event.is_reply:
-            await say(event, "📖 **Forward**\n" + __HELP__, name="fw")
+            await say(event, "📖 <b>Forward</b>\n" + brand.esc(__HELP__), name="fw",
+                      parse_mode="html")
             return
 
         if not event.is_reply:
             await say(
                 event,
-                "❌ Reply to the message you want to forward. `!fw` takes the "
-                "source from the reply, so nothing has to be resolved by id.",
+                "❌ Reply to the message you want to forward. "
+                "<code>!fw</code> takes the source from the reply, so nothing "
+                "has to be resolved by id.",
                 name="fw",
+                parse_mode="html",
             )
             return
 
         reply = await event.get_reply_message()
         if reply is None:
-            await say(event, "❌ The replied message is not available.",
-                      name="fw")
+            await say(event, "❌ <b>The replied message is not available.</b>",
+                      name="fw", parse_mode="html")
             return
 
         try:
@@ -117,8 +120,9 @@ def setup(client, my_id):
                 else await tgsend.peer(event)
         except (ValueError, UsernameInvalidError, UsernameNotOccupiedError,
                 PeerIdInvalidError) as exc:
-            await say(event, f"❌ Could not resolve `{target}`: {exc}",
-                      name="fw")
+            await say(event, f"❌ Could not resolve <code>{brand.esc(target)}</code> · "
+                             f"{brand.esc(exc)}",
+                      name="fw", parse_mode="html")
             return
 
         labels = [name for name in ("drop_author", "drop_media_captions")
@@ -132,34 +136,35 @@ def setup(client, my_id):
             )
         except flood.FLOOD_ERRORS as exc:
             left = flood.note_flood(exc.seconds)
-            text = f"⏳ Telegram rate limit: wait {exc.seconds}s."
+            text = f"⏳ <b>Telegram rate limit</b> · wait <code>{exc.seconds}s</code>."
             if left:
                 text += "\n" + flood.describe(left)
-            await say(event, text, name="fw")
+            await say(event, text, name="fw", parse_mode="html")
             return
         except ChatWriteForbiddenError:
-            await say(event, "❌ The account cannot post in the target chat.",
-                      name="fw")
+            await say(event, "❌ <b>The account cannot post in the target chat.</b>",
+                      name="fw", parse_mode="html")
             return
         except ChatAdminRequiredError:
             await say(event, "❌ Posting here needs an admin right the account "
-                             "does not have.", name="fw")
+                             "does not have.", name="fw", parse_mode="html")
             return
         except ChannelPrivateError:
             await say(event, "❌ The target is private or the account is not a "
-                             "member.", name="fw")
+                             "member.", name="fw", parse_mode="html")
             return
         except MessageIdInvalidError:
-            await say(event, "❌ The message being forwarded no longer exists.",
-                      name="fw")
+            await say(event, "❌ <b>The message being forwarded no longer exists.</b>",
+                      name="fw", parse_mode="html")
             return
         except errors.RPCError as exc:
-            await say(event, f"❌ Telegram error ({type(exc).__name__}).",
-                      name="fw")
+            await say(event, f"❌ Telegram error (<code>{brand.esc(type(exc).__name__)}</code>).",
+                      name="fw", parse_mode="html")
             return
         except Exception as exc:  # noqa: BLE001 - report, never raise
             log.exception("fw: forward failed")
-            await say(event, f"❌ {type(exc).__name__}: {exc}", name="fw")
+            await say(event, f"❌ <code>{brand.esc(type(exc).__name__)}</code> · {brand.esc(exc)}",
+                      name="fw", parse_mode="html")
             return
 
         if labels:

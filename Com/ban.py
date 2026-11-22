@@ -32,7 +32,7 @@ from datetime import datetime, timedelta, timezone
 from telethon import errors, events
 from telethon.tl.types import Channel, Chat
 
-from Com.core import flood
+from Com.core import brand, flood
 from Com.core.durations import format_duration, looks_like_duration
 from Com.core.durations import parse_duration as shared_parse_duration
 from Com.core.reply import say
@@ -167,8 +167,9 @@ def _ledger_note(written):
     """One line for the command reply when the ledger write failed."""
     if written:
         return ""
-    return ("\n⚠️ The ledger could not be written (storage error), so `!ban list` "
-            "may not show this. Telegram's own state is unaffected.")
+    return ("\n⚠️ <b>The ledger could not be written</b> (storage error), so "
+            "<code>!ban list</code> may not show this. Telegram's own state is "
+            "unaffected.")
 
 
 #------------------------------
@@ -213,14 +214,15 @@ def describe_error(exc):
 #------------------------------
 
 HELP_TEXT = (
-    "🛑 **Ban commands**\n"
-    "• `!ban <user> [reason]` — permanent ban\n"
-    "• `!ban temp <user> <10m|2h|7d> [reason]` — temporary ban\n"
-    "• `!ban unban <user> [reason]` — lift a ban\n"
-    "• `!ban kick <user> [reason]` — ban then unban\n"
-    "• `!ban list` — bans tracked in this chat\n"
-    "• `!ban info <user>` — live status + tracked details\n"
-    "_<user>_ is a reply, @username or numeric ID. Supergroups/channels only."
+    "🛑 <b>Ban commands</b>\n"
+    "• <code>!ban &lt;user&gt; [reason]</code> · permanent ban\n"
+    "• <code>!ban temp &lt;user&gt; &lt;10m|2h|7d&gt; [reason]</code> · temporary\n"
+    "• <code>!ban unban &lt;user&gt; [reason]</code> · lift a ban\n"
+    "• <code>!ban kick &lt;user&gt; [reason]</code> · ban then unban\n"
+    "• <code>!ban list</code> · bans tracked in this chat\n"
+    "• <code>!ban info &lt;user&gt;</code> · live status + tracked details\n"
+    "<i>&lt;user&gt; is a reply, @username or numeric ID. "
+    "Supergroups/channels only.</i>"
 )
 
 
@@ -228,7 +230,7 @@ def setup(client, my_id):
 
     async def _say(event, text):
         # Com/core/reply.py
-        await say(event, text, name="ban")
+        await say(event, text, name="ban", parse_mode="html")
 
     async def _chat(event):
         chat = await event.get_chat()
@@ -307,11 +309,12 @@ def setup(client, my_id):
                                until=until)
             await _say(
                 event,
-                f"⏳ **Temporary ban** — {name}\n"
-                f"Duration: {format_duration(seconds)}\n"
-                f"Expires: {_utc(until)}\n"
-                f"Reason: {reason}\n"
-                "Telegram enforces the expiry itself, so it survives restarts."
+                f"⏳ <b>Temporary ban</b> · {brand.esc(name)}\n"
+                f"Duration · <code>{format_duration(seconds)}</code>\n"
+                f"Expires · <code>{_utc(until)}</code>\n"
+                f"Reason · {brand.esc(reason)}\n"
+                "<i>Telegram enforces the expiry itself, so it survives "
+                "restarts.</i>"
                 + _ledger_note(written),
             )
             return
@@ -320,7 +323,8 @@ def setup(client, my_id):
         written = save_ban(chat.id, user_id, kind="ban", reason=reason)
         await _say(
             event,
-            f"🛑 **Banned** — {name}\nReason: {reason}" + _ledger_note(written),
+            f"🛑 <b>Banned</b> · {brand.esc(name)}\n"
+            f"Reason · {brand.esc(reason)}" + _ledger_note(written),
         )
 
     async def cmd_unban(event, token, rest):
@@ -332,8 +336,8 @@ def setup(client, my_id):
         await client.edit_permissions(chat, entity)  # all rights back to default
         tracked = drop_ban(chat.id, user_id)
         reason = rest.strip() or (tracked or {}).get("reason")
-        suffix = f"\n(was: {reason})" if reason else ""
-        await _say(event, f"✅ **Unbanned** — {name}{suffix}")
+        suffix = f"\n<i>was: {brand.esc(reason)}</i>" if reason else ""
+        await _say(event, f"✅ <b>Unbanned</b> · {brand.esc(name)}{suffix}")
 
     async def cmd_kick(event, token, rest):
         chat = await _chat(event)
@@ -351,22 +355,28 @@ def setup(client, my_id):
             log.warning("ban: kick left %s banned (%s)", user_id, type(exc).__name__)
             await _say(
                 event,
-                f"⚠️ **Kick failed halfway** — {name} is still banned.\n"
-                f"Telegram: {describe_error(exc)}\n"
-                f"Lift it with `!ban unban {user_id}`.",
+                f"⚠️ <b>Kick failed halfway</b> · {brand.esc(name)} is still "
+                "banned.\n"
+                f"Telegram · {brand.esc(describe_error(exc))}\n"
+                f"Lift it with <code>!ban unban {user_id}</code>.",
             )
             return
         drop_ban(chat.id, user_id)
-        await _say(event, f"👢 **Kicked** — {name}\nReason: {reason}")
+        await _say(
+            event,
+            f"👢 <b>Kicked</b> · {brand.esc(name)}\n"
+            f"Reason · {brand.esc(reason)}",
+        )
 
     async def cmd_list(event):
         chat = await _chat(event)
         entries = load_bans(chat.id)
         if not entries:
-            await _say(event, "📭 No bans tracked for this chat.")
+            await _say(event, "📭 <b>No bans tracked for this chat.</b>")
             return
 
-        lines = ["📋 **Bans tracked for this chat** (Telegram enforces them):"]
+        lines = ["📋 <b>Bans tracked for this chat</b> <i>(Telegram enforces "
+                 "them)</i>"]
         for user_id, entry in sorted(entries.items(), key=lambda kv: kv[1].get("since", 0)):
             try:
                 entity = await client.get_entity(int(user_id))
@@ -377,7 +387,10 @@ def setup(client, my_id):
                 when = f"until {_utc(float(entry['until']))}"
             else:
                 when = "permanent"
-            lines.append(f"• {name} — {when} — {entry.get('reason', 'no reason given')}")
+            lines.append(
+                f"• {brand.esc(name)} · {brand.esc(when)} · "
+                f"{brand.esc(entry.get('reason', 'no reason given'))}"
+            )
             if len(lines) >= 40:
                 lines.append("• … (truncated)")
                 break
@@ -391,24 +404,30 @@ def setup(client, my_id):
         tracked = load_bans(chat.id).get(str(user_id))
         banned, state = await _live_state(chat, entity)
 
-        lines = [f"🔎 **Ban info** — {name}", f"Telegram says: {state}"]
+        lines = [f"🔎 <b>Ban info</b> · {brand.esc(name)}",
+                 f"Telegram says · <i>{brand.esc(state)}</i>"]
         if tracked:
-            lines.append(f"Tracked: {tracked.get('kind', 'ban')}")
-            lines.append(f"Reason: {tracked.get('reason', 'no reason given')}")
+            lines.append(f"Tracked · <code>{brand.esc(tracked.get('kind', 'ban'))}</code>")
+            lines.append(f"Reason · {brand.esc(tracked.get('reason', 'no reason given'))}")
             if tracked.get("since"):
-                lines.append(f"Since: {_utc(float(tracked['since']))}")
+                lines.append(f"Since · <code>{_utc(float(tracked['since']))}</code>")
             if tracked.get("until"):
                 remaining = float(tracked["until"]) - time.time()
                 lines.append(
-                    f"Expires: {_utc(float(tracked['until']))} "
-                    f"({format_duration(remaining)} left)"
+                    f"Expires · <code>{_utc(float(tracked['until']))}</code> "
+                    f"<i>({format_duration(remaining)} left)</i>"
                 )
             else:
-                lines.append("Expires: never")
+                lines.append("Expires · never")
         else:
-            lines.append("Tracked: no record (ban may predate the bot or be manual)")
+            lines.append(
+                "Tracked · <i>no record (ban may predate the bot or be manual)</i>"
+            )
         if banned is False and tracked:
-            lines.append("⚠️ Not currently restricted; `!ban list` will drop this entry.")
+            lines.append(
+                "⚠️ <i>Not currently restricted;</i> <code>!ban list</code> will "
+                "drop this entry."
+            )
         await _say(event, "\n".join(lines))
 
     # router
@@ -433,7 +452,11 @@ def setup(client, my_id):
             if sub == "temp":
                 token, _, remainder = rest.strip().partition(" ")
                 if not token:
-                    await _say(event, "Usage: `!ban temp <user> <10m|2h|7d> [reason]`")
+                    await _say(
+                        event,
+                        "Usage · <code>!ban temp &lt;user&gt; "
+                        "&lt;10m|2h|7d&gt; [reason]</code>",
+                    )
                     return
                 # Reply form: first word is the duration
                 if event.is_reply and _is_duration(token):
@@ -443,28 +466,38 @@ def setup(client, my_id):
                     )
                     return
                 if not remainder.strip():
-                    await _say(event, "Usage: `!ban temp <user> <10m|2h|7d> [reason]`")
+                    await _say(
+                        event,
+                        "Usage · <code>!ban temp &lt;user&gt; "
+                        "&lt;10m|2h|7d&gt; [reason]</code>",
+                    )
                     return
                 await cmd_ban(event, token, remainder, kind="temp")
                 return
             if sub == "unban":
                 token, _, remainder = rest.strip().partition(" ")
                 if not token:
-                    await _say(event, "Usage: `!ban unban <user> [reason]`")
+                    await _say(
+                        event,
+                        "Usage · <code>!ban unban &lt;user&gt; [reason]</code>",
+                    )
                     return
                 await cmd_unban(event, token, remainder)
                 return
             if sub == "kick":
                 token, _, remainder = rest.strip().partition(" ")
                 if not token:
-                    await _say(event, "Usage: `!ban kick <user> [reason]`")
+                    await _say(
+                        event,
+                        "Usage · <code>!ban kick &lt;user&gt; [reason]</code>",
+                    )
                     return
                 await cmd_kick(event, token, remainder)
                 return
             if sub == "info":
                 token = rest.strip()
                 if not token and not event.is_reply:
-                    await _say(event, "Usage: `!ban info <user>`")
+                    await _say(event, "Usage · <code>!ban info &lt;user&gt;</code>")
                     return
                 await cmd_info(event, token)
                 return
@@ -475,14 +508,14 @@ def setup(client, my_id):
         except flood.FLOOD_ERRORS as exc:
             await _say(
                 event,
-                f"⏳ Telegram rate limit: wait {exc.seconds}s. "
-                "The ban was not applied.",
+                f"⏳ <b>Telegram rate limit</b> · wait "
+                f"<code>{exc.seconds}s</code>. The ban was not applied.",
             )
         except errors.RPCError as exc:
             log.warning("ban: RPC failure %s", type(exc).__name__)
-            await _say(event, f"❌ {describe_error(exc)}")
+            await _say(event, f"❌ {brand.esc(describe_error(exc))}")
         except (BanUnsupported, ValueError) as exc:
-            await _say(event, f"❌ {describe_error(exc)}")
+            await _say(event, f"❌ {brand.esc(describe_error(exc))}")
         except Exception as exc:  # noqa: BLE001 - a handler must never die silently
             log.exception("ban: unexpected failure")
-            await _say(event, f"❌ {type(exc).__name__}: {exc}")
+            await _say(event, f"❌ <code>{brand.esc(type(exc).__name__)}</code> · {brand.esc(exc)}")

@@ -24,7 +24,7 @@ from telethon import errors, events
 import Com.core.tgsend as tgsend
 
 import Com.core.registry as registry
-from Com.core import flood
+from Com.core import brand, flood
 from Com.core import scheduler
 from Com.core.reply import say
 from Com.core.storage import load_store, save_json
@@ -158,8 +158,8 @@ def setup(client, my_id):
         reason = record.get("reason") or DEFAULT_REASON
         since = float(record.get("since", time.time()))
         return (
-            f"🤖 I'm AFK: {reason}\n"
-            f"_Set {_human_ago(time.time() - since)}._"
+            f"🤖 <b>I'm AFK</b> · {brand.esc(reason)}\n"
+            f"<i>Set {_human_ago(time.time() - since)}.</i>"
         )
 
     # commands
@@ -175,7 +175,11 @@ def setup(client, my_id):
         try:
             if not args:
                 record = set_global(DEFAULT_REASON)
-                await _say(event, f"💤 AFK on (global, DMs only).\n_{record['reason']}_")
+                await _say(
+                    event,
+                    "💤 <b>AFK on</b> · global, DMs only\n"
+                    f"<i>{brand.esc(record['reason'])}</i>",
+                )
                 return
 
             if head_l == "off" or head_l == "back":
@@ -183,7 +187,8 @@ def setup(client, my_id):
                 clear_scope(event.chat_id, everything=everything)
                 await _say(
                     event,
-                    "✅ AFK cleared everywhere." if everything else "✅ AFK cleared.",
+                    "✅ <b>AFK cleared everywhere.</b>" if everything
+                    else "✅ <b>AFK cleared.</b>",
                 )
                 return
 
@@ -193,23 +198,26 @@ def setup(client, my_id):
                 g = state.get("global")
                 if g:
                     lines.append(
-                        f"💤 Global AFK: {g['reason']} "
-                        f"({_human_ago(time.time() - float(g['since']))})"
+                        f"💤 <b>Global AFK</b> · {brand.esc(g['reason'])} "
+                        f"<i>({_human_ago(time.time() - float(g['since']))})</i>"
                     )
                 else:
-                    lines.append("Global AFK: off")
+                    lines.append("Global AFK · off")
                 mine = state["chats"].get(str(event.chat_id))
                 if mine:
                     lines.append(
-                        f"Here: {mine['reason']} "
-                        f"({_human_ago(time.time() - float(mine['since']))})"
+                        f"Here · {brand.esc(mine['reason'])} "
+                        f"<i>({_human_ago(time.time() - float(mine['since']))})</i>"
                     )
                 else:
-                    lines.append("Here: off")
+                    lines.append("Here · off")
                 if state.get("pause_until"):
                     left = float(state["pause_until"]) - time.time()
                     if left > 0:
-                        lines.append(f"⏳ Auto-replies paused by a flood wait ({int(left)}s left)")
+                        lines.append(
+                            "⏳ Auto-replies paused by a flood wait "
+                            f"(<code>{int(left)}s</code> left)"
+                        )
                 await _say(event, "\n".join(lines))
                 return
 
@@ -218,15 +226,20 @@ def setup(client, my_id):
                 lines = []
                 if state.get("global"):
                     g = state["global"]
-                    lines.append(f"• global (DMs): {g['reason']}")
+                    lines.append(
+                        f"💤 <b>global (DMs)</b> · {brand.esc(g['reason'])}"
+                    )
                 for chat_id, record in state["chats"].items():
                     lines.append(
-                        f"• chat `{chat_id}`: {record.get('reason')} "
-                        f"({_human_ago(time.time() - float(record.get('since', 0)))})"
+                        f"• chat <code>{brand.esc(chat_id)}</code> · "
+                        f"{brand.esc(record.get('reason'))} "
+                        f"<i>({_human_ago(time.time() - float(record.get('since', 0)))})</i>"
                     )
-                lines.append(f"• active cooldowns: {len(state['cooldowns'])}")
+                lines.append(
+                    f"• active cooldowns · <code>{len(state['cooldowns'])}</code>"
+                )
                 if not state.get("global") and not state["chats"]:
-                    lines.insert(0, "📭 No AFK entries.")
+                    lines.insert(0, "📭 <b>No AFK entries.</b>")
                 await _say(event, "\n".join(lines))
                 return
 
@@ -234,16 +247,21 @@ def setup(client, my_id):
                 record = set_chat(event.chat_id, rest or DEFAULT_REASON)
                 await _say(
                     event,
-                    f"💤 AFK on for this chat only.\n_{record['reason']}_",
+                    "💤 <b>AFK on</b> · this chat only\n"
+                    f"<i>{brand.esc(record['reason'])}</i>",
                 )
                 return
 
             record = set_global(args)
-            await _say(event, f"💤 AFK on (global, DMs only).\n_{record['reason']}_")
+            await _say(
+                event,
+                "💤 <b>AFK on</b> · global, DMs only\n"
+                f"<i>{brand.esc(record['reason'])}</i>",
+            )
 
         except Exception:  # noqa: BLE001
             log.exception("afk: command failed")
-            await _say(event, "❌ AFK command failed; see the Replit log.")
+            await _say(event, "❌ <b>AFK command failed.</b> See the Replit log.")
 
     # auto-reply to incoming DMs
     @client.on(events.NewMessage(incoming=True))
@@ -267,7 +285,11 @@ def setup(client, my_id):
             if not allowed:
                 return
 
-            await client.send_message(await tgsend.peer(event), _reply_to_message(record))
+            await client.send_message(
+                await tgsend.peer(event),
+                _reply_to_message(record),
+                parse_mode="html",
+            )
             _mark_cooldown(state, key)
 
         except flood.FLOOD_ERRORS as exc:
@@ -306,4 +328,4 @@ def setup(client, my_id):
 
     async def _say(event, text):
         # Com/core/reply.py
-        await say(event, text, name="afk")
+        await say(event, text, name="afk", parse_mode="html")

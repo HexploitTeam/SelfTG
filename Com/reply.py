@@ -2,6 +2,8 @@
 import os
 from telethon import events
 
+from Com.core import brand
+from Com.core.reply import say
 from Com.core.storage import cached_json, save_json
 
 __HELP__ = (
@@ -34,8 +36,13 @@ async def copy_message(client, event, target_chat, target_msg):
         if size and size > MAX_COPY_BYTES:
             await client.send_message(
                 target_chat,
-                f"⚠️ Skipped a {size // (1024 * 1024)} MB attachment "
-                f"(auto-copy limit is {MAX_COPY_BYTES // (1024 * 1024)} MB).",
+                brand.sign(
+                    f"⚠️ <b>Skipped a {size // (1024 * 1024)} MB attachment</b>\n"
+                    f"<i>auto-copy limit is "
+                    f"{MAX_COPY_BYTES // (1024 * 1024)} MB</i>",
+                    "reply",
+                ),
+                parse_mode="html",
                 reply_to=target_msg,
             )
             return
@@ -92,7 +99,11 @@ def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!reply on$"))
     async def reply_on(event):
         if not event.is_reply:
-            await event.edit("❌ You must reply to a message to set it as target.")
+            await say(
+                event,
+                "❌ <b>You must reply to a message</b> to set it as target.",
+                name="reply", parse_mode="html",
+            )
             return
 
         reply = await event.get_reply_message()
@@ -101,23 +112,40 @@ def setup(client, my_id):
         data["target_chat"] = event.chat_id
         data["target_msg"] = reply.id
         save_data(data)
-        await event.edit(f"✅ Auto‑reply enabled. Target message: {reply.id}")
-        await event.delete()
+        await say(
+            event,
+            "✅ <b>Auto-reply enabled</b> · target "
+            f"<code>{reply.id}</code>",
+            name="reply", parse_mode="html",
+        )
+        try:
+            await event.delete()
+        except Exception:
+            pass
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!reply off$"))
     async def reply_off(event):
         data = load_data()
         data["enabled"] = False
         save_data(data)
-        await event.edit("❌ Auto‑reply disabled.")
-        await event.delete()
+        await say(event, "❌ <b>Auto-reply disabled.</b>", name="reply",
+                  parse_mode="html")
+        try:
+            await event.delete()
+        except Exception:
+            pass
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!reply status$"))
     async def reply_status(event):
         data = load_data()
         status = "ON" if data["enabled"] else "OFF"
-        target = f"Message {data['target_msg']}" if data["target_msg"] else "None"
-        await event.edit(
-            f"**Status:** {status}\n"
-            f"**Target:** {target}"
+        target = (
+            f"<code>{data['target_msg']}</code>"
+            if data["target_msg"] else "none"
+        )
+        await say(
+            event,
+            f"🔁 <b>Auto-reply</b> · <code>{status}</code>\n"
+            f"Target · {target}",
+            name="reply", parse_mode="html",
         )

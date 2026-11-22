@@ -66,7 +66,8 @@ def setup(client, my_id):
         try:
             arg_str = event.pattern_match.group(1)
             if not arg_str:
-                await say(event, "📖 Inline Help\n\n" + __HELP__, name="inline")
+                await say(event, "📖 <b>Inline Help</b>\n\n" + brand.esc(__HELP__),
+                          name="inline", parse_mode="html")
                 return
 
             # Quoted text wins, else split on |

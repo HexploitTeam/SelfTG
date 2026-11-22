@@ -29,6 +29,7 @@ import logging
 
 from telethon import events
 
+from Com.core import brand
 from Com.core.reply import say
 
 log = logging.getLogger("selftg.notfound")
@@ -111,7 +112,9 @@ def setup(client, my_id):
         shown = name.replace("`", "").replace("*", "").replace("_", "")
         await say(
             event,
-            f"❌ Command not found: `!{shown}`\n"
-            "💡 `!help all` lists every command, `!help <name>` explains one.",
+            f"❌ <b>Command not found</b> · <code>!{brand.esc(shown)}</code>\n"
+            "💡 <code>!help all</code> lists every command, "
+            "<code>!help &lt;name&gt;</code> explains one.",
             name="notfound",
+            parse_mode="html",
         )

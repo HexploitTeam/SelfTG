@@ -13,7 +13,7 @@ import time
 from telethon import events
 
 import Com.core.registry as registry
-from Com.core import confirm
+from Com.core import brand, confirm
 from Com.core.reply import say
 from Com.core.storage import load_store, save_json
 
@@ -97,9 +97,14 @@ def _render(bucket, show_done):
     lines = []
     for item in sorted(items, key=lambda entry: entry["id"]):
         mark = "✅" if item.get("done") else "⬜"
-        lines.append(f"{mark} `{item['id']}.` {item['text']}")
+        lines.append(
+            f"{mark} <code>{item['id']}.</code> {brand.esc(item['text'])}"
+        )
     done = sum(1 for item in bucket["items"] if item.get("done"))
-    lines.append(f"\n_{len(bucket['items'])} total · {done} done · {len(bucket['items']) - done} pending_")
+    lines.append(
+        f"\n<i>{len(bucket['items'])} total · {done} done · "
+        f"{len(bucket['items']) - done} pending</i>"
+    )
     return "\n".join(lines)
 
 
@@ -116,7 +121,7 @@ def setup(client, my_id):
 
         args = (event.pattern_match.group(1) or "").strip()
         if not args:
-            await _say(event, "📖 " + __HELP__)
+            await _say(event, "📖 " + brand.esc(__HELP__))
             return
 
         head, _, rest = args.partition(" ")
@@ -133,20 +138,23 @@ def setup(client, my_id):
             elif sub == "clear":
                 await _cmd_clear(event, rest)
             else:
-                await _say(event, "📖 " + __HELP__)
+                await _say(event, "📖 " + brand.esc(__HELP__))
         except Exception:  # noqa: BLE001
             log.exception("todo: command failed")
-            await _say(event, "❌ Todo command failed; see the Replit log.")
+            await _say(event, "❌ <b>Todo command failed.</b> See the Replit log.")
 
     async def _cmd_add(event, text):
         if not text:
-            await _say(event, "Usage: `!todo add <text>`")
+            await _say(event, "Usage · <code>!todo add &lt;text&gt;</code>")
             return
 
         state = load_state()
         bucket = _chat(state, event.chat_id)
         if len(bucket["items"]) >= MAX_ITEMS:
-            await _say(event, f"❌ This list already has {MAX_ITEMS} items.")
+            await _say(
+                event,
+                f"❌ <b>This list already has {MAX_ITEMS} items.</b>",
+            )
             return
 
         duplicate = any(
@@ -159,17 +167,24 @@ def setup(client, my_id):
             {"id": item_id, "text": text, "done": False, "created": time.time(), "done_at": None}
         )
         if not save_state(state):
-            await _say(event, "❌ Could not write the todo store.")
+            await _say(event, "❌ <b>Could not write the todo store.</b>")
             return
 
-        note = "\n⚠️ There is already an item with the same text." if duplicate else ""
-        await _say(event, f"➕ Added `{item_id}.` {text}{note}")
+        note = "\n⚠️ <i>There is already an item with the same text.</i>" if duplicate else ""
+        await _say(
+            event,
+            f"➕ <b>Added</b> <code>{item_id}.</code> {brand.esc(text)}{note}",
+        )
 
     async def _cmd_item(event, sub, rest):
         raw_index, _, text = rest.partition(" ")
         raw_index = raw_index.strip().strip("#").rstrip(".")
         if not raw_index.isdigit():
-            await _say(event, f"Usage: `!todo {sub} <index>` (see `!todo list all`)")
+            await _say(
+                event,
+                f"Usage · <code>!todo {brand.esc(sub)} &lt;index&gt;</code> "
+                "(see <code>!todo list all</code>)",
+            )
             return
         index = int(raw_index)
 
@@ -177,29 +192,35 @@ def setup(client, my_id):
         bucket = _chat(state, event.chat_id)
         item = _find(bucket, index)
         if item is None:
-            await _say(event, f"❌ No item `{index}` in this chat.")
+            await _say(
+                event,
+                f"❌ <b>No item</b> <code>{index}</code> in this chat.",
+            )
             return
 
         if sub == "done":
             item["done"] = True
             item["done_at"] = time.time()
-            message = f"✅ `{index}.` marked done."
+            message = f"✅ <code>{index}.</code> marked done."
         elif sub == "undone":
             item["done"] = False
             item["done_at"] = None
-            message = f"⬜ `{index}.` marked pending."
+            message = f"⬜ <code>{index}.</code> marked pending."
         elif sub == "edit":
             if not text.strip():
-                await _say(event, "Usage: `!todo edit <index> <text>`")
+                await _say(
+                    event,
+                    "Usage · <code>!todo edit &lt;index&gt; &lt;text&gt;</code>",
+                )
                 return
             item["text"] = text.strip()
-            message = f"✏️ `{index}.` updated."
+            message = f"✏️ <code>{index}.</code> updated."
         else:
             bucket["items"] = [entry for entry in bucket["items"] if entry.get("id") != index]
-            message = f"🗑️ `{index}.` deleted."
+            message = f"🗑️ <code>{index}.</code> deleted."
 
         if not save_state(state):
-            await _say(event, "❌ Could not write the todo store.")
+            await _say(event, "❌ <b>Could not write the todo store.</b>")
             return
         await _say(event, message)
 
@@ -210,11 +231,19 @@ def setup(client, my_id):
         body = _render(bucket, show_done)
         if body is None:
             if show_done:
-                await _say(event, "📭 Nothing here yet. Add one with `!todo add <text>`.")
+                await _say(
+                    event,
+                    "📭 <b>Nothing here yet.</b> Add one with "
+                    "<code>!todo add &lt;text&gt;</code>.",
+                )
             else:
-                await _say(event, "🎉 Nothing pending. `!todo list all` shows completed items.")
+                await _say(
+                    event,
+                    "🎉 <b>Nothing pending.</b> <code>!todo list all</code> "
+                    "shows completed items.",
+                )
             return
-        await _say(event, ("📋 **Todos**\n" + body))
+        await _say(event, ("📋 <b>Todos</b>\n" + body))
 
     async def _cmd_clear(event, rest):
         keyword = rest.strip().lower()
@@ -227,10 +256,16 @@ def setup(client, my_id):
                 count = len(bucket["items"])
                 bucket["items"] = []
                 save_state(state)
-                await _say(event, f"🗑️ Deleted all {count} item(s).")
+                await _say(
+                    event, f"🗑️ <b>Deleted all</b> {count} item(s)."
+                )
                 return
             if tail:
-                await _say(event, "❌ Wrong or expired confirmation token. Run `!todo clear all` again.")
+                await _say(
+                    event,
+                    "❌ <b>Wrong or expired confirmation token.</b> Run "
+                    "<code>!todo clear all</code> again.",
+                )
                 return
             prompt = confirm.request(
                 event.chat_id, ACTION_CLEAR_ALL, "This deletes every todo item in this chat."
@@ -246,9 +281,10 @@ def setup(client, my_id):
         save_state(state)
         await _say(
             event,
-            f"🗑️ Removed {removed} completed item(s)." if removed else "📭 No completed items to remove.",
+            f"🗑️ <b>Removed</b> {removed} completed item(s)." if removed
+            else "📭 <b>No completed items to remove.</b>",
         )
 
     async def _say(event, text):
         # Edit-then-reply is shared: see Com/core/reply.py.
-        await say(event, text, name="todo")
+        await say(event, text, name="todo", parse_mode="html")

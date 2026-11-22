@@ -38,11 +38,13 @@ def render(name):
     entry = _REGISTRY.get(name.lstrip("!").lower())
     if not entry:
         return None
-    lines = [f"**{entry['name']}** — {entry['description']}"]
+    # Plain text: modules embed this in HTML bodies through brand.esc, and
+    # `!help` escapes it too, so markdown markers must not be here.
+    lines = [f"{entry['name']} — {entry['description']}"]
     for usage, description in entry["subcommands"]:
-        lines.append(f"• `{usage}` — {description}")
+        lines.append(f"• {usage} — {description}")
     if entry["aliases"]:
-        lines.append("_aliases: " + ", ".join(f"`{a}`" for a in entry["aliases"]) + "_")
+        lines.append("aliases: " + ", ".join(entry["aliases"]))
     return "\n".join(lines)
 
 

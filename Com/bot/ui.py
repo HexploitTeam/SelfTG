@@ -40,6 +40,7 @@ import Com.remind as remind
 import Com.setkill as setkill
 import Com.todo as todo
 import Com.warn as warn
+from Com.core import brand
 from Com.core import scheduler as scheduler_mod
 from Com.core.durations import parse_duration
 from Com.core.storage import load_json, save_json
@@ -1408,14 +1409,17 @@ async def on_text(ctx, event):
             seconds = parse_duration(first, minimum=5, maximum=365 * 86400)
         except ValueError as exc:
             await ctx.client.send_message(
-                ctx.owner_id, f"❌ {kit.h(exc)}\nSend it again, or /cancel.",
+                ctx.owner_id,
+                brand.sign(f"❌ {kit.h(exc)}\nSend it again, or /cancel."),
                 parse_mode="html",
             )
             return True
         if not remainder.strip():
             await ctx.client.send_message(
                 ctx.owner_id,
-                "❌ Add what to remind you about: <code>30m tea</code>.",
+                brand.sign(
+                    "❌ Add what to remind you about: <code>30m tea</code>."
+                ),
                 parse_mode="html",
             )
             return True
@@ -1433,7 +1437,8 @@ async def on_text(ctx, event):
             clean = note.normalize_name(text)
         except ValueError as exc:
             await ctx.client.send_message(
-                ctx.owner_id, f"❌ {kit.h(exc)}\nSend another name, or /cancel.",
+                ctx.owner_id,
+                brand.sign(f"❌ {kit.h(exc)}\nSend another name, or /cancel."),
                 parse_mode="html",
             )
             return True
@@ -1448,16 +1453,21 @@ async def on_text(ctx, event):
         chat_id = data.get("chat")
         if not clean:
             kit.clear_flow(ctx.owner_id)
-            await ctx.client.send_message(ctx.owner_id,
-                                          "That note flow lost its name; start again.")
+            await ctx.client.send_message(
+                ctx.owner_id,
+                brand.sign("That note flow lost its name; start again."),
+                parse_mode="html",
+            )
             return True
         replaced = _save_note(scope, chat_id, clean, text[:3500])
         kit.clear_flow(ctx.owner_id)
         await kit.send(ctx, notes_screen(scope, chat_id, 0))
         await ctx.client.send_message(
             ctx.owner_id,
-            f"{'♻️ Replaced' if replaced else '✅ Saved'} note "
-            f"<code>{kit.h(clean)}</code>.",
+            brand.sign(
+                f"{'♻️ Replaced' if replaced else '✅ Saved'} note "
+                f"<code>{kit.h(clean)}</code>."
+            ),
             parse_mode="html",
         )
         return True
@@ -1469,7 +1479,10 @@ async def on_text(ctx, event):
         await kit.send(ctx, todo_screen(chat_id))
         await ctx.client.send_message(
             ctx.owner_id,
-            f"❌ {kit.h(error)}" if error else f"✅ Added todo #{item_id}.",
+            brand.sign(
+                f"❌ {kit.h(error)}" if error
+                else f"✅ Added todo <code>#{item_id}</code>."
+            ),
             parse_mode="html",
         )
         return True
@@ -1482,7 +1495,11 @@ async def on_text(ctx, event):
         except ValueError:
             await ctx.client.send_message(
                 ctx.owner_id,
-                "❌ Send a numeric user id, optionally followed by a category.",
+                brand.sign(
+                    "❌ Send a numeric user id, optionally followed by a "
+                    "category."
+                ),
+                parse_mode="html",
             )
             return True
         raw_category = rest.strip().split()[0] if rest.strip() else "default"
@@ -1493,12 +1510,18 @@ async def on_text(ctx, event):
         await kit.send(ctx, enemies_screen(chat_id))
         await ctx.client.send_message(
             ctx.owner_id,
-            f"✅ Added {uid} as {kit.h(category)}." if added
-            else f"❌ {uid} is already on that list.",
+            brand.sign(
+                f"✅ Added <code>{uid}</code> as {kit.h(category)}." if added
+                else f"❌ <code>{uid}</code> is already on that list."
+            ),
             parse_mode="html",
         )
         return True
 
     kit.clear_flow(ctx.owner_id)
-    await ctx.client.send_message(ctx.owner_id, "That flow is no longer available.")
+    await ctx.client.send_message(
+        ctx.owner_id,
+        brand.sign("That flow is no longer available."),
+        parse_mode="html",
+    )
     return True
