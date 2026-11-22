@@ -35,10 +35,13 @@ def setup(client, my_id):
             with open(filename, "w", encoding="utf-8") as f:
                 f.write(text)
 
-            await client.send_file(await tgsend.peer(event),
-                                   filename,
-                                   caption="📄 Here is your text file.",
-                                   reply_to=event.id)
+            await client.send_file(
+                await tgsend.peer(event),
+                filename,
+                caption=brand.sign("📄 <b>Here is your text file.</b>", "textfile"),
+                parse_mode="html",
+                reply_to=event.id,
+            )
 
             os.remove(filename)
 

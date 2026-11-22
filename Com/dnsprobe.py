@@ -111,10 +111,17 @@ def setup(client, my_id):
                 "timestamp": now
             }
 
-            await client.send_file(await tgsend.peer(event),
+            await client.send_file(
+                await tgsend.peer(event),
                 temp_file,
-                caption=f"✅ DNS Probe complete. Task ID: {probe_id}",
-                reply_to=event.id)
+                caption=brand.sign(
+                    "✅ <b>DNS Probe complete</b> · task "
+                    f"<code>{brand.esc(probe_id)}</code>",
+                    "dnsprobe",
+                ),
+                parse_mode="html",
+                reply_to=event.id,
+            )
             await event.delete()
 
         except Exception as e:

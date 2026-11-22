@@ -44,7 +44,13 @@ def setup(client, my_id):
         await client.send_file(
             chat_id,
             filename,
-            caption=f"✅ Portsweep completed for {host}. Scan ID: {scan_id}")
+            caption=brand.sign(
+                f"✅ <b>Portsweep completed</b> · {brand.esc(host)}\n"
+                f"Scan ID · <code>{brand.esc(scan_id)}</code>",
+                "portsweep",
+            ),
+            parse_mode="html",
+        )
         active_scans.pop(scan_id, None)
 
     @client.on(

@@ -42,7 +42,7 @@ def setup(client, my_id):
         try:
             await bot_module.bot_client.send_message(
                 await tgsend.peer(event),
-                screen.text,
+                brand.sign(screen.text),
                 buttons=get_owner_panel(),
                 parse_mode="html",
                 reply_to=event.id,

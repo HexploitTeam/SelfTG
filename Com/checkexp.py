@@ -126,10 +126,17 @@ def setup(client, my_id):
             f.write("\n\n".join(results))
 
         try:
-            await client.send_file(await tgsend.peer(event),
+            await client.send_file(
+                await tgsend.peer(event),
                 file_path,
-                caption=f"✅ Scan completed for {domain}\nScan ID: {scan_id}",
-                reply_to=event.id)
+                caption=brand.sign(
+                    f"✅ <b>Scan completed</b> · {brand.esc(domain)}\n"
+                    f"Scan ID · <code>{brand.esc(scan_id)}</code>",
+                    "checkexp",
+                ),
+                parse_mode="html",
+                reply_to=event.id,
+            )
         except Exception as e:
             await say(
                 event,

@@ -234,7 +234,12 @@ def setup(client, my_id):
         bio.seek(0)
         bio.name = name
         try:
-            await client.send_file(await tgsend.peer(event), bio, caption="📖 Help Commands")
+            await client.send_file(
+                await tgsend.peer(event),
+                bio,
+                caption=brand.sign("📖 <b>Help Commands</b>", "help"),
+                parse_mode="html",
+            )
             return
         except Exception as exc:  # noqa: BLE001 - degrade, never crash the handler
             log.warning("help: file delivery failed (%s), sending text chunks",
@@ -242,9 +247,7 @@ def setup(client, my_id):
 
         plain = brand.plain(content)
         for start in range(0, len(plain), CHUNK):
-            try:
-                await event.reply(plain[start:start + CHUNK])
-            except Exception:  # noqa: BLE001
+            if not await say(event, plain[start:start + CHUNK], name="help"):
                 log.warning("help: could not deliver help chunk at offset %d", start)
                 return
 

@@ -98,6 +98,42 @@ BRAND_TAG = re.compile(r"</?(?:b|i|code|blockquote)>")
 # Markdown the brand replaced with those tags
 MARKDOWN = re.compile(r"\*\*|`")
 
+# Raw Telegram calls: a message that never passes through say()/brand.sign()
+RAW_SENDS = {"reply", "respond", "edit", "send_message", "send_file"}
+RAW_RECEIVERS = {"event", "client", "bot_client", "msg", "message"}
+
+# Deliberate relays: the text is somebody else's content, not an answer from
+# this product, so it leaves without the signature. Keyed by module name.
+UNSIGNED_ALLOWED = {
+    # a DM auto-reply to a contact
+    "afk": {"auto_reply"},
+    # the rewritten command itself is sent for dispatch
+    "alias": {"persian_alias_handler"},
+    # bot-API delivery of !inline's payload
+    "bot.client": {"send_inline"},
+    # queued owner content executed by the self-bot
+    "bot.interop": {"_execute"},
+    # the challenge answer, posted as the group member
+    "cauto": {"answer"},
+    # !inline's plain-text fallback when no bot token is set
+    "inline": {"inline_cmd"},
+    # auto-replies to other people
+    "enemy": {"enemy_auto_reply"},
+    "menres": {"mention_response"},
+    "monitor": {"monitor_handler"},
+    "mute": {"mute_handler"},
+    # re-sent owner messages and timers
+    "f": {"task"},
+    "kill": {"kill_cmd"},
+    "repeat": {"repeat_cmd"},
+    "setkill": {"run_timer"},
+    "reply": {"copy_message"},
+    # posted as another identity on purpose
+    "sendas": {"sendas_cmd"},
+    # a query to the owner's whois bot, not a chat message
+    "whois": {"whois"},
+}
+
 
 def _text_fragments(node):
     """String literals inside a send's text/caption arguments."""
@@ -130,6 +166,69 @@ def _help_texts(tree):
             if getattr(func, "attr", None) == "command" \
                     and getattr(owner, "id", None) == "registry":
                 yield node.lineno, node
+
+
+def _raw_send_name(node):
+    """The send method when it is a raw Telegram call, else None."""
+    if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+        return None
+    name = node.func.attr
+    if name not in RAW_SENDS:
+        return None
+    try:
+        receiver = ast.unparse(node.func.value)
+    except Exception:  # noqa: BLE001 - unparse is best effort
+        return None
+    if receiver.split(".")[-1] in RAW_RECEIVERS:
+        return name
+    return None
+
+
+def _text_arguments(node):
+    """The expressions a raw send would put in the chat."""
+    name = node.func.attr
+    if name == "send_file":
+        args = [k.value for k in node.keywords if k.arg == "caption"]
+    elif name in ("reply", "respond", "edit"):
+        args = list(node.args[:1])
+    else:
+        args = list(node.args[1:2])
+    args += [k.value for k in node.keywords if k.arg in TEXT_KEYWORDS]
+    return args
+
+
+def _signed_names(tree):
+    """Variables assigned from brand.sign()/brand.render()."""
+    names = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign) and isinstance(node.value, ast.Call):
+            if getattr(node.value.func, "attr", None) in ("sign", "render"):
+                for target in node.targets:
+                    if isinstance(target, ast.Name):
+                        names.add(target.id)
+    return names
+
+
+def _is_signed(value, signed):
+    """True when the expression builds the message through brand."""
+    for leaf in ast.walk(value):
+        if isinstance(leaf, ast.Call) \
+                and getattr(leaf.func, "attr", None) in ("sign", "render"):
+            return True
+        if isinstance(leaf, ast.Name) and leaf.id in signed:
+            return True
+    return False
+
+
+def _enclosing_function(node, tree):
+    """Innermost function name around `node`."""
+    best = None
+    for func in ast.walk(tree):
+        if isinstance(func, (ast.FunctionDef, ast.AsyncFunctionDef)) \
+                and func.lineno <= node.lineno <= getattr(func, "end_lineno", func.lineno):
+            if best is None or func.lineno > best.lineno:
+                best = func
+    return best.name if best else "<module>"
 
 
 def _defines_local_say(tree):
@@ -171,6 +270,28 @@ def check_branding():
                 continue
             problems.append(f"{where}: HTML in {name}() without parse_mode")
 
+        # A raw send must build its body with brand.sign()/brand.render()
+        signed = _signed_names(tree)
+        module = os.path.basename(path)[:-3]
+        if module == "__init__":
+            module = os.path.basename(os.path.dirname(path)) + ".__init__"
+        elif os.path.basename(os.path.dirname(path)) == "bot":
+            module = "bot." + module
+        for node in ast.walk(tree):
+            name = _raw_send_name(node)
+            if name is None:
+                continue
+            texts = _text_arguments(node)
+            if not texts or all(_is_signed(text, signed) for text in texts):
+                continue
+            func = _enclosing_function(node, tree)
+            if func in UNSIGNED_ALLOWED.get(module, set()):
+                continue
+            problems.append(
+                f"{os.path.relpath(path, BASE_DIR)}:{node.lineno}: "
+                f"unsigned {name}() in {func}()"
+            )
+
         # Help text reaches the chat too, once the modifiers are escaped
         for lineno, value in _help_texts(tree):
             for text in _all_strings(value):
@@ -188,7 +309,7 @@ def check_branding():
         if len(problems) > 10:
             bad("branding", f"…and {len(problems) - 10} more")
     else:
-        ok("no markdown in sends, HTML always has parse_mode")
+        ok("no markdown, every HTML body has a mode, every chat reply is signed")
 
 
 #------------------------------
