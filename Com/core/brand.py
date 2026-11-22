@@ -1,16 +1,18 @@
 """The Spooku Self message shape.
 
-Every message the product sends has the same two parts::
+Every message the product sends has the same parts::
 
+    <title>
+    ────────────────────────
     <body>
 
+    ────────────────────────
     — Spooku Self · !ban
 
 The body carries the meaning -- one line for a confirmation, a titled card for a
-listing. The signature is the same line everywhere, at the bottom: a header on a
-one-line confirmation pushes the content to line two, and a footer reads the same
-on a self-bot answer and on a companion-bot screen, so the two accounts are
-recognisable from one mark.
+listing. A rule under the title and another above the signature set the content
+apart from the marks, so the same shape holds on a self-bot answer and on a
+companion-bot screen. The signature is the same line everywhere, at the bottom.
 
 Typography
 ----------
@@ -39,6 +41,10 @@ import re
 
 NAME = "Spooku Self"
 
+# Telegram has no horizontal rule; a full-width line of box drawing is the one
+# divider that survives HTML parse mode and every client
+RULE = "─" * 24
+
 # The tags this product uses; a plain-text copy (a .txt export, a log line)
 # keeps the words and drops the markup
 _TAG = re.compile(r"</?(?:b|i|code|blockquote)>")
@@ -55,7 +61,15 @@ def sign(body, command=None):
     if command:
         line += f" · <code>!{str(command).lstrip('!')}</code>"
     text = (body or "").rstrip()
-    return f"{text}\n\n{line}" if text else line
+    if not text:
+        return line
+
+    # A titled body gets a rule under the title as well as above the signature
+    head, sep, rest = text.partition("\n")
+    rest = rest.lstrip("\n")
+    if sep and rest:
+        text = f"{head}\n{RULE}\n\n{rest}"
+    return f"{text}\n\n{RULE}\n{line}"
 
 
 def render(body, command=None):
