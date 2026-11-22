@@ -7,7 +7,7 @@ own messages, which is why this has to go through the bot client rather than
 """
 from telethon import events
 
-import Com.bot as bot_module
+from Com.bot import client as bot_module
 import Com.core.tgsend as tgsend
 from Com.bot import ui as botui
 from Com.bot.kit import markup
@@ -15,8 +15,7 @@ from Com.core import brand
 
 __HELP__ = (
     "!panel → Send the bot's control panel into this chat.\n"
-    "The panel is sent by the bot account, so its buttons work.\n"
-    "!botstatus → Check if the bot is running and connected."
+    "The panel is sent by the bot account, so its buttons work."
 )
 __CATEGORY__ = "Utilities"
 
@@ -55,10 +54,4 @@ def setup(client, my_id):
             return
         await event.delete()
 
-    @client.on(events.NewMessage(from_users=my_id, pattern=r"^!botstatus$"))
-    async def botstatus_cmd(event):
-        await event.edit(
-            brand.render(f"🤖 Bot status\n{bot_module.get_bot_status()}", "botstatus"),
-            parse_mode="html",
-        )
-        await event.delete()
+    # `!botstatus` lives in Com/bs.py; registering it here too would answer twice
