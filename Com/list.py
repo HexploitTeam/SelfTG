@@ -6,6 +6,8 @@ from telethon import events
 from telethon.tl.types import User
 import Com.core.tgsend as tgsend
 
+from Com.core import brand
+from Com.core.reply import say
 from Com.core.storage import load_json, save_json
 
 __HELP__ = (
@@ -70,11 +72,14 @@ async def get_user_info(client, user_id):
         return None
 
 def format_entry(info):
-    name = info.get("name", "Unknown")
-    username = f"@{info['username']}" if info.get("username") else "N/A"
-    uid = info.get("id", "N/A")
-    added = info.get("added", "Unknown")
-    return f"{name} ({username}) – ID: {uid} (added: {added})"
+    name = brand.esc(info.get("name", "Unknown"))
+    username = f"@{brand.esc(info['username'])}" if info.get("username") else "N/A"
+    uid = brand.esc(info.get("id", "N/A"))
+    added = brand.esc(info.get("added", "Unknown"))
+    return (
+        f"<b>{name}</b> ({username}) · ID <code>{uid}</code> · "
+        f"added <code>{added}</code>"
+    )
 
 #------------------------------
 #Command handlers
@@ -85,41 +90,66 @@ def setup(client, my_id):
     async def list_create(event):
         name = event.pattern_match.group(1)
         if load_list(name) is not None:
-            await event.edit(f"❌ List '{name}' already exists.")
+            await say(
+                event,
+                f"❌ <b>List already exists.</b> <code>{brand.esc(name)}</code>",
+                name="list",
+                parse_mode="html",
+            )
             return
         save_list(name, [])
-        await event.edit(f"✅ List '{name}' created.")
+        await say(
+            event,
+            f"✅ <b>List created.</b> <code>{brand.esc(name)}</code>",
+            name="list",
+            parse_mode="html",
+        )
         await event.delete()
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!list add\s+(\S+)$"))
     async def list_add(event):
         name = event.pattern_match.group(1)
         if not event.is_reply:
-            await event.edit("❌ Reply to a user's message to add them.")
+            await say(
+                event, "❌ Reply to a user's message to add them.", name="list"
+            )
             return
         reply = await event.get_reply_message()
         user_id = reply.sender_id
         if user_id is None:
-            await event.edit("❌ Could not determine user.")
+            await say(event, "❌ Could not determine user.", name="list")
             return
 
         data = load_list(name)
         if data is None:
-            await event.edit(f"❌ List '{name}' does not exist. Create it first with `!list create {name}`.")
+            await say(
+                event,
+                f"❌ <b>List does not exist.</b> <code>{brand.esc(name)}</code>\n"
+                f"Create it first with <code>!list create "
+                f"{brand.esc(name)}</code>.",
+                name="list",
+                parse_mode="html",
+            )
             return
 
         if any(entry.get("id") == user_id for entry in data):
-            await event.edit("❌ User already in this list.")
+            await say(event, "❌ User already in this list.", name="list")
             return
 
         info = await get_user_info(client, user_id)
         if not info:
-            await event.edit("❌ Failed to get user info.")
+            await say(event, "❌ Failed to get user info.", name="list")
             return
 
         data.append(info)
         save_list(name, data)
-        await event.edit(f"✅ Added {info['name']} (ID: {user_id}) to '{name}'.")
+        await say(
+            event,
+            f"✅ <b>Added</b> {brand.esc(info['name'])} "
+            f"(<code>{user_id}</code>) to <code>{brand.esc(name)}</code>.",
+            name="list",
+            parse_mode="html",
+        )
         await event.delete()
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!list show\s+(\S+)$"))
@@ -127,25 +157,45 @@ def setup(client, my_id):
         name = event.pattern_match.group(1)
         data = load_list(name)
         if data is None:
-            await event.edit(f"❌ List '{name}' does not exist.")
+            await say(
+                event,
+                f"❌ <b>List does not exist.</b> <code>{brand.esc(name)}</code>",
+                name="list",
+                parse_mode="html",
+            )
             return
         if not data:
-            await event.edit(f"📭 List '{name}' is empty.")
+            await say(
+                event,
+                f"📭 <b>List is empty.</b> <code>{brand.esc(name)}</code>",
+                name="list",
+                parse_mode="html",
+            )
             return
 
         lines = []
         for idx, entry in enumerate(data, start=1):
             lines.append(f"{idx}. {format_entry(entry)}")
 
-        msg = f"📋 **List: {name}** ({len(data)} entries)\n" + "\n".join(lines)
+        msg = (
+            f"📋 <b>List</b> · <code>{brand.esc(name)}</code> "
+            f"({len(data)} entries)\n" + "\n".join(lines)
+        )
         if len(msg) > 4000:
             import io
-            bio = io.BytesIO(msg.encode("utf-8"))
+            bio = io.BytesIO(brand.plain(msg).encode("utf-8"))
             bio.name = f"{name}.txt"
-            await client.send_file(await tgsend.peer(event), bio, caption=f"📋 List: {name}")
+            await client.send_file(
+                await tgsend.peer(event),
+                bio,
+                caption=brand.sign(
+                    f"📋 <b>List</b> · <code>{brand.esc(name)}</code>", "list"
+                ),
+                parse_mode="html",
+            )
             await event.delete()
         else:
-            await event.edit(msg)
+            await say(event, msg, name="list", parse_mode="html")
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!list remove\s+(\S+)\s+(\d+)$"))
     async def list_remove(event):
@@ -153,14 +203,29 @@ def setup(client, my_id):
         idx = int(event.pattern_match.group(2)) - 1  # convert to 0-based
         data = load_list(name)
         if data is None:
-            await event.edit(f"❌ List '{name}' does not exist.")
+            await say(
+                event,
+                f"❌ <b>List does not exist.</b> <code>{brand.esc(name)}</code>",
+                name="list",
+                parse_mode="html",
+            )
             return
         if idx < 0 or idx >= len(data):
-            await event.edit(f"❌ Invalid index. Use 1 to {len(data)}.")
+            await say(
+                event,
+                f"❌ <b>Invalid index.</b> Use 1 to <code>{len(data)}</code>.",
+                name="list",
+                parse_mode="html",
+            )
             return
         removed = data.pop(idx)
         save_list(name, data)
-        await event.edit(f"✅ Removed: {format_entry(removed)}")
+        await say(
+            event,
+            f"✅ <b>Removed</b>\n{format_entry(removed)}",
+            name="list",
+            parse_mode="html",
+        )
         await event.delete()
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!list delete\s+(\S+)$"))
@@ -168,29 +233,45 @@ def setup(client, my_id):
         name = event.pattern_match.group(1)
         path = get_list_path(name)
         if not os.path.exists(path):
-            await event.edit(f"❌ List '{name}' does not exist.")
+            await say(
+                event,
+                f"❌ <b>List does not exist.</b> <code>{brand.esc(name)}</code>",
+                name="list",
+                parse_mode="html",
+            )
             return
         os.remove(path)
-        await event.edit(f"🗑️ Deleted list '{name}'.")
+        await say(
+            event,
+            f"🗑️ <b>Deleted list</b> <code>{brand.esc(name)}</code>.",
+            name="list",
+            parse_mode="html",
+        )
         await event.delete()
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!list lists$"))
     async def list_lists(event):
         lists = get_all_lists()
         if not lists:
-            await event.edit("📭 No lists created yet.")
+            await say(event, "📭 No lists created yet.", name="list")
             return
-        msg = "📂 **Available lists:**\n" + "\n".join(f"• {l}" for l in lists)
-        await event.edit(msg)
+        msg = "📂 <b>Available lists</b>\n" + "\n".join(
+            f"• <code>{brand.esc(name)}</code>" for name in lists
+        )
+        await say(event, msg, name="list", parse_mode="html")
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!list$"))
     async def list_help(event):
-        await event.edit(
-            "📖 **List Commands**\n"
-            "• `!list create <name>` – new list\n"
-            "• `!list add <name>` (reply) – add user\n"
-            "• `!list show <name>` – show entries\n"
-            "• `!list remove <name> <index>` – remove by index\n"
-            "• `!list delete <name>` – delete whole list\n"
-            "• `!list lists` – show all lists"
+        await say(
+            event,
+            "📖 <b>List Commands</b>\n"
+            "• <code>!list create &lt;name&gt;</code> – new list\n"
+            "• <code>!list add &lt;name&gt;</code> (reply) – add user\n"
+            "• <code>!list show &lt;name&gt;</code> – show entries\n"
+            "• <code>!list remove &lt;name&gt; &lt;index&gt;</code> – remove by "
+            "index\n"
+            "• <code>!list delete &lt;name&gt;</code> – delete whole list\n"
+            "• <code>!list lists</code> – show all lists",
+            name="list",
+            parse_mode="html",
         )

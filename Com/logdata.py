@@ -2,6 +2,9 @@
 from telethon import events
 import os
 
+from Com.core import brand
+from Com.core.reply import say
+
 __HELP__ = "!logdata → Show total number of log files and storage used"
 __CATEGORY__ = "Information"
 LOG_FOLDER = "Logs"
@@ -22,7 +25,7 @@ def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!logdata$"))
     async def logdata(event):
         try:
-            await event.edit("📊 Calculating log data...")
+            await say(event, "📊 Calculating log data…", name="logdata")
 
             total_files = 0
             total_size = 0
@@ -38,9 +41,19 @@ def setup(client, my_id):
 
             readable_size = human_readable_size(total_size)
 
-            await event.edit(
-                f"📁 There are {total_files} log files saved in '{LOG_FOLDER}'.\n💾 Storage used: {readable_size}"
+            await say(
+                event,
+                f"📁 <b>Log files</b> · <code>{total_files}</code> saved in "
+                f"<code>{brand.esc(LOG_FOLDER)}</code>\n"
+                f"💾 <b>Storage used</b> · <code>{brand.esc(readable_size)}</code>",
+                name="logdata",
+                parse_mode="html",
             )
 
         except Exception as e:
-            await event.edit(f"❌ Failed to get log data: {str(e)}")
+            await say(
+                event,
+                f"❌ <b>Could not read log data.</b> {brand.esc(e)}",
+                name="logdata",
+                parse_mode="html",
+            )

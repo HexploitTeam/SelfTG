@@ -5,6 +5,9 @@ from telethon import events
 import Com.core.tgsend as tgsend
 from faker import Faker
 
+from Com.core import brand
+from Com.core.reply import say
+
 __HELP__ = (
     "!mock [options] [type] [count] → Generate mock data.\n"
     "Types: name, first_name, last_name, email, phone, address, city, country, \n"
@@ -158,7 +161,12 @@ def setup(client, my_id):
         try:
             arg_str = event.pattern_match.group(1)
             if not arg_str:
-                await event.edit("📖 **Mock Help**\n" + __HELP__)
+                await say(
+                    event,
+                    "📖 <b>Mock Help</b>\n" + brand.esc(__HELP__),
+                    name="mock",
+                    parse_mode="html",
+                )
                 return
 
             args = shlex.split(arg_str)
@@ -177,14 +185,25 @@ def setup(client, my_id):
                         pass
 
             if not mock_type:
-                await event.edit("❌ Please specify a type. Use `!mock` for help.")
+                await say(
+                    event,
+                    "❌ <b>No type given.</b> Use <code>!mock</code> for help.",
+                    name="mock",
+                    parse_mode="html",
+                )
                 return
 
             try:
                 fake = Faker(flags['locale'])
             except AttributeError:
-                await event.edit(f"❌ Locale '{flags['locale']}' not available.\n"
-                                 "Try: en_US, fa_IR, de_DE, fr_FR, es_ES, it_IT, ...")
+                await say(
+                    event,
+                    f"❌ <b>Locale not available.</b> "
+                    f"<code>{brand.esc(flags['locale'])}</code>\n"
+                    "Try: en_US, fa_IR, de_DE, fr_FR, es_ES, it_IT, …",
+                    name="mock",
+                    parse_mode="html",
+                )
                 return
 
             # Special type: "all" or "profile"
@@ -192,31 +211,48 @@ def setup(client, my_id):
                 data = []
                 for _ in range(count):
                     profile = generate_profile(fake, flags['locale'])
-                    lines = [f"{k}: {v}" for k, v in profile.items()]
+                    lines = [
+                        f"<b>{brand.esc(k)}</b> · {brand.esc(v)}"
+                        for k, v in profile.items()
+                    ]
                     data.append("\n".join(lines))
-                output = f"📝 **Mock Profile** (locale: {flags['locale']})\n"
-                output += f"📊 Count: {count}\n\n"
+                output = (
+                    f"📝 <b>Mock Profile</b> · locale "
+                    f"<code>{brand.esc(flags['locale'])}</code>\n"
+                    f"📊 <b>Count</b> · <code>{count}</code>\n\n"
+                )
                 if count == 1:
                     output += data[0]
                 else:
                     for i, item in enumerate(data, 1):
-                        output += f"--- Profile {i} ---\n{item}\n\n"
+                        output += f"<b>Profile {i}</b>\n{item}\n\n"
                 output = output.rstrip()
 
                 if len(output) > 4000:
                     import io
-                    bio = io.BytesIO(output.encode("utf-8"))
+                    bio = io.BytesIO(brand.plain(output).encode("utf-8"))
                     bio.name = "mock_profile.txt"
-                    await client.send_file(await tgsend.peer(event), bio, caption="📝 Mock Profile")
+                    await client.send_file(
+                        await tgsend.peer(event),
+                        bio,
+                        caption=brand.sign("📝 <b>Mock Profile</b>", "mock"),
+                        parse_mode="html",
+                    )
                     await event.delete()
                 else:
-                    await event.edit(output)
+                    await say(event, output, name="mock", parse_mode="html")
                 return
 
             # Normal types
             if mock_type not in TYPE_MAP:
-                await event.edit(f"❌ Unknown type: {mock_type}\n"
-                                 f"Available types: {', '.join(sorted(TYPE_MAP.keys()))}")
+                await say(
+                    event,
+                    f"❌ <b>Unknown type.</b> <code>{brand.esc(mock_type)}</code>\n"
+                    f"<b>Available</b> · "
+                    f"{', '.join(brand.esc(t) for t in sorted(TYPE_MAP))}",
+                    name="mock",
+                    parse_mode="html",
+                )
                 return
 
             method_name = TYPE_MAP[mock_type]
@@ -226,28 +262,53 @@ def setup(client, my_id):
                 try:
                     data.append(str(method()))
                 except Exception as e:
-                    await event.edit(f"❌ Error generating data: {e}")
+                    await say(
+                        event,
+                        f"❌ <b>Could not generate data.</b> {brand.esc(e)}",
+                        name="mock",
+                        parse_mode="html",
+                    )
                     return
 
-            output = f"📝 **Mock Data** ({mock_type})\n"
-            output += f"🌍 Locale: {flags['locale']}\n"
-            output += f"📊 Count: {count}\n\n"
+            output = (
+                f"📝 <b>Mock Data</b> · <code>{brand.esc(mock_type)}</code>\n"
+                f"🌍 <b>Locale</b> · <code>{brand.esc(flags['locale'])}</code>\n"
+                f"📊 <b>Count</b> · <code>{count}</code>\n\n"
+            )
             if count == 1:
-                output += data[0]
+                output += brand.esc(data[0])
             else:
                 for i, item in enumerate(data, 1):
-                    output += f"{i}. {item}\n"
+                    output += f"{i}. {brand.esc(item)}\n"
 
             if len(output) > 4000:
                 import io
-                bio = io.BytesIO(output.encode("utf-8"))
+                bio = io.BytesIO(brand.plain(output).encode("utf-8"))
                 bio.name = f"mock_{mock_type}.txt"
-                await client.send_file(await tgsend.peer(event), bio, caption=f"📝 Mock: {mock_type}")
+                await client.send_file(
+                    await tgsend.peer(event),
+                    bio,
+                    caption=brand.sign(
+                        f"📝 <b>Mock</b> · <code>{brand.esc(mock_type)}</code>",
+                        "mock",
+                    ),
+                    parse_mode="html",
+                )
                 await event.delete()
             else:
-                await event.edit(output)
+                await say(event, output, name="mock", parse_mode="html")
 
         except ValueError as e:
-            await event.edit(f"❌ {e}")
+            await say(
+                event,
+                f"❌ <b>Bad arguments.</b> {brand.esc(e)}",
+                name="mock",
+                parse_mode="html",
+            )
         except Exception as e:
-            await event.edit(f"❌ Error: {str(e)}")
+            await say(
+                event,
+                f"❌ <b>Mock failed.</b> {brand.esc(e)}",
+                name="mock",
+                parse_mode="html",
+            )

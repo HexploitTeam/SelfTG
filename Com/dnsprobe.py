@@ -7,6 +7,9 @@ import asyncio
 import dns.resolver
 from datetime import datetime
 
+from Com.core import brand
+from Com.core.reply import say
+
 __HELP__ = "!dnsprobe <domain1> <domain2> ... → Bulk DNS record enumerator (A, AAAA, MX, TXT, CNAME)\n!dnsprobe del <ID> → Delete a previous probe file by ID"
 
 MODE_FOLDER = "mode/dns"
@@ -45,8 +48,13 @@ def setup(client, my_id):
         try:
             args = event.pattern_match.group(1)
             if not args:
-                await event.reply(
-                    "❌ Provide at least one domain or use !dnsprobe del <ID>")
+                await say(
+                    event,
+                    "❌ Provide at least one domain or use "
+                    "<code>!dnsprobe del &lt;ID&gt;</code>",
+                    name="dnsprobe",
+                    parse_mode="html",
+                )
                 return
 
             parts = args.split()
@@ -55,10 +63,20 @@ def setup(client, my_id):
                 for filename in os.listdir(MODE_FOLDER):
                     if filename.startswith(f"{del_id}_dnsprobe_"):
                         os.remove(os.path.join(MODE_FOLDER, filename))
-                        await event.edit(
-                            f"✅ Deleted DNS probe file with ID {del_id}")
+                        await say(
+                            event,
+                            f"✅ <b>Deleted DNS probe file</b> "
+                            f"<code>{del_id}</code>",
+                            name="dnsprobe",
+                            parse_mode="html",
+                        )
                         return
-                await event.edit(f"❌ No DNS probe found with ID {del_id}")
+                await say(
+                    event,
+                    f"❌ <b>No DNS probe found with ID</b> <code>{del_id}</code>",
+                    name="dnsprobe",
+                    parse_mode="html",
+                )
                 return
 
             domains = parts
@@ -67,8 +85,13 @@ def setup(client, my_id):
             temp_file = os.path.join(MODE_FOLDER,
                                      f"{probe_id}_dnsprobe_{now}.txt")
 
-            await event.edit(
-                f"⏳ Probing {len(domains)} domain(s)... Task ID: {probe_id}")
+            await say(
+                event,
+                f"⏳ <b>Probing</b> <code>{len(domains)}</code> domain(s)\n"
+                f"<b>Task ID</b> · <code>{probe_id}</code>",
+                name="dnsprobe",
+                parse_mode="html",
+            )
 
             results = []
             for domain in domains:
@@ -95,4 +118,9 @@ def setup(client, my_id):
             await event.delete()
 
         except Exception as e:
-            await event.reply(f"❌ Error: {str(e)}")
+            await say(
+                event,
+                f"❌ <b>DNS probe failed.</b> {brand.esc(e)}",
+                name="dnsprobe",
+                parse_mode="html",
+            )

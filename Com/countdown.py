@@ -5,6 +5,8 @@ import asyncio
 import os
 import json
 
+from Com.core import brand
+from Com.core.reply import say
 from Com.core.storage import save_json
 import Com.core.tgsend as tgsend
 
@@ -58,7 +60,13 @@ def setup(client, my_id):
             while remaining > 0:
                 display = format_hms(remaining)
                 try:
-                    await msg.edit(f"⏳ Countdown: {display}")
+                    await msg.edit(
+                        brand.sign(
+                            f"⏳ <b>Countdown</b> · <code>{display}</code>",
+                            "countdown",
+                        ),
+                        parse_mode="html",
+                    )
                 except:
                     pass
                 active_countdowns[chat_id]["remaining"] = remaining
@@ -66,12 +74,22 @@ def setup(client, my_id):
                 await asyncio.sleep(1)
                 remaining -= 1
             try:
-                await msg.edit(f"✅ Countdown finished! Reason: {reason}")
+                await msg.edit(
+                    brand.sign(
+                        f"✅ <b>Countdown finished</b>\n"
+                        f"<b>Reason</b> · {brand.esc(reason)}",
+                        "countdown",
+                    ),
+                    parse_mode="html",
+                )
             except:
                 pass
         except asyncio.CancelledError:
             try:
-                await msg.edit("❌ Countdown stopped!")
+                await msg.edit(
+                    brand.sign("❌ <b>Countdown stopped</b>", "countdown"),
+                    parse_mode="html",
+                )
             except:
                 pass
         finally:
@@ -86,7 +104,13 @@ def setup(client, my_id):
             reason = info.get("reason", "")
             msg = await client.send_message(
                 await tgsend.resolve(client, chat_id),
-                f"⏳ Countdown resumed: {format_hms(remaining)}")
+                brand.sign(
+                    f"⏳ <b>Countdown resumed</b> · "
+                    f"<code>{format_hms(remaining)}</code>",
+                    "countdown",
+                ),
+                parse_mode="html",
+            )
             asyncio.create_task(run_countdown(chat_id, remaining, reason, msg))
 
     asyncio.create_task(resume_cds())
@@ -97,8 +121,12 @@ def setup(client, my_id):
     async def countdown(event):
         chat_id = event.chat_id
         if chat_id in active_countdowns:
-            await event.reply(
-                "❌ A countdown is already running in this chat! Stop it first with !countdown stop."
+            await say(
+                event,
+                "❌ <b>A countdown is already running in this chat.</b> Stop it "
+                "first with <code>!countdown stop</code>.",
+                name="countdown",
+                parse_mode="html",
             )
             return
 
@@ -113,10 +141,16 @@ def setup(client, my_id):
         elif unit == "h":
             total_seconds = number * 3600
         else:
-            await event.reply("❌ Invalid unit! Use s, m, or h.")
+            await say(event, "❌ Invalid unit. Use s, m or h.", name="countdown")
             return
 
-        msg = await event.reply(f"⏳ Countdown: {format_hms(total_seconds)}")
+        msg = await event.reply(
+            brand.sign(
+                f"⏳ <b>Countdown</b> · <code>{format_hms(total_seconds)}</code>",
+                "countdown",
+            ),
+            parse_mode="html",
+        )
         asyncio.create_task(run_countdown(chat_id, total_seconds, reason, msg))
         await event.delete()
 
@@ -131,7 +165,12 @@ def setup(client, my_id):
 
             if msg:
                 try:
-                    await msg.edit("❌ Countdown stopping...")
+                    await msg.edit(
+                        brand.sign(
+                            "❌ <b>Countdown stopping…</b>", "countdown"
+                        ),
+                        parse_mode="html",
+                    )
                 except Exception:
                     pass
 
@@ -146,5 +185,8 @@ def setup(client, my_id):
             await save_cd()
             await event.delete()
         else:
-            await event.edit(
-                "❌ No countdown is currently running in this chat!")
+            await say(
+                event,
+                "❌ No countdown is currently running in this chat.",
+                name="countdown",
+            )

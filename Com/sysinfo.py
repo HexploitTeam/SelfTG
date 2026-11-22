@@ -9,6 +9,8 @@ from datetime import datetime
 import pytz
 from telethon import events
 
+from Com.core import brand
+from Com.core.reply import say
 from Com.core.storage import save_json as _save_json
 
 log = logging.getLogger("selftg.sysinfo")
@@ -125,59 +127,68 @@ def setup(client, my_id):
             return {"error": str(e)}
 
     async def format_sysinfo(info):
-        lines = ["🖥️ **System Info Report**", "-----------------------------"]
+        lines = ["🖥️ <b>System Info</b>"]
 
         # CPU
         cpu = info.get("cpu", {})
+        lines.append("")
         lines.append(
-            f"⚡ **CPU:** ({cpu.get('cores')} cores / {cpu.get('threads')} threads)"
+            f"⚡ <b>CPU</b> · {cpu.get('cores')} cores / {cpu.get('threads')} threads"
         )
         lines.append(
-            f"Usage per core: {', '.join(f'{p}%' for p in cpu.get('per_core_usage', []))}"
+            "Usage per core · "
+            + ", ".join(f"<code>{p}%</code>" for p in cpu.get("per_core_usage", []))
         )
-        lines.append(
-            f"Frequency: {cpu.get('freq', 'N/A')} MHz\n-----------------------------"
-        )
+        lines.append(f"Frequency · <code>{cpu.get('freq', 'N/A')} MHz</code>")
 
         # Memory
         mem = info.get("memory", {})
+        lines.append("")
         lines.append(
-            f"💾 **Memory:** {(mem.get('used') or 0) / 1e9:.2f}GB/{(mem.get('total') or 0) / 1e9:.2f}GB ({mem.get('percent', 0)}%)"
+            f"💾 <b>Memory</b> · <code>{(mem.get('used') or 0) / 1e9:.2f}GB / "
+            f"{(mem.get('total') or 0) / 1e9:.2f}GB ({mem.get('percent', 0)}%)</code>"
         )
         lines.append(
-            f"🔄 Swap: {mem.get('swap_used') or 0:.2f}B/{mem.get('swap_total') or 0:.2f}B ({mem.get('swap_percent',0)}%)\n-----------------------------"
+            f"🔄 <b>Swap</b> · <code>{mem.get('swap_used') or 0:.2f}B / "
+            f"{mem.get('swap_total') or 0:.2f}B ({mem.get('swap_percent', 0)}%)</code>"
         )
 
         # Disks
-        lines.append("📀 **Disks:**")
+        lines.append("")
+        lines.append("📀 <b>Disks</b>")
         for d in info.get("disks", []):
             lines.append(
-                f" - {d['device']} ({d['mount']}) {d['used']/1e6:.2f}MB/{d['total']/1e9:.2f}GB ({d['percent']}%)"
+                f"  <code>{brand.esc(d['device'])}</code> ({brand.esc(d['mount'])}) · "
+                f"{d['used'] / 1e6:.2f}MB / {d['total'] / 1e9:.2f}GB ({d['percent']}%)"
             )
-        lines.append("-----------------------------")
 
         # Network
         net = info.get("network", {})
+        lines.append("")
         lines.append(
-            f"📡 **Network:** Sent {net.get('sent')/1e6:.2f}MB | Recv {net.get('recv')/1e6:.2f}MB | Conns: {net.get('connections')}"
+            f"📡 <b>Network</b> · Sent <code>{net.get('sent') / 1e6:.2f}MB</code> · "
+            f"Recv <code>{net.get('recv') / 1e6:.2f}MB</code> · "
+            f"Conns <code>{net.get('connections')}</code>"
         )
-        lines.append("-----------------------------")
 
         # GPU
         gpus = info.get("gpus", [])
         if gpus:
-            lines.append("🎮 **GPU(s):**")
+            lines.append("")
+            lines.append("🎮 <b>GPU</b>")
             for gpu in gpus:
                 lines.append(
-                    f" - {gpu['name']}: Load {gpu['load']}% | Mem {gpu['mem_used']}/{gpu['mem_total']}MB | Temp {gpu['temp']}°C"
+                    f"  {brand.esc(gpu['name'])} · Load {gpu['load']}% · "
+                    f"Mem {gpu['mem_used']}/{gpu['mem_total']}MB · Temp {gpu['temp']}°C"
                 )
-            lines.append("-----------------------------")
 
         # Uptime / Platform
-        lines.append(f"⏱️ **Uptime:** {info.get('uptime')}")
-        lines.append(f"💻 **Platform:** {info.get('platform')}")
-        lines.append(f"🐍 **Python:** {info.get('python')}")
-        lines.append("-----------------------------")
+        lines.append("")
+        lines.append(f"⏱️ <b>Uptime</b> · <code>{brand.esc(info.get('uptime'))}</code>")
+        lines.append(
+            f"💻 <b>Platform</b> · <code>{brand.esc(info.get('platform'))}</code>"
+        )
+        lines.append(f"🐍 <b>Python</b> · <code>{brand.esc(info.get('python'))}</code>")
 
         return "\n".join(lines)
 
@@ -185,10 +196,15 @@ def setup(client, my_id):
     async def sysinfo_cmd(event):
         info = await collect_sysinfo()
         if info.get("error"):
-            await event.edit(f"❌ Could not collect system info: {info['error']}")
+            await say(
+                event,
+                f"❌ <b>Could not collect system info.</b> {brand.esc(info['error'])}",
+                name="sysinfo",
+                parse_mode="html",
+            )
             return
         msg = await format_sysinfo(info)
-        await event.reply(msg)
+        await say(event, msg, name="sysinfo", parse_mode="html")
         await event.delete()
 
     # Optional snapshot log (SYSINFO_AUTOLOG=1), once a minute

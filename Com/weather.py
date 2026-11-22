@@ -12,6 +12,8 @@ import logging
 
 from telethon import events
 
+from Com.core import brand
+from Com.core.reply import say
 import Com.core.api as api
 
 __HELP__ = (
@@ -113,12 +115,16 @@ async def _open_meteo(city):
     current = data.get("current") or {}
     emoji, label = describe_code(current.get("weather_code", -1))
     lines = [
-        f"{emoji} **{name}{', ' + country if country else ''}**",
-        f"{label}, {current.get('temperature_2m', '?')}°C "
-        f"(feels {current.get('apparent_temperature', '?')}°C)",
-        f"💧 Humidity {current.get('relative_humidity_2m', '?')}% · "
-        f"🌬️ Wind {current.get('wind_speed_10m', '?')} km/h · "
-        f"🌧️ Precip {current.get('precipitation', '?')} mm",
+        f"{emoji} <b>{brand.esc(name)}"
+        f"{brand.esc(', ' + country) if country else ''}</b>",
+        f"{brand.esc(label)} · "
+        f"<code>{current.get('temperature_2m', '?')}°C</code> "
+        f"(feels <code>{current.get('apparent_temperature', '?')}°C</code>)",
+        f"💧 <b>Humidity</b> "
+        f"<code>{current.get('relative_humidity_2m', '?')}%</code> · "
+        f"🌬️ <b>Wind</b> <code>{current.get('wind_speed_10m', '?')} km/h</code> · "
+        f"🌧️ <b>Precip</b> "
+        f"<code>{current.get('precipitation', '?')} mm</code>",
     ]
 
     daily = data.get("daily") or {}
@@ -130,11 +136,13 @@ async def _open_meteo(city):
                 (daily.get("weather_code") or [0])[index]
             )
             lines.append(
-                f"`{day}` {day_emoji} {daily.get('temperature_2m_min', ['?'])[index]}…"
-                f"{daily.get('temperature_2m_max', ['?'])[index]}°C, "
-                f"{day_label}, rain {daily.get('precipitation_probability_max', ['?'])[index]}%"
+                f"<code>{brand.esc(day)}</code> {day_emoji} "
+                f"<code>{daily.get('temperature_2m_min', ['?'])[index]}…"
+                f"{daily.get('temperature_2m_max', ['?'])[index]}°C</code>, "
+                f"{brand.esc(day_label)}, rain "
+                f"{daily.get('precipitation_probability_max', ['?'])[index]}%"
             )
-    lines.append("\n_source: Open-Meteo (free, no key)_")
+    lines.append("\n<i>source: Open-Meteo (free, no key)</i>")
     return "\n".join(lines)
 
 
@@ -148,11 +156,12 @@ async def _wttr(city):
     current = (data.get("current_condition") or [{}])[0]
     desc = (current.get("weatherDesc") or [{}])[0].get("value", "unknown")
     lines = [
-        f"🌡️ **{city}** (wttr.in fallback)",
-        f"{desc}, {current.get('temp_C', '?')}°C (feels {current.get('FeelsLikeC', '?')}°C)",
-        f"💧 Humidity {current.get('humidity', '?')}% · "
-        f"🌬️ Wind {current.get('windspeedKmph', '?')} km/h",
-        "\n_source: wttr.in (free, no key)_",
+        f"🌡️ <b>{brand.esc(city)}</b> (wttr.in fallback)",
+        f"{brand.esc(desc)} · <code>{current.get('temp_C', '?')}°C</code> "
+        f"(feels <code>{current.get('FeelsLikeC', '?')}°C</code>)",
+        f"💧 <b>Humidity</b> <code>{current.get('humidity', '?')}%</code> · "
+        f"🌬️ <b>Wind</b> <code>{current.get('windspeedKmph', '?')} km/h</code>",
+        "\n<i>source: wttr.in (free, no key)</i>",
     ]
     return "\n".join(lines)
 
@@ -182,29 +191,39 @@ def setup(client, my_id):
     async def weather_cmd(event):
         city = (event.pattern_match.group(1) or "").strip()
         if not city:
-            await _safe_edit(event, "Usage: `!weather <city>` — e.g. `!weather Tehran`")
+            await say(
+                event,
+                "Usage: <code>!weather &lt;city&gt;</code> — e.g. "
+                "<code>!weather Tehran</code>",
+                name="weather",
+                parse_mode="html",
+            )
             return
-        await _safe_edit(event, f"🌍 Looking up weather for **{city}**…")
+        await say(
+            event,
+            f"🌍 <b>Looking up weather</b> for {brand.esc(city)}…",
+            name="weather",
+            parse_mode="html",
+        )
         try:
             report = await get_weather(city)
         except api.APIError as exc:
-            await _safe_edit(
+            await say(
                 event,
-                f"❌ Weather unavailable ({exc.describe()}). "
-                "Both free providers failed or are rate limited — try again in a minute.",
+                f"❌ <b>Weather unavailable.</b> {brand.esc(exc.describe())}.\n"
+                "Both free providers failed or are rate limited — try again in a "
+                "minute.",
+                name="weather",
+                parse_mode="html",
             )
             return
         except Exception as exc:  # noqa: BLE001
             log.exception("weather: unexpected failure")
-            await _safe_edit(event, f"❌ {type(exc).__name__}: {exc}")
+            await say(
+                event,
+                f"❌ <b>{brand.esc(type(exc).__name__)}</b> · {brand.esc(exc)}",
+                name="weather",
+                parse_mode="html",
+            )
             return
-        await _safe_edit(event, report)
-
-    async def _safe_edit(event, text):
-        try:
-            await event.edit(text)
-        except Exception:
-            try:
-                await event.reply(text)
-            except Exception:
-                log.info("weather: response could not be delivered")
+        await say(event, report, name="weather", parse_mode="html")

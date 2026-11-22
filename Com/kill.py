@@ -4,7 +4,8 @@ import json
 import random
 from telethon import errors, events
 
-from Com.core import flood
+from Com.core import brand, flood
+from Com.core.reply import say
 import Com.core.tgsend as tgsend
 
 __HELP__ = (
@@ -34,7 +35,7 @@ def setup(client, my_id):
         try:
             N = int(event.pattern_match.group(1))
             if N < 1:
-                await event.edit("❌ Number must be at least 1.")
+                await say(event, "❌ Number must be at least 1.", name="kill")
                 return
 
             username = event.pattern_match.group(2)  # may be None
@@ -43,7 +44,13 @@ def setup(client, my_id):
 
             lines = load_list()
             if not lines:
-                await event.edit("❌ The main list is empty. Add texts with `!enemy list add` or `!enemy clist`.")
+                await say(
+                    event,
+                    "❌ <b>The main list is empty.</b> Add texts with "
+                    "<code>!enemy list add</code> or <code>!enemy clist</code>.",
+                    name="kill",
+                    parse_mode="html",
+                )
                 return
 
             warn = False
@@ -80,25 +87,46 @@ def setup(client, my_id):
                     )
                 except flood.FLOOD_ERRORS as exc:
                     left = flood.note_flood(exc.seconds)
-                    note = (f"⏳ Telegram asked to wait {exc.seconds}s; stopped "
-                            f"after {sent} of {N} messages.")
+                    note = (
+                        f"⏳ <b>Telegram asked to wait</b> "
+                        f"<code>{exc.seconds}s</code>; stopped after "
+                        f"<code>{sent}</code> of <code>{N}</code> messages."
+                    )
                     if left:
-                        note += "\n" + flood.describe(left)
-                    await client.send_message(peer, note)
+                        note += "\n" + brand.esc(flood.describe(left))
+                    await client.send_message(
+                        peer, brand.sign(note, "kill"), parse_mode="html"
+                    )
                     break
                 sent += 1
                 await flood.pace(event.chat_id)
             flood.forget(event.chat_id)
             if warn:
-                await client.send_message(await tgsend.peer(event),
-                    f"⚠️ Only {len(lines)} texts available, used all of them.",
-                    reply_to=reply_msg.id if reply_msg else None
+                await client.send_message(
+                    await tgsend.peer(event),
+                    brand.sign(
+                        f"⚠️ <b>Only {len(lines)} texts available</b>, used all of "
+                        "them.",
+                        "kill",
+                    ),
+                    parse_mode="html",
+                    reply_to=reply_msg.id if reply_msg else None,
                 )
 
         except ValueError:
-            await event.edit("❌ Invalid number. Use `!kill <N> [@username]`.")
+            await say(
+                event,
+                "❌ Invalid number. Use "
+                "<code>!kill &lt;N&gt; [@username]</code>.",
+                name="kill",
+                parse_mode="html",
+            )
         except Exception as e:
             try:
-                await client.send_message(await tgsend.peer(event), f"❌ Error: {str(e)}")
+                await client.send_message(
+                    await tgsend.peer(event),
+                    brand.sign(f"❌ <b>Kill failed.</b> {brand.esc(e)}", "kill"),
+                    parse_mode="html",
+                )
             except:
                 pass

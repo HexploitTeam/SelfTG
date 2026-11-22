@@ -6,7 +6,8 @@ import logging
 import random
 from telethon import errors, events
 
-from Com.core import flood
+from Com.core import brand, flood
+from Com.core.reply import say
 from Com.core.storage import save_json
 import Com.core.tgsend as tgsend
 
@@ -152,7 +153,9 @@ def setup(client, my_id):
         try:
             interval = int(event.pattern_match.group(1))
             if interval < 1:
-                await event.edit("❌ Interval must be at least 1 second.")
+                await say(
+                    event, "❌ Interval must be at least 1 second.", name="setkill"
+                )
                 return
             text = event.pattern_match.group(2)  # may be None
             if text:
@@ -186,12 +189,30 @@ def setup(client, my_id):
             active_timers[new_id] = task
             timer_data[new_id] = timer_entry
 
-            await event.edit(f"✅ Timer started! ID: {new_id}, interval: {interval}s, text: {text or 'random'}")
+            await say(
+                event,
+                f"✅ <b>Timer started</b> · ID <code>{new_id}</code>\n"
+                f"<b>Interval</b> · <code>{interval}s</code>\n"
+                f"<b>Text</b> · {brand.esc(text or 'random')}",
+                name="setkill",
+                parse_mode="html",
+            )
             await event.delete()
         except ValueError:
-            await event.edit("❌ Invalid interval. Use `!setkill start <seconds> [text]`.")
+            await say(
+                event,
+                "❌ <b>Invalid interval.</b> Use "
+                "<code>!setkill start &lt;seconds&gt; [text]</code>.",
+                name="setkill",
+                parse_mode="html",
+            )
         except Exception as e:
-            await event.edit(f"❌ Error: {e}")
+            await say(
+                event,
+                f"❌ <b>Setkill failed.</b> {brand.esc(e)}",
+                name="setkill",
+                parse_mode="html",
+            )
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!setkill stop(?:\s+(\d+))?$"))
     async def setkill_stop(event):
@@ -199,10 +220,20 @@ def setup(client, my_id):
         if timer_id:
             timer_id = int(timer_id)
             if timer_id not in active_timers:
-                await event.edit(f"❌ Timer {timer_id} not found.")
+                await say(
+                    event,
+                    f"❌ <b>Timer {timer_id} not found.</b>",
+                    name="setkill",
+                    parse_mode="html",
+                )
                 return
             await stop_timer(timer_id)
-            await event.edit(f"✅ Timer {timer_id} stopped.")
+            await say(
+                event,
+                f"✅ <b>Timer stopped</b> · ID <code>{timer_id}</code>",
+                name="setkill",
+                parse_mode="html",
+            )
             await event.delete()
         else:
             chat_id = event.chat_id
@@ -213,25 +244,33 @@ def setup(client, my_id):
                     found = t["id"]
                     break
             if found is None:
-                await event.edit("❌ No timer running for this chat.")
+                await say(
+                    event, "❌ No timer running for this chat.", name="setkill"
+                )
                 return
             await stop_timer(found)
-            await event.edit(f"✅ Timer for this chat stopped.")
+            await say(
+                event, "✅ <b>Timer for this chat stopped.</b>", name="setkill",
+                parse_mode="html",
+            )
             await event.delete()
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!setkill list$"))
     async def setkill_list(event):
         data = load_timers()
         if not data["timers"]:
-            await event.edit("📭 No active timers.")
+            await say(event, "📭 No active timers.", name="setkill")
             return
-        lines = ["📋 **Active Timers:**"]
+        lines = ["📋 <b>Active Timers</b>"]
         for t in data["timers"]:
             lines.append(
-                f"ID: {t['id']} | Chat: {t['chat_id']} | Interval: {t['interval']}s | "
-                f"Text: {t.get('text') or 'random'} | Reply: {t.get('reply_to') or 'No'}"
+                f"• <b>ID</b> <code>{t['id']}</code> · "
+                f"<b>Chat</b> <code>{t['chat_id']}</code> · "
+                f"<b>Interval</b> <code>{t['interval']}s</code>\n"
+                f"  <b>Text</b> · {brand.esc(t.get('text') or 'random')} · "
+                f"<b>Reply</b> · {brand.esc(t.get('reply_to') or 'No')}"
             )
-        await event.edit("\n".join(lines))
+        await say(event, "\n".join(lines), name="setkill", parse_mode="html")
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!setkill status$"))
     async def setkill_status(event):
@@ -243,13 +282,13 @@ def setup(client, my_id):
                 found = t
                 break
         if found is None:
-            await event.edit("📭 No timer running for this chat.")
+            await say(event, "📭 No timer running for this chat.", name="setkill")
             return
         lines = [
-            f"**Timer Status for this chat**",
-            f"ID: {found['id']}",
-            f"Interval: {found['interval']}s",
-            f"Text: {found.get('text') or 'random'}",
-            f"Reply to: {found.get('reply_to') or 'No'}"
+            "⏱ <b>Timer Status</b>",
+            f"<b>ID</b> · <code>{found['id']}</code>",
+            f"<b>Interval</b> · <code>{found['interval']}s</code>",
+            f"<b>Text</b> · {brand.esc(found.get('text') or 'random')}",
+            f"<b>Reply to</b> · {brand.esc(found.get('reply_to') or 'No')}",
         ]
-        await event.edit("\n".join(lines))
+        await say(event, "\n".join(lines), name="setkill", parse_mode="html")

@@ -1,5 +1,8 @@
 """!info: profile summary for the sender or for the replied-to user."""
 from telethon import events
+
+from Com.core import brand
+from Com.core.reply import say
 import Com.core.tgsend as tgsend
 
 __HELP__ = "!info → Show your profile info in the chat\n!info (reply) → Show info of replied user"
@@ -23,17 +26,24 @@ def setup(client, my_id):
                     reply_sender = getattr(reply_msg, "sender_id", None)
                 reply_sender = reply_sender or event.reply_to_sender
                 if reply_sender is None:
-                    await event.edit(
-                        "❌ That reply points at a message this account cannot "
-                        "read, and Telegram sent no sender for it."
+                    await say(
+                        event,
+                        "❌ <b>That reply points at a message this account cannot "
+                        "read</b>, and Telegram sent no sender for it.",
+                        name="info",
+                        parse_mode="html",
                     )
                     return
                 target_user = await client.get_entity(reply_sender)
             else:
                 target_user = await client.get_me()
 
-            await event.edit(
-                f"Gathering **{target_user.id}'s information** in **'{chat_name}'**..."
+            await say(
+                event,
+                f"⏳ <b>Gathering information</b> for <code>{target_user.id}</code> "
+                f"in <b>{brand.esc(chat_name)}</b>…",
+                name="info",
+                parse_mode="html",
             )
 
             first_name = target_user.first_name or ""
@@ -47,24 +57,42 @@ def setup(client, my_id):
                 total_messages += 1
 
             photo = await client.get_profile_photos(target_user)
+            display_name = f"{first_name} {last_name}".strip()
             info_text = (
-                f"👤 Name: {first_name} {last_name}\n"
-                f"🆔 ID: {user_id_val}\n"
-                f"💬 Username: {username}\n"
-                f"⭐ Premium: {'Yes' if is_premium else 'No'}\n"
-                f"📨 Total messages sent in this chat: {total_messages}"
+                f"👤 <b>Name</b> · {brand.esc(display_name or 'N/A')}\n"
+                f"🆔 <b>ID</b> · <code>{user_id_val}</code>\n"
+                f"💬 <b>Username</b> · {brand.esc(username)}\n"
+                f"⭐ <b>Premium</b> · {'Yes' if is_premium else 'No'}\n"
+                f"📨 <b>Messages in this chat</b> · <code>{total_messages}</code>"
             )
             # Only set when the replied-to message lives in another chat
             if event.reply_to_chat is not None:
                 origin = getattr(event.reply_to_chat, "title", None) \
                     or getattr(event.reply_to_chat, "username", None) \
                     or "another chat"
-                info_text += f"\n↩️ Reply came from: {origin}"
+                info_text += f"\n↩️ <b>Reply came from</b> · {brand.esc(origin)}"
 
+            caption = brand.sign(info_text, "info")
             if photo.total > 0:
-                await client.send_file(await tgsend.peer(event), photo[0], caption=info_text, reply_to=event.id)
+                await client.send_file(
+                    await tgsend.peer(event),
+                    photo[0],
+                    caption=caption,
+                    parse_mode="html",
+                    reply_to=event.id,
+                )
             else:
-                await client.send_message(await tgsend.peer(event), info_text, reply_to=event.id)
+                await client.send_message(
+                    await tgsend.peer(event),
+                    caption,
+                    parse_mode="html",
+                    reply_to=event.id,
+                )
 
         except Exception as e:
-            await event.reply(f"❌ Failed to fetch info: {str(e)}")
+            await say(
+                event,
+                f"❌ <b>Could not fetch info.</b> {brand.esc(e)}",
+                name="info",
+                parse_mode="html",
+            )

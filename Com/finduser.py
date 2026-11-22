@@ -4,6 +4,9 @@ import os
 from datetime import datetime
 import pytz
 
+from Com.core import brand
+from Com.core.reply import say
+
 __HELP__ = "!finduser <username/ID> → Gather all messages sent by a user in all group logs."
 __CATEGORY__ = "Information"
 GROUP_FOLDER = "Logs/Groups"
@@ -44,8 +47,13 @@ def setup(client, my_id):
                                 user_entity = await client.get_entity(user_str)
                                 target_user_id = user_entity.id
                             except:
-                                await event.reply(
-                                    f"❌ Cannot find user '{user_str}'")
+                                await say(
+                                    event,
+                                    f"❌ <b>Cannot find user.</b> "
+                                    f"<code>{brand.esc(user_str)}</code>",
+                                    name="finduser",
+                                    parse_mode="html",
+                                )
                                 return
                 else:
                     send_here = False
@@ -57,16 +65,23 @@ def setup(client, my_id):
                             user_entity = await client.get_entity(user_str)
                             target_user_id = user_entity.id
                         except:
-                            await event.reply(
-                                f"❌ Cannot find user '{user_str}'")
+                            await say(
+                                event,
+                                f"❌ <b>Cannot find user.</b> "
+                                f"<code>{brand.esc(user_str)}</code>",
+                                name="finduser",
+                                parse_mode="html",
+                            )
                             return
             else:
-                await event.reply(
-                    "❌ Please specify a user or reply to a message.")
+                await say(
+                    event, "❌ Please specify a user or reply to a message.",
+                    name="finduser",
+                )
                 return
 
             if target_user_id is None:
-                await event.reply("❌ Could not determine user ID.")
+                await say(event, "❌ Could not determine user ID.", name="finduser")
                 return
 
             log_lines = []
@@ -100,8 +115,13 @@ def setup(client, my_id):
                                      "\n".join(group_msgs) + "\n.\n")
 
             if not log_lines:
-                await event.edit(
-                    f"❌ No messages found for **{target_user_id}**")
+                await say(
+                    event,
+                    f"❌ <b>No messages found</b> for "
+                    f"<code>{brand.esc(target_user_id)}</code>",
+                    name="finduser",
+                    parse_mode="html",
+                )
                 return
 
             now = datetime.now(tz).strftime("%Y-%m-%d_%H-%M-%S")
@@ -113,10 +133,26 @@ def setup(client, my_id):
             await event.client.send_file(
                 target_chat,
                 temp_file,
-                caption=f"Sent the Log file of **{target_user_id}**",
+                caption=brand.sign(
+                    f"📄 <b>Log file</b> for "
+                    f"<code>{brand.esc(target_user_id)}</code>",
+                    "finduser",
+                ),
+                parse_mode="html",
                 reply_to=event.id if send_here else None)
-            await event.edit(f"Sent the Log file of **{target_user_id}**")
+            await say(
+                event,
+                f"✅ <b>Sent the log file</b> for "
+                f"<code>{brand.esc(target_user_id)}</code>",
+                name="finduser",
+                parse_mode="html",
+            )
             os.remove(temp_file)
 
         except Exception as e:
-            await event.edit(f"❌ Error: {str(e)}")
+            await say(
+                event,
+                f"❌ <b>Finduser failed.</b> {brand.esc(e)}",
+                name="finduser",
+                parse_mode="html",
+            )

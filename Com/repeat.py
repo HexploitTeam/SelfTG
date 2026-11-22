@@ -1,7 +1,8 @@
 """!repeat: send a message N times."""
 from telethon import errors, events
 
-from Com.core import flood
+from Com.core import brand, flood
+from Com.core.reply import say
 import Com.core.tgsend as tgsend
 
 __HELP__ = (
@@ -19,10 +20,12 @@ def setup(client, my_id):
         try:
             N = int(event.pattern_match.group(1))
             if N < 1:
-                await event.edit("❌ Number must be at least 1.")
+                await say(event, "❌ Number must be at least 1.", name="repeat")
                 return
             if N > 20:
-                await event.edit("❌ Maximum allowed is 20 (to avoid spam).")
+                await say(
+                    event, "❌ Maximum allowed is 20 (to avoid spam).", name="repeat"
+                )
                 return
 
             text = event.pattern_match.group(2).strip()
@@ -35,11 +38,15 @@ def setup(client, my_id):
                     reply_to_id = reply_msg.id
             else:
                 if not event.is_reply:
-                    await event.edit("❌ Reply to a message when no text is provided.")
+                    await say(
+                        event,
+                        "❌ Reply to a message when no text is provided.",
+                        name="repeat",
+                    )
                     return
                 reply_msg = await event.get_reply_message()
                 if not reply_msg.text:
-                    await event.edit("❌ The replied message has no text.")
+                    await say(event, "❌ The replied message has no text.", name="repeat")
                     return
                 use_text = reply_msg.text
                 reply_to_id = reply_msg.id
@@ -58,11 +65,16 @@ def setup(client, my_id):
                     await client.send_message(peer, use_text, reply_to=reply_to_id)
                 except flood.FLOOD_ERRORS as exc:
                     left = flood.note_flood(exc.seconds)
-                    note = (f"⏳ Telegram asked to wait {exc.seconds}s; stopped "
-                            f"after {sent} of {N} copies.")
+                    note = (
+                        f"⏳ <b>Telegram asked to wait</b> "
+                        f"<code>{exc.seconds}s</code>; stopped after "
+                        f"<code>{sent}</code> of <code>{N}</code> copies."
+                    )
                     if left:
-                        note += "\n" + flood.describe(left)
-                    await client.send_message(peer, note)
+                        note += "\n" + brand.esc(flood.describe(left))
+                    await client.send_message(
+                        peer, brand.sign(note, "repeat"), parse_mode="html"
+                    )
                     break
                 sent += 1
                 await flood.pace(event.chat_id)
@@ -70,11 +82,22 @@ def setup(client, my_id):
 
         except ValueError:
             try:
-                await event.edit("❌ Invalid number. Use `!repeat <N>`.")
+                await say(
+                    event,
+                    "❌ Invalid number. Use <code>!repeat &lt;N&gt;</code>.",
+                    name="repeat",
+                    parse_mode="html",
+                )
             except:
                 pass
         except Exception as e:
             try:
-                await client.send_message(await tgsend.peer(event), f"❌ Error: {str(e)}")
+                await client.send_message(
+                    await tgsend.peer(event),
+                    brand.sign(
+                        f"❌ <b>Repeat failed.</b> {brand.esc(e)}", "repeat"
+                    ),
+                    parse_mode="html",
+                )
             except:
                 pass

@@ -5,6 +5,8 @@ from datetime import datetime
 import os
 import pytz
 
+from Com.core.reply import say
+
 __HELP__ = "!log ON/OFF → Enable or disable logging messages to text files"
 __CATEGORY__ = "Information"
 
@@ -60,7 +62,12 @@ def setup(client, my_id):
         LOG_MODE = mode
         with open(MODE_FILE, "w", encoding="utf-8") as f:
             f.write(f"!log: {LOG_MODE}")
-        await event.edit(f"✅ Logging mode set to: {LOG_MODE}")
+        await say(
+            event,
+            f"✅ <b>Logging mode</b> · <code>{LOG_MODE}</code>",
+            name="log",
+            parse_mode="html",
+        )
 
     # Log new messages
     @client.on(events.NewMessage())

@@ -5,7 +5,8 @@ import asyncio
 import logging
 import random
 
-from Com.core import flood
+from Com.core import brand, flood
+from Com.core.reply import say
 from Com.core.storage import cached_json, ensure_json_file, save_json
 
 log = logging.getLogger("selftg.f")
@@ -52,20 +53,31 @@ def setup(client, my_id):
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!f\s+add$"))
     async def f_add(event):
         if not event.is_reply:
-            await event.edit("❌ WRONG usage!\n!f add (reply to message)")
+            await say(
+                event,
+                "❌ <b>Wrong usage.</b> Reply to a message with "
+                "<code>!f add</code>.",
+                name="f",
+                parse_mode="html",
+            )
             return
 
         reply_msg = await event.get_reply_message()
         text = reply_msg.text
         if not text:
-            await event.edit("❌ Replied message has no text!")
+            await say(event, "❌ The replied message has no text.", name="f")
             return
 
         items = load_items()
         code_id = get_next_id()
         items.append({"id": code_id, "text": text})
         save_items(items)
-        await event.edit(f"✅ Text saved. Code: {code_id}")
+        await say(
+            event,
+            f"✅ <b>Text saved</b> · code <code>{code_id}</code>",
+            name="f",
+            parse_mode="html",
+        )
 
     # Delete text
     @client.on(
@@ -81,26 +93,47 @@ def setup(client, my_id):
                 break
         if found:
             save_items(items)
-            await event.edit(f"✅ Deleted Code: {del_id}")
+            await say(
+                event,
+                f"✅ <b>Deleted</b> · code <code>{del_id}</code>",
+                name="f",
+                parse_mode="html",
+            )
         else:
-            await event.edit(f"❌ Code {del_id} not found!")
+            await say(
+                event,
+                f"❌ <b>Code not found.</b> <code>{del_id}</code>",
+                name="f",
+                parse_mode="html",
+            )
 
     # Start sending randomly
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!f\s+start$"))
     async def f_start(event):
         if not event.is_reply:
-            await event.edit("❌ WRONG usage!\n!f start (reply to message)")
+            await say(
+                event,
+                "❌ <b>Wrong usage.</b> Reply to a message with "
+                "<code>!f start</code>.",
+                name="f",
+                parse_mode="html",
+            )
             return
 
         reply_msg = await event.get_reply_message()
         items = load_items()
         if not items:
-            await event.edit("❌ f.json is empty!")
+            await say(event, "❌ The reply list is empty.", name="f")
             return
 
         code_id = get_next_id()
         chat_id = event.chat_id
-        await event.edit(f"✅ Started! Code: {code_id}")
+        await say(
+            event,
+            f"✅ <b>Started</b> · code <code>{code_id}</code>",
+            name="f",
+            parse_mode="html",
+        )
 
         async def task():
             while True:
@@ -144,10 +177,19 @@ def setup(client, my_id):
         if task:
             task.cancel()
             del active_f_tasks[stop_id]
-            await event.edit(
-                f"✅ Stopped sending random replies for Code: {stop_id}")
+            await say(
+                event,
+                f"✅ <b>Stopped</b> · code <code>{stop_id}</code>",
+                name="f",
+                parse_mode="html",
+            )
         else:
-            await event.edit(f"❌ No active task with Code: {stop_id}")
+            await say(
+                event,
+                f"❌ <b>No active task</b> with code <code>{stop_id}</code>",
+                name="f",
+                parse_mode="html",
+            )
 
     # Fallback for wrong usage
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!f\b"))
@@ -156,8 +198,13 @@ def setup(client, my_id):
         if not any(
                 text.startswith(cmd)
                 for cmd in ["!f add", "!f del", "!f start", "!f stop"]):
-            await event.edit("❌ WRONG usage!\n"
-                             "!f add (reply to message)\n"
-                             "!f del <Code>\n"
-                             "!f start (reply to message)\n"
-                             "!f stop <Code>")
+            await say(
+                event,
+                "❌ <b>Wrong usage.</b>\n"
+                "<code>!f add</code> (reply to message)\n"
+                "<code>!f del &lt;Code&gt;</code>\n"
+                "<code>!f start</code> (reply to message)\n"
+                "<code>!f stop &lt;Code&gt;</code>",
+                name="f",
+                parse_mode="html",
+            )

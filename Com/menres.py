@@ -2,6 +2,8 @@
 from telethon import events
 import os
 
+from Com.core import brand
+from Com.core.reply import say
 from Com.core.storage import ensure_json_file, load_json, save_json
 
 __HELP__ = ("!menres on/off → Enable or disable mention auto-response\n"
@@ -30,8 +32,12 @@ def setup(client, my_id):
         state = event.pattern_match.group(1).lower()
         cfg["enabled"] = state == "on"
         save_config(cfg)
-        await event.edit(
-            f"✅ Mention Response {'enabled' if cfg['enabled'] else 'disabled'}."
+        await say(
+            event,
+            f"✅ <b>Mention response</b> · "
+            f"<code>{'on' if cfg['enabled'] else 'off'}</code>",
+            name="menres",
+            parse_mode="html",
         )
 
     @client.on(
@@ -41,7 +47,12 @@ def setup(client, my_id):
         text = event.pattern_match.group(1).strip()
         cfg["text"] = text
         save_config(cfg)
-        await event.edit(f"✅ Mention response text set to:\n{text}")
+        await say(
+            event,
+            f"✅ <b>Mention response text</b>\n{brand.esc(text)}",
+            name="menres",
+            parse_mode="html",
+        )
 
     @client.on(events.NewMessage())
     async def mention_response(event):

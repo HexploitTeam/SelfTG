@@ -6,6 +6,9 @@ import asyncio
 from datetime import datetime
 import pytz
 
+from Com.core import brand
+from Com.core.reply import say
+
 __HELP__ = ("!whois set @BotUsername → Set the bot to fetch info from\n"
             "!whois @Username/NumberID → Fetch info from the set bot\n"
             "!whois (reply to a message) → Fetch info of the message sender\n"
@@ -48,7 +51,12 @@ def setup(client, my_id):
         os.makedirs(os.path.dirname(WHOIS_FILE), exist_ok=True)
         with open(WHOIS_FILE, "w", encoding="utf-8") as f:
             f.write(bot_username)
-        await event.edit(f"✅ Whois bot set to @{bot_username}")
+        await say(
+            event,
+            f"✅ <b>Whois bot set</b> · <code>@{brand.esc(bot_username)}</code>",
+            name="whois",
+            parse_mode="html",
+        )
 
     # Fetch info
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!whois\s*(.*)$"))

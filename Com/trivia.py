@@ -14,6 +14,8 @@ from urllib.parse import unquote
 
 from telethon import events
 
+from Com.core import brand
+from Com.core.reply import say
 import Com.core.api as api
 from Com.core.storage import load_json, save_json
 
@@ -139,19 +141,24 @@ async def fetch_question(category=None):
 def render(question, revealed=False):
     letters = "ABCD"
     lines = [
-        f"🎲 **Trivia** · {question['category']} · _{question['difficulty']}_",
+        f"🎲 <b>Trivia</b> · {brand.esc(question['category'])} · "
+        f"<i>{brand.esc(question['difficulty'])}</i>",
         "",
-        question["question"],
+        brand.esc(question["question"]),
         "",
     ]
     for index, option in enumerate(question["options"][:4]):
-        marker = "✅" if revealed and option == question["correct"] else f"**{letters[index]}**"
-        lines.append(f"{marker}) {option}")
+        marker = (
+            "✅"
+            if revealed and option == question["correct"]
+            else f"<b>{letters[index]}</b>"
+        )
+        lines.append(f"{marker}) {brand.esc(option)}")
     lines.append("")
     if revealed:
-        lines.append(f"Answer: **{question['correct']}**")
+        lines.append(f"<b>Answer</b> · {brand.esc(question['correct'])}")
     else:
-        lines.append(f"_Answer in {REVEAL_DELAY}s…_")
+        lines.append(f"<i>Answer in {REVEAL_DELAY}s…</i>")
     return "\n".join(lines)
 
 
@@ -164,10 +171,12 @@ def setup(client, my_id):
     async def trivia_cmd(event):
         category = (event.pattern_match.group(1) or "").strip().lower() or None
         if category and category not in CATEGORIES:
-            await _safe_edit(
+            await say(
                 event,
-                "❌ Unknown category. Try one of: "
+                "❌ <b>Unknown category.</b> Try one of: "
                 + ", ".join(sorted(CATEGORIES)),
+                name="trivia",
+                parse_mode="html",
             )
             return
 
@@ -175,30 +184,39 @@ def setup(client, my_id):
             question = await fetch_question(category)
         except api.RateLimited as exc:
             wait = exc.retry_after or 6
-            await _safe_edit(event, f"⏳ Trivia is cooling down — try again in {wait}s.")
+            await say(
+                event,
+                f"⏳ <b>Trivia is cooling down</b> — try again in "
+                f"<code>{wait}s</code>.",
+                name="trivia",
+                parse_mode="html",
+            )
             return
         except api.APIError as exc:
-            await _safe_edit(
-                event, f"❌ Could not fetch a question ({exc.describe()}). Try again shortly."
+            await say(
+                event,
+                f"❌ <b>Could not fetch a question.</b> "
+                f"{brand.esc(exc.describe())}. Try again shortly.",
+                name="trivia",
+                parse_mode="html",
             )
             return
         except Exception as exc:  # noqa: BLE001
             log.exception("trivia: unexpected failure")
-            await _safe_edit(event, f"❌ {type(exc).__name__}: {exc}")
+            await say(
+                event,
+                f"❌ <b>{brand.esc(type(exc).__name__)}</b> · {brand.esc(exc)}",
+                name="trivia",
+                parse_mode="html",
+            )
             return
 
-        await _safe_edit(event, render(question))
+        await say(event, render(question), name="trivia", parse_mode="html")
         await asyncio.sleep(REVEAL_DELAY)
         try:
-            await event.edit(render(question, revealed=True))
+            await event.edit(
+                brand.sign(render(question, revealed=True), "trivia"),
+                parse_mode="html",
+            )
         except Exception as exc:  # noqa: BLE001 - message may be gone
             log.info("trivia: could not reveal answer (%s)", type(exc).__name__)
-
-    async def _safe_edit(event, text):
-        try:
-            await event.edit(text)
-        except Exception:
-            try:
-                await event.reply(text)
-            except Exception:
-                log.info("trivia: response could not be delivered")

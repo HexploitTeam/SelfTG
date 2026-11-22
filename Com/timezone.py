@@ -3,6 +3,9 @@ import shlex
 from datetime import datetime
 import re
 from telethon import events
+
+from Com.core import brand
+from Com.core.reply import say
 import Com.core.tgsend as tgsend
 
 try:
@@ -62,12 +65,23 @@ def setup(client, my_id):
     async def timezone_cmd(event):
         try:
             if TIMEZONE_MODULE is None:
-                await event.edit("❌ Timezone module not installed. Run: pip install pytz")
+                await say(
+                    event,
+                    "❌ <b>Timezone module not installed.</b> Run "
+                    "<code>pip install pytz</code>.",
+                    name="timezone",
+                    parse_mode="html",
+                )
                 return
 
             arg = event.pattern_match.group(1)
             if not arg:
-                await event.edit("📖 **Timezone Help**\n" + __HELP__)
+                await say(
+                    event,
+                    "📖 <b>Timezone Help</b>\n" + brand.esc(__HELP__),
+                    name="timezone",
+                    parse_mode="html",
+                )
                 return
 
             args = shlex.split(arg)
@@ -81,31 +95,64 @@ def setup(client, my_id):
                     import io
                     bio = io.BytesIO("\n".join(tz_list).encode("utf-8"))
                     bio.name = "timezones.txt"
-                    await client.send_file(await tgsend.peer(event), bio, caption="📋 All timezones")
+                    await client.send_file(
+                        await tgsend.peer(event),
+                        bio,
+                        caption=brand.sign("📋 <b>All timezones</b>", "timezone"),
+                        parse_mode="html",
+                    )
                     await event.delete()
                 else:
-                    await event.edit("📋 **Available timezones:**\n" + "\n".join(tz_list))
+                    await say(
+                        event,
+                        "📋 <b>Available timezones</b>\n"
+                        + "\n".join(brand.esc(tz) for tz in tz_list),
+                        name="timezone",
+                        parse_mode="html",
+                    )
                 return
 
             # !timezone now <timezone>
             if cmd == "now":
                 if len(args) < 2:
-                    await event.edit("❌ Usage: !timezone now <timezone>")
+                    await say(
+                        event,
+                        "❌ Usage: <code>!timezone now &lt;timezone&gt;</code>",
+                        name="timezone",
+                        parse_mode="html",
+                    )
                     return
                 tz_name = args[1]
                 try:
                     tz = get_timezone(tz_name)
                 except Exception:
-                    await event.edit(f"❌ Unknown timezone: {tz_name}")
+                    await say(
+                        event,
+                        f"❌ <b>Unknown timezone.</b> {brand.esc(tz_name)}",
+                        name="timezone",
+                        parse_mode="html",
+                    )
                     return
                 now = datetime.now(tz)
-                await event.edit(f"🕐 Current time in **{tz_name}**:\n`{format_datetime(now, tz_name)}`")
+                await say(
+                    event,
+                    f"🕐 <b>Current time</b> · {brand.esc(tz_name)}\n"
+                    f"<code>{brand.esc(format_datetime(now, tz_name))}</code>",
+                    name="timezone",
+                    parse_mode="html",
+                )
                 return
 
             # !timezone convert <datetime> <from_tz> <to_tz>
             if cmd == "convert":
                 if len(args) < 4:
-                    await event.edit("❌ Usage: !timezone convert '<datetime>' <from_tz> <to_tz>")
+                    await say(
+                        event,
+                        "❌ Usage: <code>!timezone convert '&lt;datetime&gt;' "
+                        "&lt;from_tz&gt; &lt;to_tz&gt;</code>",
+                        name="timezone",
+                        parse_mode="html",
+                    )
                     return
                 dt_str = args[1]
                 from_tz_name = args[2]
@@ -120,7 +167,13 @@ def setup(client, my_id):
                     except:
                         continue
                 if dt is None:
-                    await event.edit("❌ Could not parse datetime. Try 'YYYY-MM-DD HH:MM'")
+                    await say(
+                        event,
+                        "❌ <b>Could not parse that datetime.</b> Try "
+                        "<code>YYYY-MM-DD HH:MM</code>",
+                        name="timezone",
+                        parse_mode="html",
+                    )
                     return
 
                 # Get timezone objects
@@ -128,7 +181,9 @@ def setup(client, my_id):
                     from_tz = get_timezone(from_tz_name)
                     to_tz = get_timezone(to_tz_name)
                 except Exception:
-                    await event.edit("❌ Invalid timezone provided.")
+                    await say(
+                        event, "❌ Invalid timezone provided.", name="timezone"
+                    )
                     return
 
                 # Convert: first localize naive datetime as from_tz, then convert to to_tz
@@ -141,10 +196,14 @@ def setup(client, my_id):
 
                 to_dt = from_dt.astimezone(to_tz)
 
-                output = f"🔄 **Timezone Conversion**\n"
-                output += f"Input: `{dt_str}` ({from_tz_name})\n"
-                output += f"Result: `{format_datetime(to_dt, to_tz_name)}`"
-                await event.edit(output)
+                output = (
+                    "🔄 <b>Timezone Conversion</b>\n"
+                    f"<b>Input</b> · <code>{brand.esc(dt_str)}</code> "
+                    f"({brand.esc(from_tz_name)})\n"
+                    f"<b>Result</b> · "
+                    f"<code>{brand.esc(format_datetime(to_dt, to_tz_name))}</code>"
+                )
+                await say(event, output, name="timezone", parse_mode="html")
                 return
 
             # !timezone <timezone>: current time there
@@ -152,11 +211,27 @@ def setup(client, my_id):
             try:
                 tz = get_timezone(tz_name)
             except Exception:
-                await event.edit(f"❌ Unknown timezone: {tz_name}\n"
-                                 "Use `!timezone list` to see all.")
+                await say(
+                    event,
+                    f"❌ <b>Unknown timezone.</b> {brand.esc(tz_name)}\n"
+                    "Use <code>!timezone list</code> to see all.",
+                    name="timezone",
+                    parse_mode="html",
+                )
                 return
             now = datetime.now(tz)
-            await event.edit(f"🕐 Current time in **{tz_name}**:\n`{format_datetime(now, tz_name)}`")
+            await say(
+                event,
+                f"🕐 <b>Current time</b> · {brand.esc(tz_name)}\n"
+                f"<code>{brand.esc(format_datetime(now, tz_name))}</code>",
+                name="timezone",
+                parse_mode="html",
+            )
 
         except Exception as e:
-            await event.edit(f"❌ Error: {str(e)}")
+            await say(
+                event,
+                f"❌ <b>Timezone failed.</b> {brand.esc(e)}",
+                name="timezone",
+                parse_mode="html",
+            )

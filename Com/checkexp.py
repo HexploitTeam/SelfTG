@@ -6,6 +6,9 @@ import os
 import json
 import uuid
 
+from Com.core import brand
+from Com.core.reply import say
+
 __HELP__ = (
     "!checkexp <domain> → Scan domain for safe vulnerabilities (XSS, SQLi, headers, TLS, etc.)\n"
     "!checkexp del <ID> → Delete saved scan report")
@@ -34,9 +37,19 @@ def setup(client, my_id):
         file_path = os.path.join(SCAN_FOLDER, f"{scan_id}.txt")
         if os.path.exists(file_path):
             os.remove(file_path)
-            await event.edit(f"✅ Scan report {scan_id} deleted.")
+            await say(
+                event,
+                f"✅ <b>Scan report deleted</b> · <code>{scan_id}</code>",
+                name="checkexp",
+                parse_mode="html",
+            )
         else:
-            await event.edit(f"❌ No scan report with ID {scan_id} found.")
+            await say(
+                event,
+                f"❌ <b>No scan report with ID</b> <code>{scan_id}</code>",
+                name="checkexp",
+                parse_mode="html",
+            )
 
     @client.on(
         events.NewMessage(from_users=my_id, pattern=r"^!checkexp\s+(\S+)$"))
@@ -45,8 +58,13 @@ def setup(client, my_id):
         scan_id = str(uuid.uuid4().int)[:12]  # unique short ID
         file_path = os.path.join(SCAN_FOLDER, f"{scan_id}.txt")
 
-        await event.edit(
-            f"🔍 Starting safe scan for {domain}...\nScan ID: {scan_id}")
+        await say(
+            event,
+            f"🔍 <b>Starting safe scan</b> for {brand.esc(domain)}\n"
+            f"<b>Scan ID</b> · <code>{scan_id}</code>",
+            name="checkexp",
+            parse_mode="html",
+        )
 
         async with aiohttp.ClientSession() as session:
             results = []
@@ -113,8 +131,13 @@ def setup(client, my_id):
                 caption=f"✅ Scan completed for {domain}\nScan ID: {scan_id}",
                 reply_to=event.id)
         except Exception as e:
-            await event.edit(
-                f"❌ Scan completed but failed to send file: {str(e)}")
+            await say(
+                event,
+                f"❌ <b>Scan completed but the report could not be sent.</b> "
+                f"{brand.esc(e)}",
+                name="checkexp",
+                parse_mode="html",
+            )
             return
 
         await event.delete()  # remove original command

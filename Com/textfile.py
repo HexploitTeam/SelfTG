@@ -4,6 +4,9 @@ import Com.core.tgsend as tgsend
 import os
 from datetime import datetime
 
+from Com.core import brand
+from Com.core.reply import say
+
 __HELP__ = "!textfile <text> or reply → Create a .txt file from text"
 
 os.makedirs("temp", exist_ok=True)
@@ -20,8 +23,10 @@ def setup(client, my_id):
                 reply_msg = await event.get_reply_message()
                 text = reply_msg.text or reply_msg.message
             if not text:
-                await event.reply(
-                    "❌ Please provide text or reply to a message.")
+                await say(
+                    event, "❌ Please provide text or reply to a message.",
+                    name="textfile",
+                )
                 return
 
             now = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -38,4 +43,9 @@ def setup(client, my_id):
             os.remove(filename)
 
         except Exception as e:
-            await event.reply(f"❌ Error: {str(e)}")
+            await say(
+                event,
+                f"❌ <b>Text file failed.</b> {brand.esc(e)}",
+                name="textfile",
+                parse_mode="html",
+            )

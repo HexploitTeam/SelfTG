@@ -6,6 +6,8 @@ from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 from telethon import events
 
+from Com.core import brand
+from Com.core.reply import say
 from Com.core.storage import save_json
 import Com.core.tgsend as tgsend
 
@@ -190,41 +192,53 @@ def format_stats(stats, title="📊 Stats"):
         return "📭 No messages counted yet."
 
     lines = []
-    lines.append(f"**{title}**")
-    lines.append(f"📨 Messages: **{stats['total_msgs']}**")
+    lines.append(f"<b>{brand.esc(title)}</b>")
+    lines.append(f"📨 <b>Messages</b> · <code>{stats['total_msgs']}</code>")
     if stats.get("first_message"):
-        lines.append(f"🕒 First: {stats['first_message']}")
-        lines.append(f"🕒 Last: {stats['last_message']}")
-    lines.append(f"📝 Characters: {stats['total_chars']}")
-    lines.append(f"📝 Words: {stats['total_words']}")
-    lines.append(f"😊 Emojis: {stats['total_emojis']}")
-    lines.append(f"📣 Mentions: {stats['total_mentions']}")
-    lines.append(f"💬 Replies given: {stats['replies_given']}")
+        lines.append(f"🕒 <b>First</b> · <code>{brand.esc(stats['first_message'])}</code>")
+        lines.append(f"🕒 <b>Last</b> · <code>{brand.esc(stats['last_message'])}</code>")
+    lines.append(f"📝 <b>Characters</b> · <code>{stats['total_chars']}</code>")
+    lines.append(f"📝 <b>Words</b> · <code>{stats['total_words']}</code>")
+    lines.append(f"😊 <b>Emojis</b> · <code>{stats['total_emojis']}</code>")
+    lines.append(f"📣 <b>Mentions</b> · <code>{stats['total_mentions']}</code>")
+    lines.append(f"💬 <b>Replies given</b> · <code>{stats['replies_given']}</code>")
 
     if stats.get("media"):
-        media_str = ", ".join(f"{k.replace('MessageMedia','')}: {v}" for k, v in stats["media"].items())
-        lines.append(f"🖼️ Media: {media_str}")
+        media_str = ", ".join(
+            f"{brand.esc(k.replace('MessageMedia', ''))}: {v}"
+            for k, v in stats["media"].items()
+        )
+        lines.append(f"🖼️ <b>Media</b> · {media_str}")
 
     # Top words
     word_counter = stats.get("word_counts", {})
     if word_counter:
         top_words = sorted(word_counter.items(), key=lambda x: x[1], reverse=True)[:5]
         if top_words:
-            lines.append("📝 **Top words:** " + ", ".join(f"{w}×{c}" for w, c in top_words))
+            lines.append(
+                "📝 <b>Top words</b> · "
+                + ", ".join(f"<code>{brand.esc(w)}</code>×{c}" for w, c in top_words)
+            )
 
     # Top emojis
     emoji_counter = stats.get("emoji_counts", {})
     if emoji_counter:
         top_emojis = sorted(emoji_counter.items(), key=lambda x: x[1], reverse=True)[:5]
         if top_emojis:
-            lines.append("😊 **Top emojis:** " + " ".join(f"{e}×{c}" for e, c in top_emojis))
+            lines.append(
+                "😊 <b>Top emojis</b> · "
+                + " ".join(f"{brand.esc(e)}×{c}" for e, c in top_emojis)
+            )
 
     # Top mentions
     mention_counter = stats.get("mention_counts", {})
     if mention_counter:
         top_mentions = sorted(mention_counter.items(), key=lambda x: x[1], reverse=True)[:5]
         if top_mentions:
-            lines.append("📣 **Top mentions:** " + ", ".join(f"{m}×{c}" for m, c in top_mentions))
+            lines.append(
+                "📣 <b>Top mentions</b> · "
+                + ", ".join(f"<code>{brand.esc(m)}</code>×{c}" for m, c in top_mentions)
+            )
 
     # Daily average
     if stats.get("first_message") and stats.get("last_message"):
@@ -234,7 +248,7 @@ def format_stats(stats, title="📊 Stats"):
             days = (last - first).days + 1
             if days > 0:
                 avg = stats["total_msgs"] / days
-                lines.append(f"📈 Avg per day: {avg:.1f}")
+                lines.append(f"📈 <b>Avg per day</b> · <code>{avg:.1f}</code>")
         except:
             pass
 
@@ -242,13 +256,19 @@ def format_stats(stats, title="📊 Stats"):
     daily = stats.get("daily_counts", {})
     if daily:
         top_day = max(daily.items(), key=lambda x: x[1])
-        lines.append(f"📅 Most active day: {top_day[0]} ({top_day[1]} messages)")
+        lines.append(
+            f"📅 <b>Most active day</b> · <code>{brand.esc(top_day[0])}</code> "
+            f"({top_day[1]} messages)"
+        )
 
     # Most active hour
     hourly = stats.get("hourly_counts", {})
     if hourly:
         top_hour = max(hourly.items(), key=lambda x: x[1])
-        lines.append(f"⏰ Most active hour: {top_hour[0]}:00 ({top_hour[1]} messages)")
+        lines.append(
+            f"⏰ <b>Most active hour</b> · <code>{brand.esc(top_hour[0])}:00</code> "
+            f"({top_hour[1]} messages)"
+        )
 
     return "\n".join(lines)
 
@@ -265,18 +285,18 @@ def setup(client, my_id):
         chat_id = event.chat_id
         stats = get_chat_stats(chat_id)
         output = format_stats(stats, title="📊 Stats for this chat")
-        await event.edit(output)
+        await say(event, output, name="stats", parse_mode="html")
 
     # !stats all
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!stats all$"))
     async def show_stats_all(event):
         data = load_stats()
         if not data:
-            await event.edit("📭 No stats found in any chat.")
+            await say(event, "📭 No stats found in any chat.", name="stats")
             return
         combined = combine_stats_all(data)
         output = format_stats(combined, title="🌍 Total stats across all chats")
-        await event.edit(output)
+        await say(event, output, name="stats", parse_mode="html")
 
     # !stats reset
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!stats reset$"))
@@ -287,9 +307,9 @@ def setup(client, my_id):
         if chat_id_str in data:
             del data[chat_id_str]
             save_stats(data)
-            await event.edit("✅ Stats reset for this chat.")
+            await say(event, "✅ Stats reset for this chat.", name="stats")
         else:
-            await event.edit("❌ No stats to reset for this chat.")
+            await say(event, "❌ No stats to reset for this chat.", name="stats")
         await event.delete()
 
     # !stats scan [limit]
@@ -304,17 +324,27 @@ def setup(client, my_id):
             limit = 5000
 
         chat_id = event.chat_id
-        await event.edit(f"⏳ Scanning up to {limit} messages in history...")
+        await say(
+            event,
+            f"⏳ <b>Scanning</b> up to <code>{limit}</code> messages in history…",
+            name="stats",
+            parse_mode="html",
+        )
 
         try:
             msgs = await client.get_messages(await tgsend.peer(event), limit=limit)
         except Exception as e:
-            await event.edit(f"❌ Failed to fetch messages: {e}")
+            await say(
+                event,
+                f"❌ <b>Could not fetch messages.</b> {brand.esc(e)}",
+                name="stats",
+                parse_mode="html",
+            )
             return
 
         own_msgs = [m for m in msgs if m.sender_id == my_id]
         if not own_msgs:
-            await event.edit("📭 You have no messages in the scanned range.")
+            await say(event, "📭 You have no messages in the scanned range.", name="stats")
             return
 
         # One write per scan
@@ -322,5 +352,10 @@ def setup(client, my_id):
             update_stats(chat_id, msg, flush=False)
         save_stats()
 
-        await event.edit(f"✅ Added {len(own_msgs)} messages from history to stats.")
+        await say(
+            event,
+            f"✅ <b>Added</b> <code>{len(own_msgs)}</code> messages from history to stats.",
+            name="stats",
+            parse_mode="html",
+        )
         await event.delete()

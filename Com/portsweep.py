@@ -6,6 +6,9 @@ import os
 import json
 from datetime import datetime
 
+from Com.core import brand
+from Com.core.reply import say
+
 __HELP__ = "!portsweep <host> [start_port-end_port] → Scan ports safely and get open/filtered list.\n!portsweep del <ID> → Delete saved scan result."
 
 SAVE_FOLDER = "mode/portsweep"
@@ -62,10 +65,20 @@ def setup(client, my_id):
                     if file and os.path.exists(file):
                         os.remove(file)
                     active_scans.pop(del_id)
-                    await event.reply(f"✅ Deleted portsweep result {del_id}")
+                    await say(
+                        event,
+                        f"✅ <b>Deleted portsweep result</b> <code>{del_id}</code>",
+                        name="portsweep",
+                        parse_mode="html",
+                    )
                     return
                 else:
-                    await event.reply(f"❌ Scan ID {del_id} not found")
+                    await say(
+                        event,
+                        f"❌ <b>Scan ID not found.</b> <code>{del_id}</code>",
+                        name="portsweep",
+                        parse_mode="html",
+                    )
                     return
 
             parts = args.split()
@@ -79,8 +92,13 @@ def setup(client, my_id):
                 start_port, end_port = 1, 1024
 
             if not (1 <= start_port <= end_port <= 65535):
-                await event.reply(
-                    "❌ Invalid port range. Use 1-65535 with start <= end.")
+                await say(
+                    event,
+                    "❌ Invalid port range. Use <code>1-65535</code> with "
+                    "start ≤ end.",
+                    name="portsweep",
+                    parse_mode="html",
+                )
                 return
 
             ports = list(range(start_port, end_port + 1))
@@ -93,8 +111,18 @@ def setup(client, my_id):
                 "task": task,
                 "file": f"{SAVE_FOLDER}/portsweep_{scan_id}.txt"
             }
-            await event.reply(
-                f"⏳ Portsweep started for {host}. Scan ID: {scan_id}")
+            await say(
+                event,
+                f"⏳ <b>Portsweep started</b> · {brand.esc(host)}\n"
+                f"<b>Scan ID</b> · <code>{scan_id}</code>",
+                name="portsweep",
+                parse_mode="html",
+            )
 
         except Exception as e:
-            await event.reply(f"❌ Error: {str(e)}")
+            await say(
+                event,
+                f"❌ <b>Portsweep failed.</b> {brand.esc(e)}",
+                name="portsweep",
+                parse_mode="html",
+            )

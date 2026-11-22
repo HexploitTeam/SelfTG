@@ -22,6 +22,8 @@ from urllib.parse import quote
 from telethon import events
 import Com.core.tgsend as tgsend
 
+from Com.core import brand
+from Com.core.reply import say
 import Com.core.api as api
 
 __HELP__ = (
@@ -49,19 +51,26 @@ async def generate_image(prompt):
         )
     except api.RateLimited as exc:
         wait = exc.retry_after or 30
-        return None, f"Image service is rate limiting this IP — try again in ~{wait}s."
+        return None, (
+            "<b>Image service is rate limiting this IP</b> — try again in "
+            f"~<code>{wait}s</code>."
+        )
     except api.APIError as exc:
-        return None, f"Image service unavailable ({exc.describe()})."
+        return None, f"<b>Image service unavailable.</b> {brand.esc(exc.describe())}"
     except Exception as exc:  # noqa: BLE001
         log.exception("draw: unexpected failure")
-        return None, f"{type(exc).__name__}: {exc}"
+        return None, (
+            f"<b>{brand.esc(type(exc).__name__)}</b> · {brand.esc(exc)}"
+        )
 
     if not body:
-        return None, "Image service returned an empty response."
+        return None, "<b>Image service returned an empty response.</b>"
     if not body[:3] == b"\xff\xd8\xff" and not body[:8] == b"\x89PNG\r\n\x1a\n":
         # Pollinations returns a text error page when a prompt is refused.
         snippet = body[:200].decode("utf-8", errors="replace").strip()
-        return None, f"Image service refused the request: {snippet}"
+        return None, (
+            f"<b>Image service refused the request.</b> {brand.esc(snippet)}"
+        )
     return body, None
 
 
@@ -70,34 +79,50 @@ def setup(client, my_id):
     async def draw_cmd(event):
         prompt = (event.pattern_match.group(1) or "").strip()
         if not prompt:
-            await _safe_edit(event, "❌ Please provide a prompt. Example: `!draw a cat in space`")
+            await say(
+                event,
+                "❌ <b>No prompt.</b> Example: <code>!draw a cat in space</code>",
+                name="draw",
+                parse_mode="html",
+            )
             return
 
-        await _safe_edit(event, f"🎨 Generating: `{prompt}` … (10-60s)")
+        await say(
+            event,
+            f"🎨 <b>Generating</b> · <code>{brand.esc(prompt)}</code> … (10-60s)",
+            name="draw",
+            parse_mode="html",
+        )
 
         image_bytes, error = await generate_image(prompt)
         if error:
-            await _safe_edit(event, f"❌ {error}")
+            await say(
+                event,
+                f"❌ {error}",
+                name="draw",
+                parse_mode="html",
+            )
             return
 
         bio = BytesIO(image_bytes)
         bio.name = "generated.jpg"
         try:
-            await client.send_file(await tgsend.peer(event),
+            await client.send_file(
+                await tgsend.peer(event),
                 bio,
-                caption=f"🖼️ {prompt}",
+                caption=brand.sign(
+                    f"🖼️ <b>{brand.esc(prompt)}</b>", "draw"
+                ),
+                parse_mode="html",
                 reply_to=event.id,
             )
             await event.delete()
         except Exception as exc:  # noqa: BLE001
             log.exception("draw: could not send image")
-            await _safe_edit(event, f"❌ Generated the image but could not send it: {exc}")
-
-    async def _safe_edit(event, text):
-        try:
-            await event.edit(text)
-        except Exception:
-            try:
-                await event.reply(text)
-            except Exception:
-                log.info("draw: response could not be delivered")
+            await say(
+                event,
+                f"❌ <b>Generated the image but could not send it.</b> "
+                f"{brand.esc(exc)}",
+                name="draw",
+                parse_mode="html",
+            )

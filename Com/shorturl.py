@@ -15,6 +15,8 @@ from urllib.parse import quote
 
 from telethon import events
 
+from Com.core import brand
+from Com.core.reply import say
 import Com.core.api as api
 from Com.core.storage import load_json, save_json
 
@@ -121,7 +123,11 @@ def setup(client, my_id):
             url = (reply.raw_text or "").strip() if reply else ""
 
         if not url:
-            await _reply(event, "❌ Provide a URL or reply to a message containing one.")
+            await say(
+                event,
+                "❌ Provide a URL or reply to a message containing one.",
+                name="shorturl",
+            )
             return
 
         if not url.lower().startswith("http"):
@@ -130,24 +136,28 @@ def setup(client, my_id):
         try:
             short_link = await shorten(url, service)
         except api.APIError as exc:
-            await _reply(
+            await say(
                 event,
-                f"❌ Could not shorten that link.\nProviders tried: {exc}",
+                f"❌ <b>Could not shorten that link.</b>\n"
+                f"<b>Providers tried</b> · {brand.esc(exc)}",
+                name="shorturl",
+                parse_mode="html",
             )
             return
         except Exception as exc:  # noqa: BLE001
             log.exception("shorturl: unexpected failure")
-            await _reply(event, f"❌ {type(exc).__name__}: {exc}")
+            await say(
+                event,
+                f"❌ <b>{brand.esc(type(exc).__name__)}</b> · {brand.esc(exc)}",
+                name="shorturl",
+                parse_mode="html",
+            )
             return
 
-        await _reply(event, f"🔗 {short_link}")
+        await say(
+            event,
+            f"🔗 <b>Short link</b>\n<code>{brand.esc(short_link)}</code>",
+            name="shorturl",
+            parse_mode="html",
+        )
         log_url(url, short_link, service)
-
-    async def _reply(event, text):
-        try:
-            await event.reply(text)
-        except Exception:
-            try:
-                await event.edit(text)
-            except Exception:
-                log.info("shorturl: response could not be delivered")

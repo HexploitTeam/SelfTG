@@ -3,6 +3,9 @@ from telethon import events
 import qrcode
 from io import BytesIO
 
+from Com.core import brand
+from Com.core.reply import say
+
 __HELP__ = "!qr <text> → Generate a QR code from the given text"
 __CATEGORY__ = "Utilities"
 
@@ -21,4 +24,9 @@ def setup(client, my_id):
 
             await event.reply(file=bio)
         except Exception as e:
-            await event.reply(f"❌ Error: {str(e)}")
+            await say(
+                event,
+                f"❌ <b>QR failed.</b> {brand.esc(e)}",
+                name="qr",
+                parse_mode="html",
+            )

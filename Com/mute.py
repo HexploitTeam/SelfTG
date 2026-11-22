@@ -2,6 +2,8 @@
 import os
 from telethon import events
 
+from Com.core import brand
+from Com.core.reply import say
 from Com.core.storage import ensure_json_file, load_json, save_json
 
 __HELP__ = (
@@ -126,34 +128,54 @@ def setup(client, my_id):
                         entity = await client.get_entity(arg)
                         target_user_id = entity.id
                     except:
-                        await event.edit(f"❌ Could not find user: {arg}")
+                        await say(
+                            event,
+                            f"❌ <b>Could not find user.</b> <code>{brand.esc(arg)}</code>",
+                            name="mute",
+                            parse_mode="html",
+                        )
                         return
             else:
                 if not event.is_reply:
-                    await event.edit("❌ Reply to a user or provide a username/ID.")
+                    await say(
+                        event,
+                        "❌ Reply to a user or provide a username/ID.",
+                        name="mute",
+                    )
                     return
                 reply = await event.get_reply_message()
                 target_user_id = reply.sender_id
 
             if target_user_id is None:
-                await event.edit("❌ Could not determine target user.")
+                await say(event, "❌ Could not determine target user.", name="mute")
                 return
 
             chat_id = event.chat_id
             muted_list = get_muted_users(chat_id)
             if any(e["user_id"] == target_user_id for e in muted_list):
-                await event.edit("❌ User is already muted.")
+                await say(event, "❌ User is already muted.", name="mute")
                 return
 
             muted_list.append({"user_id": target_user_id, "mode": mode})
             set_muted_users(chat_id, muted_list)
             username = await get_username(client, target_user_id)
             mode_label = "admin" if mode == "admin" else "manual"
-            await event.edit(f"✅ Muted {username} ({mode_label} mode)")
+            await say(
+                event,
+                f"✅ <b>Muted</b> {brand.esc(username)} "
+                f"(<code>{mode_label}</code> mode)",
+                name="mute",
+                parse_mode="html",
+            )
             await event.delete()
 
         except Exception as e:
-            await event.edit(f"❌ Error: {str(e)}")
+            await say(
+                event,
+                f"❌ <b>Mute failed.</b> {brand.esc(e)}",
+                name="mute",
+                parse_mode="html",
+            )
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!mute remove(?:\s+(.+))?$"))
     async def mute_remove(event):
@@ -168,40 +190,59 @@ def setup(client, my_id):
                         entity = await client.get_entity(arg)
                         target_user_id = entity.id
                     except:
-                        await event.edit(f"❌ Could not find user: {arg}")
+                        await say(
+                            event,
+                            f"❌ <b>Could not find user.</b> <code>{brand.esc(arg)}</code>",
+                            name="mute",
+                            parse_mode="html",
+                        )
                         return
             else:
                 if not event.is_reply:
-                    await event.edit("❌ Reply to a user or provide a username/ID.")
+                    await say(
+                        event,
+                        "❌ Reply to a user or provide a username/ID.",
+                        name="mute",
+                    )
                     return
                 reply = await event.get_reply_message()
                 target_user_id = reply.sender_id
 
             if target_user_id is None:
-                await event.edit("❌ Could not determine target user.")
+                await say(event, "❌ Could not determine target user.", name="mute")
                 return
 
             chat_id = event.chat_id
             muted_list = get_muted_users(chat_id)
             new_list = [e for e in muted_list if e["user_id"] != target_user_id]
             if len(new_list) == len(muted_list):
-                await event.edit("❌ User is not muted.")
+                await say(event, "❌ User is not muted.", name="mute")
                 return
 
             set_muted_users(chat_id, new_list)
             username = await get_username(client, target_user_id)
-            await event.edit(f"✅ Unmuted {username}")
+            await say(
+                event,
+                f"✅ <b>Unmuted</b> {brand.esc(username)}",
+                name="mute",
+                parse_mode="html",
+            )
             await event.delete()
 
         except Exception as e:
-            await event.edit(f"❌ Error: {str(e)}")
+            await say(
+                event,
+                f"❌ <b>Mute failed.</b> {brand.esc(e)}",
+                name="mute",
+                parse_mode="html",
+            )
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!mute list$"))
     async def mute_list(event):
         chat_id = event.chat_id
         muted_list = get_muted_users(chat_id)
         if not muted_list:
-            await event.edit("📭 No muted users in this chat.")
+            await say(event, "📭 No muted users in this chat.", name="mute")
             return
 
         lines = []
@@ -209,16 +250,23 @@ def setup(client, my_id):
             uid = entry["user_id"]
             mode = entry.get("mode", "admin")
             name = await get_username(client, uid)
-            lines.append(f"• {name} ({mode} mode)")
-        msg = "📋 **Muted users in this chat:**\n" + "\n".join(lines)
-        await event.edit(msg)
+            lines.append(
+                f"• <b>{brand.esc(name)}</b> (<code>{uid}</code>) · "
+                f"<code>{brand.esc(mode)}</code> mode"
+            )
+        msg = "📋 <b>Muted users in this chat</b>\n" + "\n".join(lines)
+        await say(event, msg, name="mute", parse_mode="html")
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!mute$"))
     async def mute_help(event):
-        await event.edit(
-            "📖 **Mute Commands**\n"
-            "• `!mute add <user>` (or reply) – admin mode (try delete)\n"
-            "• `!mute addm <user>` (or reply) – manual mode (always reply del)\n"
-            "• `!mute remove <user>` (or reply) – unmute\n"
-            "• `!mute list` – list muted users"
+        await say(
+            event,
+            "📖 <b>Mute Commands</b>\n"
+            "• <code>!mute add &lt;user&gt;</code> (or reply) – admin mode (try delete)\n"
+            "• <code>!mute addm &lt;user&gt;</code> (or reply) – manual mode "
+            "(always reply del)\n"
+            "• <code>!mute remove &lt;user&gt;</code> (or reply) – unmute\n"
+            "• <code>!mute list</code> – list muted users",
+            name="mute",
+            parse_mode="html",
         )

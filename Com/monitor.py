@@ -4,6 +4,8 @@ import os
 import re
 from telethon import events
 
+from Com.core import brand
+from Com.core.reply import say
 from Com.core.storage import cached_json, save_json
 
 log = logging.getLogger("selftg.monitor")
@@ -160,11 +162,15 @@ def setup(client, my_id):
                 user_name = getattr(user, "first_name", "Unknown")
                 await client.send_message(
                     my_id,
-                    f"⚡ Keyword alert!\n"
-                    f"Chat: {chat_name}\n"
-                    f"User: {user_name}\n"
-                    f"Keyword: '{matched_keyword}'\n"
-                    f"Message: {text}"
+                    brand.sign(
+                        "⚡ <b>Keyword alert</b>\n"
+                        f"<b>Chat</b> · {brand.esc(chat_name)}\n"
+                        f"<b>User</b> · {brand.esc(user_name)}\n"
+                        f"<b>Keyword</b> · <code>{brand.esc(matched_keyword)}</code>\n"
+                        f"<b>Message</b> · {brand.esc(text)}",
+                        "monitor",
+                    ),
+                    parse_mode="html",
                 )
             except Exception as exc:  # noqa: BLE001 - alert delivery is best effort
                 log.warning("monitor: alert DM failed (%s)", type(exc).__name__)
@@ -182,11 +188,21 @@ def setup(client, my_id):
         data = load_data()
         scope = get_scope(data, event.chat_id)
         if keyword in scope["keywords"]:
-            await event.reply(f"⚠️ Keyword '{keyword}' already in the watchlist.")
+            await say(
+                event,
+                f"⚠️ <b>Already watching</b> <code>{brand.esc(keyword)}</code>.",
+                name="monitor",
+                parse_mode="html",
+            )
             return
         scope["keywords"].append(keyword)
         save_data(data)
-        await event.reply(f"✅ Added '{keyword}' to watchlist.")
+        await say(
+            event,
+            f"✅ <b>Watching</b> <code>{brand.esc(keyword)}</code>.",
+            name="monitor",
+            parse_mode="html",
+        )
 
     # !monitor remove <keyword>
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!monitor remove (.+)"))
@@ -195,11 +211,23 @@ def setup(client, my_id):
         data = load_data()
         scope = get_scope(data, event.chat_id)
         if keyword not in scope["keywords"]:
-            await event.reply(f"⚠️ Keyword '{keyword}' not in the watchlist.")
+            await say(
+                event,
+                f"⚠️ <b>Not in the watchlist</b> · "
+                f"<code>{brand.esc(keyword)}</code>",
+                name="monitor",
+                parse_mode="html",
+            )
             return
         scope["keywords"].remove(keyword)
         save_data(data)
-        await event.reply(f"✅ Removed '{keyword}' from watchlist.")
+        await say(
+            event,
+            f"✅ <b>Removed</b> <code>{brand.esc(keyword)}</code> from the "
+            "watchlist.",
+            name="monitor",
+            parse_mode="html",
+        )
 
     # !monitor list
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!monitor list$"))
@@ -208,25 +236,34 @@ def setup(client, my_id):
         chat_id_str = str(event.chat_id)
         global_enabled = data["__settings"].get("global_enabled", False)
 
-        msg = "📝 **Watchlist**\n"
+        msg = "📝 <b>Watchlist</b>\n"
         if global_enabled:
             kw = data["__global"].get("keywords", [])
-            msg += "🌍 **Global:** " + (", ".join(kw) if kw else "(empty)") + "\n"
+            msg += "🌍 <b>Global</b> · " + (
+                ", ".join(f"<code>{brand.esc(k)}</code>" for k in kw)
+                if kw else "(empty)"
+            ) + "\n"
         if chat_id_str in data:
             kw = data[chat_id_str].get("keywords", [])
-            msg += f"📌 **This chat:** " + (", ".join(kw) if kw else "(empty)") + "\n"
+            msg += "📌 <b>This chat</b> · " + (
+                ", ".join(f"<code>{brand.esc(k)}</code>" for k in kw)
+                if kw else "(empty)"
+            ) + "\n"
         else:
-            msg += "📌 This chat: (empty)\n"
+            msg += "📌 <b>This chat</b> · (empty)\n"
 
         # Show settings
         scope = get_scope(data, event.chat_id)
-        msg += f"🔹 Reply: {scope.get('reply_text') or 'Off'}\n"
-        msg += f"🔹 Case sensitive: {'On' if scope.get('case_sensitive') else 'Off'}\n"
-        msg += f"🔹 Regex mode: {'On' if scope.get('regex') else 'Off'}\n"
-        msg += f"🔹 Silent: {'On' if scope.get('silent') else 'Off'}\n"
-        msg += f"🌍 Global mode: {'On' if global_enabled else 'Off'}"
+        msg += f"🔹 <b>Reply</b> · {brand.esc(scope.get('reply_text')) or 'Off'}\n"
+        msg += (
+            "🔹 <b>Case sensitive</b> · "
+            f"{'On' if scope.get('case_sensitive') else 'Off'}\n"
+        )
+        msg += f"🔹 <b>Regex mode</b> · {'On' if scope.get('regex') else 'Off'}\n"
+        msg += f"🔹 <b>Silent</b> · {'On' if scope.get('silent') else 'Off'}\n"
+        msg += f"🌍 <b>Global mode</b> · {'On' if global_enabled else 'Off'}"
 
-        await event.edit(msg)
+        await say(event, msg, name="monitor", parse_mode="html")
 
     # !monitor global
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!monitor global$"))
@@ -236,7 +273,12 @@ def setup(client, my_id):
         data["__settings"]["global_enabled"] = not current
         save_data(data)
         status = "ON" if not current else "OFF"
-        await event.reply(f"🌍 Global watch mode: {status}")
+        await say(
+            event,
+            f"🌍 <b>Global watch mode</b> · <code>{status}</code>",
+            name="monitor",
+            parse_mode="html",
+        )
 
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!monitor reply (.+)"))
     async def monitor_reply(event):
@@ -245,10 +287,16 @@ def setup(client, my_id):
         scope = get_scope(data, event.chat_id)
         if text.lower() == "off":
             scope["reply_text"] = None
-            await event.reply("✅ Reply text disabled.")
+            await say(event, "✅ <b>Reply text disabled.</b>", name="monitor",
+                     parse_mode="html")
         else:
             scope["reply_text"] = text
-            await event.reply(f"✅ Reply text set to: {text}")
+            await say(
+                event,
+                f"✅ <b>Reply text</b> · {brand.esc(text)}",
+                name="monitor",
+                parse_mode="html",
+            )
         save_data(data)
 
     # !monitor regex
@@ -259,7 +307,12 @@ def setup(client, my_id):
         scope["regex"] = not scope.get("regex", False)
         save_data(data)
         status = "ON" if scope["regex"] else "OFF"
-        await event.reply(f"🔍 Regex mode: {status}")
+        await say(
+            event,
+            f"🔍 <b>Regex mode</b> · <code>{status}</code>",
+            name="monitor",
+            parse_mode="html",
+        )
 
     # !monitor case
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!monitor case$"))
@@ -269,7 +322,12 @@ def setup(client, my_id):
         scope["case_sensitive"] = not scope.get("case_sensitive", False)
         save_data(data)
         status = "ON" if scope["case_sensitive"] else "OFF"
-        await event.reply(f"🔤 Case sensitivity: {status}")
+        await say(
+            event,
+            f"🔤 <b>Case sensitivity</b> · <code>{status}</code>",
+            name="monitor",
+            parse_mode="html",
+        )
 
     # !monitor silent
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!monitor silent$"))
@@ -279,19 +337,27 @@ def setup(client, my_id):
         scope["silent"] = not scope.get("silent", False)
         save_data(data)
         status = "ON" if scope["silent"] else "OFF"
-        await event.reply(f"🔇 Silent mode: {status}")
+        await say(
+            event,
+            f"🔇 <b>Silent mode</b> · <code>{status}</code>",
+            name="monitor",
+            parse_mode="html",
+        )
 
     # Fallback help
     @client.on(events.NewMessage(from_users=my_id, pattern=r"^!monitor$"))
     async def monitor_help(event):
-        await event.edit(
-            "📖 **Monitor Commands**\n"
-            "• `!monitor add <keyword>`\n"
-            "• `!monitor remove <keyword>`\n"
-            "• `!monitor list`\n"
-            "• `!monitor global` – toggle global watch\n"
-            "• `!monitor reply <text|off>`\n"
-            "• `!monitor regex` – toggle regex\n"
-            "• `!monitor case` – toggle case sensitivity\n"
-            "• `!monitor silent` – toggle silent mode"
+        await say(
+            event,
+            "📖 <b>Monitor Commands</b>\n"
+            "• <code>!monitor add &lt;keyword&gt;</code>\n"
+            "• <code>!monitor remove &lt;keyword&gt;</code>\n"
+            "• <code>!monitor list</code>\n"
+            "• <code>!monitor global</code> – toggle global watch\n"
+            "• <code>!monitor reply &lt;text|off&gt;</code>\n"
+            "• <code>!monitor regex</code> – toggle regex\n"
+            "• <code>!monitor case</code> – toggle case sensitivity\n"
+            "• <code>!monitor silent</code> – toggle silent mode",
+            name="monitor",
+            parse_mode="html",
         )
