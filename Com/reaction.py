@@ -503,13 +503,13 @@ def setup(client, my_id):
     #One-off reaction to a replied message
     #------------------------------
 
-    async def say(event, text):
+    async def say(event, text, *, name="react", parse_mode="html"):
         """Answer in place with the Spooku Self signature, else reply.
 
         Every body in this module is HTML, so the shared helper only appends the
-        signature.
+        signature; `name` labels the task behind the message.
         """
-        await _say(event, text, name="react", parse_mode="html")
+        await _say(event, text, name=name, parse_mode=parse_mode)
 
     @client.on(events.NewMessage(from_users=my_id,
                                  pattern=r"^!react(?:\s+([\s\S]+))?$"))
