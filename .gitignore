@@ -19,6 +19,9 @@ mode/reminders.json
 mode/polls.json
 mode/confirm.json
 mode/settings.json
+# !trivia session token and !guess rounds: runtime state, not source.
+mode/trivia_token.json
+mode/games.json
 # !cauto's on/off switch: one Repl's runtime choice, not source.
 mode/cauto.json
 
