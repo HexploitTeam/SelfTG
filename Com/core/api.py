@@ -247,6 +247,50 @@ async def fetch_bytes(url, *, params=None, provider="unknown", timeout=None,
     )
 
 
+async def fetch_response(url, *, provider="unknown", timeout=None,
+                         headers=None, allow_redirects=False,
+                         max_bytes=512 * 1024):
+    """GET `url` and return status, headers and a bounded text body.
+
+    For commands that need the response itself rather than a parsed payload
+    (`!checkexp` reads security headers and follows a redirect chain by hand).
+    A 4xx is *returned*, not raised: the status is the finding. 429 still
+    raises, because continuing would make the throttle worse.
+    """
+    session = await get_session()
+    timeout_obj = aiohttp.ClientTimeout(total=timeout or DEFAULT_TIMEOUT)
+    merged = {"Accept": "*/*"}
+    if headers:
+        merged.update(headers)
+    try:
+        async with session.get(
+            url, headers=merged, timeout=timeout_obj,
+            allow_redirects=allow_redirects,
+        ) as resp:
+            body = await resp.content.read(max_bytes + 1)
+            truncated = len(body) > max_bytes
+            if resp.status == 429:
+                raise RateLimited(
+                    "rate limit reached",
+                    status=429,
+                    provider=provider,
+                    retry_after=_retry_after(resp.headers),
+                )
+            return {
+                "status": resp.status,
+                "url": str(resp.url),
+                "headers": {k.lower(): v for k, v in resp.headers.items()},
+                "text": body[:max_bytes].decode("utf-8", errors="replace"),
+                "truncated": truncated,
+            }
+    except asyncio.TimeoutError:
+        raise APIError("timed out", provider=provider) from None
+    except aiohttp.ClientError as exc:
+        raise APIError(
+            f"network error ({type(exc).__name__})", provider=provider
+        ) from None
+
+
 async def post_json(url, payload, *, provider="unknown", timeout=None,
                     headers=None, retries=0, data=None):
     merged = {"Accept": "application/json"}
