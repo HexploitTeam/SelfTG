@@ -80,7 +80,7 @@ SUBCOMMANDS = [
 
 __HELP__ = registry.command(
     "creator", SUBCOMMANDS,
-    "Credit line for this account; owner-only, stored in `mode/settings.json`.",
+    "Credit line for this account; owner-only, stored in mode/settings.json.",
 )
 __CATEGORY__ = "Utilities"
 

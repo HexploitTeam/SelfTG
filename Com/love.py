@@ -105,7 +105,7 @@ LOVE_LINES = (
 __HELP__ = (
     "!love <name> → Save the lover's name\n"
     "!love → Send one of the twenty lines, for that name\n"
-    "The lines are `LOVE_LINES` in Com/love.py; edit them there."
+    "The lines are LOVE_LINES in Com/love.py; edit them there."
 )
 __CATEGORY__ = "Utilities"
 

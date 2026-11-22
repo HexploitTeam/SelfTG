@@ -19,7 +19,7 @@ __HELP__ = (
     "  php, html, css, json, yaml, xml, sql, bash, rust, swift, kotlin, dart,\n"
     "  scala, r, matlab, perl, lua, haskell, elixir, clojure, erlang, groovy,\n"
     "  julia, nim, zig, vlang, crystal, ... (over 500 languages supported)\n"
-    "Use `!syntax --list` to see all languages."
+    "Use !syntax --list to see all languages."
 )
 __CATEGORY__ = "Utilities"
 

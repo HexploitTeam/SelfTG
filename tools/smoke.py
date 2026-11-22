@@ -4,10 +4,13 @@ What it checks -- all of it without a Telegram account or the network:
 
 1. **Compile** every Python file in the tree (warnings as errors, so a stray
    invalid escape no longer slips through).
-2. **Helpers** that the commands share: duration parsing, the flood gate and
+2. **Branding**: every message send builds Telegram HTML, not markdown: no
+   ``**``/backtick emphasis left in a body, and a body with ``<b>``/``<i>``/
+   ``<code>``/``<blockquote>`` always passes ``parse_mode``.
+3. **Helpers** that the commands share: duration parsing, the flood gate and
    breaker, the storage cache, confirmation tokens, the arithmetic sandbox and
    the bot's callback-data budget.
-3. **Modules**: every ``Com/*.py`` imports and registers handlers against a stub
+4. **Modules**: every ``Com/*.py`` imports and registers handlers against a stub
    client, so a module that silently vanished from ``main.load_commands()``
    (the failure mode behind ``!inline`` never loading) is visible here instead of
    in production.
@@ -21,10 +24,12 @@ package is not installed are listed separately -- that is dependency
 provisioning, not a code defect, and on the Repl everything in
 ``requirements.txt`` is installed.
 """
+import ast
 import asyncio
 import io
 import os
 import py_compile
+import re
 import sys
 import traceback
 
@@ -80,7 +85,114 @@ def check_compile():
 
 
 #------------------------------
-#2. Shared helpers
+#2. Branding
+#------------------------------
+
+# Functions that put a string into a chat
+SEND_FUNCS = {"reply", "respond", "edit", "send_message", "send_file"}
+SAY_FUNCS = {"say", "_say"}
+TEXT_KEYWORDS = {"text", "caption"}
+
+# The tags Com/core/brand.py allows
+BRAND_TAG = re.compile(r"</?(?:b|i|code|blockquote)>")
+# Markdown the brand replaced with those tags
+MARKDOWN = re.compile(r"\*\*|`")
+
+
+def _text_fragments(node):
+    """String literals inside a send's text/caption arguments."""
+    candidates = list(node.args[:3])
+    candidates += [k.value for k in node.keywords if k.arg in TEXT_KEYWORDS]
+    fragments = []
+    for arg in candidates:
+        for leaf in ast.walk(arg):
+            if isinstance(leaf, ast.Constant) and isinstance(leaf.value, str):
+                fragments.append(leaf.value)
+    return fragments
+
+
+def _all_strings(node):
+    """Every string literal anywhere inside `node`."""
+    return [leaf.value for leaf in ast.walk(node)
+            if isinstance(leaf, ast.Constant) and isinstance(leaf.value, str)]
+
+
+def _help_texts(tree):
+    """`__HELP__` values and registry.command(...) tables."""
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            names = [t.id for t in node.targets if isinstance(t, ast.Name)]
+            if "__HELP__" in names:
+                yield node.lineno, node.value
+        elif isinstance(node, ast.Call):
+            func = node.func
+            owner = getattr(func, "value", None)
+            if getattr(func, "attr", None) == "command" \
+                    and getattr(owner, "id", None) == "registry":
+                yield node.lineno, node
+
+
+def _defines_local_say(tree):
+    """True when the module wraps `say` with its own parse_mode default."""
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) \
+                and node.name in SAY_FUNCS:
+            return True
+    return False
+
+
+def check_branding():
+    problems = []
+    for path in python_files():
+        if os.sep + "tools" + os.sep in path:
+            continue
+        try:
+            tree = ast.parse(open(path, encoding="utf-8").read())
+        except SyntaxError:  # compile already reported it
+            continue
+        local_say = _defines_local_say(tree)
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            name = getattr(node.func, "id", None) or getattr(node.func, "attr", None)
+            if name not in SEND_FUNCS | SAY_FUNCS:
+                continue
+            fragments = _text_fragments(node)
+            where = f"{os.path.relpath(path, BASE_DIR)}:{node.lineno}"
+            for text in fragments:
+                if MARKDOWN.search(text):
+                    snippet = text.strip().replace("\n", " ")[:60]
+                    problems.append(f"{where}: markdown in {name}(): {snippet!r}")
+            has_html = any(BRAND_TAG.search(text) for text in fragments)
+            if not has_html or "parse_mode" in {k.arg for k in node.keywords}:
+                continue
+            # A module's own say()/`_say()` adds the mode itself
+            if name in SAY_FUNCS and local_say:
+                continue
+            problems.append(f"{where}: HTML in {name}() without parse_mode")
+
+        # Help text reaches the chat too, once the modifiers are escaped
+        for lineno, value in _help_texts(tree):
+            for text in _all_strings(value):
+                if MARKDOWN.search(text):
+                    snippet = text.strip().replace("\n", " ")[:60]
+                    problems.append(
+                        f"{os.path.relpath(path, BASE_DIR)}:{lineno}: "
+                        f"markdown in help text: {snippet!r}"
+                    )
+                    break
+
+    if problems:
+        for line in problems[:10]:
+            bad("branding", line)
+        if len(problems) > 10:
+            bad("branding", f"…and {len(problems) - 10} more")
+    else:
+        ok("no markdown in sends, HTML always has parse_mode")
+
+
+#------------------------------
+#3. Shared helpers
 #------------------------------
 
 def check_helpers():
@@ -183,7 +295,7 @@ def check_helpers():
 
 
 #------------------------------
-#3. Modules
+#4. Modules
 #------------------------------
 
 class StubClient:
@@ -267,9 +379,11 @@ def main():
     print("SelfTG smoke test\n")
     print("1. compile")
     check_compile()
-    print("\n2. helpers")
+    print("\n2. branding")
+    check_branding()
+    print("\n3. helpers")
     check_helpers()
-    print("\n3. modules")
+    print("\n4. modules")
     try:
         asyncio.run(check_modules())
     except Exception:  # noqa: BLE001 - report, never hide

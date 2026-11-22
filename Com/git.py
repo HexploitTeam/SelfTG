@@ -26,7 +26,7 @@ log = logging.getLogger("selftg.git")
 __HELP__ = (
     "!git pull → Fetch origin/beta and reset the checkout to it "
     "(local edits to tracked files are discarded)\n"
-    "!git pull <branch> → Same, for another branch (e.g. `!git pull new`)\n"
+    "!git pull <branch> → Same, for another branch (e.g. !git pull new)\n"
     "!git push → Placeholder; not implemented yet"
 )
 __CATEGORY__ = "Setup"
