@@ -42,6 +42,21 @@ async def peer(event):
     return chat if chat is not None else event.chat_id
 
 
+def chat_ref(value):
+    """A callback-data string that names a numeric chat id becomes an int.
+
+    Button routes carry every argument as text, and Telethon reads a string
+    like ``"-1003549336332"`` as a *username*, which fails with "Cannot find
+    any entity corresponding to". The id has to be an int again before it is
+    used.
+    """
+    if isinstance(value, str):
+        text = value.strip()
+        if text.lstrip("-").isdigit():
+            return int(text)
+    return value
+
+
 async def resolve(client, chat_id):
     """Resolve a *stored* chat id (no event available) to an input peer.
 
@@ -50,16 +65,22 @@ async def resolve(client, chat_id):
     not available. `get_input_entity()` alone hits the empty StringSession cache
     after a restart, so fall back to a dialog scan before giving up.
     """
+    ref = chat_ref(chat_id)
     try:
-        return await client.get_input_entity(chat_id)
+        return await client.get_input_entity(ref)
     except Exception:  # noqa: BLE001 - not cached yet, look through dialogs
-        log.info("tgsend: %s not cached, scanning dialogs", chat_id)
+        log.info("tgsend: %s not cached, scanning dialogs", ref)
     try:
         async for dialog in client.iter_dialogs():
             entity = getattr(dialog, "entity", None)
-            if getattr(dialog, "id", None) == chat_id or \
-                    getattr(entity, "id", None) == chat_id:
-                return await client.get_input_entity(entity or chat_id)
+            ids = (getattr(dialog, "id", None), getattr(entity, "id", None))
+            if ref in ids or (isinstance(ref, int) and str(ref) in {str(i) for i in ids}):
+                return await client.get_input_entity(entity or ref)
     except Exception:  # noqa: BLE001
-        log.warning("tgsend: dialog scan failed for %s", chat_id)
-    return chat_id
+        log.warning("tgsend: dialog scan failed for %s", ref)
+    if isinstance(ref, int):
+        raise ValueError(
+            f"chat {ref} is not in this account's dialog list; open it in "
+            "Telegram once, then refresh the bot's chat list"
+        )
+    return ref

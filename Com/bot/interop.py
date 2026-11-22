@@ -239,7 +239,8 @@ def enqueue(kind, chat_id, text, reply_to=None):
     action = {
         "id": _new_id(),
         "kind": kind,
-        "chat_id": chat_id,
+        # Callback data is text; a numeric id must be an int for Telethon
+        "chat_id": tgsend.chat_ref(chat_id),
         "text": text,
         "reply_to": reply_to,
         "state": "pending",
