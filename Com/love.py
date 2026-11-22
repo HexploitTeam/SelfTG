@@ -15,12 +15,14 @@ message is roughly 600 characters, far inside Telegram's 4096 limit.
 
 Name handling and formatting injection
 --------------------------------------
-The given name is pasted into the text, so it is checked against an English-name
-alphabet before use: ASCII letters, single spaces, hyphens and apostrophes,
-1-30 characters. ``*``, ``_``, backticks, angle brackets, backslashes, newlines,
-digits and emoji are rejected with a short message, so no entity or markdown
-syntax can enter the output. As a second layer the message is sent with no
-``parse_mode`` and no entities, so the characters that are allowed stay literal.
+The given name is pasted into the text, so it is filtered before use: 1-30
+characters after collapsing runs of whitespace, no control or invisible
+formatting characters, and none of the characters that would split or mark up
+the message -- ``*``, ``_``, backticks, angle brackets, backslashes, ``~``,
+``|``, brackets, braces, ``#``, ``@`` and ``$``. Everything else is kept, so
+names in any language and any Unicode font work (``𝐒𝐚𝐫𝐚𝐡``, ``𝓢𝓪𝓻𝓪𝓱``,
+``Ｓａｒａｈ``). As a second layer the message is sent with no ``parse_mode`` and
+no entities, so the characters that are allowed stay literal.
 
 Substitution uses ``str.replace("{name}", name)``, never ``str.format``: braces
 inside an edited line cannot raise ``KeyError`` or ``IndexError``.
@@ -33,7 +35,7 @@ that answers strangers in every chat, costs one outgoing message per stranger,
 and could drift from the single owner check used everywhere else.
 """
 import logging
-import re
+import unicodedata
 
 from telethon import events
 
@@ -41,8 +43,8 @@ from Com.core.reply import say
 
 log = logging.getLogger("selftg.love")
 
-# English given names: letters, single spaces, hyphens and apostrophes only
-NAME_RE = re.compile(r"^[A-Za-z]+(?:[ '-][A-Za-z]+)*$")
+# Markup that would split the message; every other character is kept
+BLOCKED_CHARS = set("*_`<>\\~|[](){}#@$")
 MAX_NAME = 30
 
 # The ten lines `!love` prints; {name} is replaced with the given name.
@@ -70,18 +72,28 @@ __CATEGORY__ = "Utilities"
 #Name check
 #------------------------------
 
+def _bad_char(name):
+    """First character that is markup or invisible, or None when all are fine."""
+    for ch in name:
+        if ch in BLOCKED_CHARS or unicodedata.category(ch).startswith("C"):
+            return ch
+    return None
+
+
 def normalize_name(raw):
-    """Trim and validate a given name; raises ValueError with a short reason."""
-    name = (raw or "").strip()
+    """Collapse spaces and validate a name; raises ValueError with a short reason."""
+    name = " ".join((raw or "").split())
     if not name:
         raise ValueError("Usage: `!love <name>` — e.g. `!love Sarah`")
     if len(name) > MAX_NAME:
         raise ValueError(f"that name is longer than {MAX_NAME} characters")
-    if not NAME_RE.match(name):
+    if _bad_char(name) is not None:
         raise ValueError(
-            "use letters, spaces, hyphens or apostrophes only "
-            "(e.g. `Anne-Marie`, `O'Brien`)"
+            "that name has characters that aren't allowed — letters in any "
+            "language or font are fine, markup is not"
         )
+    if name[0] in "-'\u2019" or name[-1] in "-'\u2019":
+        raise ValueError("a name can't start or end with a hyphen or apostrophe")
     return name
 
 
