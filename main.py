@@ -36,6 +36,12 @@ _background_tasks = []
 #Configuration
 #------------------------------
 
+# Text for `!love` (Com/love.py). Edit this string and restart the Repl; it is
+# source, not a runtime setting, so no command changes it at runtime. Empty or
+# whitespace-only makes `!love` refuse with a message instead of sending blank.
+LOVE_TEXT = "Made with love."
+
+
 def _require_env(name):
     value = (os.environ.get(name) or "").strip()
     if not value:
