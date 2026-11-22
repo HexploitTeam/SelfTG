@@ -55,6 +55,24 @@ def esc(value):
     return html.escape(str(value), quote=False)
 
 
+def _plain_title(line):
+    """True when `line` is a title, not the opening of a quoted/code block."""
+    stripped = line.strip()
+    if not stripped:
+        return False
+    lowered = stripped.lower()
+    if lowered.startswith(("<blockquote", "<code")):
+        return False
+    # An inline <code> or a quote that opened here must also close here, or the
+    # rule would be drawn inside it.
+    for tag in ("blockquote", "code"):
+        opened = len(re.findall(rf"<{tag}>", lowered))
+        closed = len(re.findall(rf"</{tag}>", lowered))
+        if opened > closed:
+            return False
+    return True
+
+
 def sign(body, command=None):
     """Append the signature to an HTML body; `command` adds the origin tag."""
     line = f"— <b>{NAME}</b>"
@@ -67,7 +85,7 @@ def sign(body, command=None):
     # A titled body gets a rule under the title as well as above the signature
     head, sep, rest = text.partition("\n")
     rest = rest.lstrip("\n")
-    if sep and rest:
+    if sep and rest and _plain_title(head):
         text = f"{head}\n{RULE}\n\n{rest}"
     return f"{text}\n\n{RULE}\n{line}"
 
