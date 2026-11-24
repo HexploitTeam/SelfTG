@@ -26,7 +26,7 @@ to Gemini either.
 | `!compliment [target]` | `Com/social.py` | The counterweight; the one people actually screenshot |
 | `!wyr` | `Com/social.py` | Would-you-rather from a 25-pair local bank; starts a conversation rather than ending one |
 | `!pirate`, `!shakespeare`, `!uwu`, `!leet` | `Com/style.py` | Four substitution tables; handing a message back in a hat is the cheapest illusion of understanding, and it is genuinely funny in a chat |
-| `!aiml generate/train/status/reset` | `Com/aiml.py` | Existing command, rebuilt on an owner-supplied corpus; the only "it wrote that itself" moment in the set |
+| `!aiml gen/say/para/next/corpus/status/config/set/train/reset` | `Com/aiml.py` | Existing command, rebuilt on an owner-supplied corpus and upgraded to an interpolated 1–3-gram sampler with continuation, paragraphs, next-word odds and saved settings; the only "it wrote that itself" moment in the set |
 
 ### API-backed — exactly one
 
@@ -55,34 +55,54 @@ bot and a different surface.
 
 ## 3. Local generator design (the Markov chain)
 
-**Corpus:** `data/markov_corpus.txt` — *The Time Machine* (1895, public domain),
-179,005 bytes, 32,319 words. Fetched from the GITenberg mirror of Project
-Gutenberg #35 because `gutenberg.org` returned 503; header, footer, licence block
-and illustration markers stripped, normalised to UTF-8/Unix. Provenance and
-replacement instructions are in `data/README.md`.
+**Corpus:** `data/corpus/` — one UTF-8 `.txt` file per source, all trained
+together. It ships with `the-time-machine.txt`: *The Time Machine* (1895, public
+domain), 179,005 bytes, 32,319 words. Fetched from the GITenberg mirror of
+Project Gutenberg #35 because `gutenberg.org` returned 503; header, footer,
+licence block and illustration markers stripped, normalised to UTF-8/Unix.
+Provenance and replacement instructions are in `data/README.md`.
 
-**Replacement:** drop any UTF-8 prose into that path and run `!aiml train` (or
-just `!aiml generate`; the model rebuilds when the file's mtime changes). Below
-300 words the command refuses and says the word count; 100–500 KB is the
-recommended range.
+**Adding text:** drop another `.txt` file into `data/corpus/`. No command is
+needed — the model cache key is (order, every source's name/mtime/size), so a
+new, edited, removed or renamed file rebuilds on the next `!aiml gen/say/para/
+next`. `!aiml train` forces the rebuild and reports per source; `!aiml corpus`
+lists what is loaded. Up to 12 files are accepted (more is refused with the
+count), the minimum is 300 words in total, and `data/README.md` recommends
+keeping the folder near 1 MB because the model grows with it.
 
 **Enforcement of the no-Telegram rule:**
 
 * `Com/aiml.py` contains no `iter_messages`, no `get_messages`, no client
-  reference in the training path — the only input is `open(CORPUS_FILE)`.
+  reference in the training path — the only input is `open()` over the `.txt`
+  files in `data/corpus/`.
 * The command takes a seed phrase, never a chat or a user as a corpus selector.
 * The two committed models trained from real chats
   (`ML/models/markov_-1003421813254.json`, `…860.json`, 2.6 MB and 1.0 MB) are
   deleted from the working tree. `ML/models/` is now ignored, and the directory
   is not read by any code.
 * `data/README.md` states the rule where the next person will look.
-* The help text and `!aiml status` say "the local file only; Telegram messages
-  are never read".
+* The help text, `!aiml status`, `!aiml corpus` and `!aiml train` all say the
+  text comes from local files only; Telegram messages are never read.
 
-**Quality controls:** the corpus is split into sentence units, trained as a
-bigram chain (order 2). Generation takes the longest of up to three walks (a
-bigram can dead-end after two words), stops at the first sentence end after six
-words, trims leading quotes, capitalises, and appends a full stop if missing.
+**Engine:** `ML/smart_markov.py` keeps counts for every order from 1 to
+`order` (default 3, range 1–4) and blends them at sampling time: the longest
+matching state leads, shorter states refine the tail, and counts are weights
+rather than a uniform pick. States are keyed in lowercase so `the time` finds
+`the Time`; the words that come back keep the corpus's capitalisation. A
+`temp` setting reshapes the weights (0.2–2.0; below 1 is safer, above 1 is
+stranger). Prompt continuation matches the seed's longest known *suffix* and
+retries shorter suffixes when a walk dead-ends instead of returning the prompt
+alone. `!aiml next` merges punctuation variants and shows blended odds.
+
+**Quality controls:** the corpus is split into sentence units; a walk stops at
+the first sentence end once it has enough words, avoids repeating the previous
+word, trims leading quotes, capitalises, appends a full stop when missing, and
+caps a generated sentence at 1,000 characters (a paragraph is never cut). Settings (`order`, `temp`, `length`,
+`sentences`) live in `mode/aiml.json`, are validated against ranges on write and
+clamped on read; the model cache is keyed on (every source's name, mtime and
+size, plus order) so a setting or file change rebuilds on the next command.
+The cache check only `stat`s the sources: cached commands do not reread the
+prose.
 
 ## 4. API-backed design (`!ask`)
 
@@ -123,12 +143,23 @@ Gemini.
 | `!pirate` etc. | no text / empty reply | `❌ Nothing to transform.` + usage |
 | `!pirate` etc. | > 800 chars | transforms the first 800 + `Trimmed to the first 800 characters.` |
 | `!pirate` etc. | empty result | `❌ That came out empty. Try a longer line.` |
-| `!aiml` | bare command | help card |
-| `!aiml generate` | corpus missing | `❌ No usable corpus.` + `corpus not found at data/markov_corpus.txt` + where to add text |
-| `!aiml generate` | corpus too small | `corpus has N words; at least 300 are needed` |
-| `!aiml generate` | walk produces nothing | `❌ Nothing came out.` + try without a seed |
+| `!aiml` | bare command | help card + the settings in force |
+| `!aiml gen/say/para/next/corpus/status/train` | corpus missing | `❌ No usable corpus.` + `no .txt files in data/corpus/` + where to add text |
+| same | corpus too small | `N source(s) hold N words; at least 300 are needed` |
+| same | more than 12 sources | `N sources in data/corpus/; at most 12 are trained. Remove some or merge them into one file.` |
+| `!aiml gen` | walk produces nothing | `❌ Nothing came out.` + try without a prompt |
+| `!aiml gen 400` / `!aiml para 9` | argument out of range | `❌ Length out of range.` / `❌ Too many sentences.` + the range and an example |
+| `!aiml say` | no prompt | `❌ Give me a starting point.` + usage |
+| `!aiml say zzzz` / `!aiml gen zzzz` | prompt has no continuation | `❌ That prompt goes nowhere.` + `The corpus never continues …` + try a shorter phrase |
+| `!aiml next` | no phrase | `❌ Give me a phrase.` + usage |
+| `!aiml next zzzz` | phrase unknown | `❌ No continuation for that.` + the phrase + try the last word or two |
+| `!aiml set` | unknown/missing key or value | `❌ Unknown setting.` + `Keys · order, temp, length, sentences`, or `❌ Missing value.` |
+| `!aiml set order x` / `order 9` | not a number / out of range | `❌ Not a number.` / `❌ Out of range.` + the accepted range |
+| `!aiml set …` | `mode/aiml.json` unwritable | `❌ Could not save the setting.` + reason + `Nothing was changed.` |
+| `!aiml set …` | success | `✅ Setting saved` + the note for that key + `Now · order/temp/length` |
 | `!aiml train` | corpus unreadable/too small | `❌ Cannot train from the corpus.` + reason + path |
-| `!aiml train 500` | numeric argument | works, plus `The message count in the old command is ignored: training reads the corpus file, never chat history.` |
+| `!aiml train` | success | `✅ Model rebuilt` + words, sentences, states, transitions, build time |
+| `!aiml reset` | always | `✅ Model cache cleared.` + which file it rebuilds from; settings kept |
 | `!ask` | no question | usage card explaining only typed text is sent |
 | `!ask` | no keys | `❌ !ask has no provider configured.` + `GROQ_API_KEY` / `GEMINI_API_KEY`, free/no card |
 | `!ask` | within 8 s | `⏳ Ask is cooling down · try again in Ns.` |
@@ -158,15 +189,44 @@ Gemini.
 
 | File | Change | Why | Could break |
 |---|---|---|---|
-| `Com/aiml.py` | Rewritten: corpus-only training, no `iter_messages`, no per-chat model files, in-memory bigram cache keyed on mtime, longest-of-three generation | The old command trained on Telegram messages, which the legal constraint forbids | `!aiml train N` no longer means "last N messages"; it rebuilds from the corpus and says so. Old model JSONs are ignored, not loaded |
+| `Com/aiml.py` | Rewritten: corpus-only training, no `iter_messages`, no per-chat model files, in-memory cache keyed on (mtime, size, order), then upgraded to ten subcommands (`gen`, `say`, `para`, `next`, `corpus`, `status`, `config`, `set`, `train`, `reset`) with validated settings in `mode/aiml.json` | The old command trained on Telegram messages, which the legal constraint forbids; the upgrade turns one thin generator into a usable local text tool | `!aiml train N` no longer means "last N messages"; `!aiml generate <seed>` still works and now continues via suffix matching. Old model JSONs are ignored, not loaded |
+| `ML/smart_markov.py` | Rewritten: interpolated orders 1–3 (configurable 1–4), count-weighted temperature sampling, lowercase state keys, suffix continuation with fallback, `paragraph()`, `next_words()`, richer stats; `save`/`load` and the `ML/models` directory side effect removed | The old single-order uniform pick dead-ended constantly and ignored how often a continuation actually occurred; nothing can rebuild model files any more | Any hidden caller of `save`/`load` would break — none exists; `Com/aiml.py` was the only importer |
 | `Com/summarize.py` | `!summarize chat` is local-only; a replied message is local-only; only typed text may use Gemini. Gemini key moved from the query string to `x-goog-api-key` | Chat content must not be ingested by a remote model; keys in URLs leak into logs | `!summarize chat` is extractive now, never abstractive. The help text says so |
 | `ML/models/*.json` | Deleted (2 tracked files, 3.6 MB total) | They were Markov models trained on real chat messages | Anyone who relied on the old `!aiml` per-chat models loses them; they are regenerable from the corpus, and were the legal problem |
-| `.gitignore` | `mode/ask.json`, `ML/models/` | Runtime quota state; and to keep chat-derived models out of git | none |
-| `data/markov_corpus.txt`, `data/README.md` | **new** — public-domain corpus + provenance/replacement rules | Makes `!aiml` work out of the box without touching Telegram data | none |
+| `.gitignore` | `mode/ask.json`, `mode/aiml.json`, `ML/models/` | Runtime quota and sampler state; and to keep chat-derived models out of git | none |
+| `data/corpus/the-time-machine.txt`, `data/README.md` | **new** — public-domain corpus folder + provenance/multi-file rules | Makes `!aiml` work out of the box without touching Telegram data, and lets the owner grow the training set one file at a time | the single `data/markov_corpus.txt` from the first pass moved into the folder, so there is exactly one input path |
 
 No shared helper was added: `Com/core/api.py` already has `post_json`, timeouts,
 429 detection and `first_success`; `Com/core/reply.say` and `brand` already give
 the house style.
+
+### Simplifications after review
+
+A second read of the `!aiml` change removed paths that only existed because of
+how it was built, without changing what any command does:
+
+* `!aiml` and `!aiml help`/`?` were two handlers with identical bodies, and
+  `gen <prompt>` duplicated `say <prompt>` line for line. Now one help handler
+  and one continuation handler serve both; `gen 50` still sets the length and
+  `say 50` still continues from "50", which a test pins down.
+* The legacy `data/markov_corpus.txt` fallback is gone. The file is renamed into
+  `data/corpus/` by this same change, so no checkout can reach the old path;
+  the readiness error and `data/README.md` lost the parenthetical with it.
+* The cache check now only `stat`s the sources. Previously every `gen`, `say`,
+  `para`, `next` and `status` reread 180 KB and re-split every sentence just to
+  decide the model was already warm; the text is read only on a real rebuild.
+* `_totals()` stopped counting sentences nobody read, documents stopped carrying
+  their path, and `get_stats()` stopped returning `order`/`start_states`; the
+  engine's `transitions` property went with the one caller that used it.
+* `!aiml para` ran the paragraph through the 1,000-character sentence cap, so an
+  extreme `para 6` at `length 120` was cut mid-sentence. A paragraph is now
+  whitespace-normalised and never truncated; single sentences are still capped.
+* `_blend()` lowercased the whole sentence on every step of a walk; it now takes
+  the last `order` words only. The arbitrary "stop blending after three orders"
+  break went too, so `order 4` uses all four. Order-3 output is unchanged: the
+  rebuilt model still reports 48,724 states / 85,602 transitions (5,532 / 18,573
+  / 24,619 by order) and `!aiml next the time` still gives Traveller 47.8% /
+  Machine 30.4%.
 
 ## 7. Validation
 
@@ -174,19 +234,34 @@ the house style.
 account, no message left the process):
 
 * `tools/smoke.py` — **passes**: 117 files compile, branding checks pass,
-  82 modules load, 181 handlers register (was 113 / 78 / 168).
+  88 modules load, 199 handlers register (was 113 / 78 / 168 before this work,
+  and 194 between the first pass and the `!aiml` upgrade; the two duplicate
+  help handlers and the duplicated continuation path were merged).
 * Handler runs for all new commands with realistic arguments:
   * oracle: fortune, tarot with a question, predict with/without a question,
     mood positive, mood negative, mood empty;
   * social: roast with a target, roast without, compliment, wyr;
   * style: all four with text, plus the empty-usage path;
-  * aiml: help, train, train with a numeric argument, generate with and without
-    a seed, status, reset;
+  * aiml train pipeline: one source loads; adding a second file rebuilds the
+    model on its own (33,000 words, 2 sources) and removing it rebuilds back to
+    one; 13 sources are refused with the count; a 4-word source is refused with
+    its word count; `!aiml corpus`, `!aiml train` and `!aiml status` cards were
+    rendered and read;
+  * aiml: help, gen (default/explicit length/out of range/with prompt/unknown
+    prompt), generate alias, say (missing prompt, continuation, dead end), para
+    (default/count/out of range), next (missing phrase, known, unknown), corpus,
+    status, train, config, set (unknown key, missing value, non-number, out of
+    range, valid order, valid temp), reset, and status again after the order
+    change — 29 command runs, each delivering a signed HTML card;
   * ask: no-key refusal, empty-question card, successful answer through the
     handler, cooldown, daily cap, all-providers-fail.
-* Corpus model built from the shipped file: 32,276 trained words, 18,979
-  states, 28,534 transitions, **0.039 s** to build; sample outputs inspected
-  (e.g. *"The time I began to carry on a wonderful deepness of blue…"*).
+* Corpus model built from the shipped file at the default order 3: 32,276
+  trained words, 1,871 sentences, 48,724 states, 85,602 transitions,
+  **0.16–0.21 s** to build; sample outputs inspected at temp 0.3/1.0/1.8 and at orders 1 and 4
+  (e.g. *"The forest seemed full of my only experience of mountaineering…"*).
+* Settings: written, read back, and confirmed that an out-of-range order, a
+  non-numeric temp and an out-of-range length fall back to their defaults on
+  read; `mode/aiml.json` is git-ignored and was removed after the test.
 * Corpus failure paths: missing file and a 10-word file both produce the exact
   messages in §5.
 * Quota: first reserve succeeds; immediate second raises cooldown 8 s; a state
@@ -194,8 +269,8 @@ account, no message left the process):
   the store error.
 * Provider chain with monkeypatched HTTP: Groq 429 → Gemini answer; all-500 →
   `APIError` containing both failures; no keys → empty provider list.
-* Memory: RSS delta for the corpus model **8.4 MB** (measured with
-  `ru_maxrss`), on top of the interpreter.
+* Memory: RSS delta for the order-3 corpus model **16 MB** (measured with
+  `ru_maxrss`), on top of the interpreter; order 2 is roughly 8 MB.
 * Endpoint reachability without credentials: Groq 401, Gemini 403.
 
 **Not tested, and not claimed:**
@@ -216,9 +291,12 @@ account, no message left the process):
 
 ## 8. Memory and CPU statement
 
-* Corpus file: 179 KB on disk.
-* Model: 18,979 unique states / 28,534 transitions; measured **+8.4 MB RSS**
-  when built, once per process, and only if `!aiml` is used.
+* Shipped corpus: 179 KB on disk, one source; the folder accepts up to 12
+  sources, and the model grows with the text they hold.
+* Model at the default order 3: 48,724 states / 85,602 transitions; measured
+  **+16 MB RSS** when built, ~0.2 s, once per process, and only if `!aiml` is
+  used. Order 2 is about half that; order 4 is larger and only built if asked
+  for with `!aiml set order 4`.
 * `!ask`: one HTTP request, max 300 output tokens, 30 s timeout, no model in
   process.
 * Everything else: lookup tables of a few kilobytes.
@@ -233,15 +311,17 @@ account, no message left the process):
 
 * Local commands use `random`, `re`, `logging` and the standard library.
 * `!ask` uses the existing `aiohttp` through `Com/core/api.py`.
-* `!aiml` reuses the existing `ML/smart_markov.py` (itself only `json`, `re`,
-  `random`, `collections`, `ast`).
+* `!aiml` reuses `ML/smart_markov.py`, now standard library only (`random`,
+  `collections`) — its old `json`, `ast` and `os` imports went away with the
+  model-file save/load path.
 * No pronunciation dictionary was added, which is exactly why `!haiku` was left
   out rather than faked.
 
 ## 10. Final verdict
 
-**Try first:** `!fortune`, `!tarot will this deploy survive`, `!roast ali`, and
-`!aiml generate the time`. Those need no setup and show the tone. Then add
+**Try first:** `!fortune`, `!tarot will this deploy survive`, `!roast ali`,
+`!aiml say the time traveller`, `!aiml next the time` and `!aiml para`. Those
+need no setup and show the tone. Then add
 `GROQ_API_KEY` (console.groq.com/keys) and try `!ask why is the sky blue?`; add
 `GEMINI_API_KEY` as the fallback.
 
@@ -257,7 +337,9 @@ account, no message left the process):
   should make knowingly.
 * **Markov quality is corpus quality.** The shipped novel gives Victorian
   sentences that are funny and sometimes nonsensical; a different corpus changes
-  the voice entirely. Bigram chains dead-end, hence the three-walk retry.
+  the voice entirely. Interpolation keeps walks alive far longer than the old
+  bigram, but a 32k-word corpus still produces the occasional dead end, hence
+  the suffix retry and the explicit "goes nowhere" message.
 * **`!aiml` semantics changed.** The old "train on the last N messages" no
   longer exists by design. If the owner wanted that, the answer is that it is
   the one feature the ToS rule forbids.
