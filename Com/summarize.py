@@ -26,10 +26,10 @@ GEMINI_MODELS = [
 log = logging.getLogger("selftg.summarize")
 
 __HELP__ = (
-    "!summarize <text> (or reply) → Summarize the given text.\n"
-    "!summarize chat [N] → Summarize the last N messages in this chat (default 50).\n"
-    "Uses Gemini free tier when GEMINI_API_KEY is set, otherwise local summarization "
-    "(works for Persian & English)."
+    "!summarize <text> → Summarize text you type (Gemini when configured).\n"
+    "!summarize chat [N] → Summarize the last N messages, locally (default 50).\n"
+    "Chat text and replied messages are summarized locally and never sent to a "
+    "model; only text you type leaves the machine. Works for Persian & English."
 )
 __CATEGORY__ = "Utilities"
 
@@ -136,7 +136,7 @@ def summarize_locally(text, max_sentences=5, max_chars=2000):
 
 GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
-    "{model}:generateContent?key={key}"
+    "{model}:generateContent"
 )
 MAX_PROMPT_CHARS = 12000  # keeps us inside the free per-minute token budget
 
@@ -175,9 +175,10 @@ async def summarize_with_gemini(text):
     for model in models:
         try:
             data = await api.post_json(
-                GEMINI_URL.format(model=model, key=GEMINI_API_KEY),
+                GEMINI_URL.format(model=model),
                 payload,
                 provider=f"gemini({model})",
+                headers={"x-goog-api-key": GEMINI_API_KEY},
                 timeout=25,
                 retries=0,
             )
@@ -259,17 +260,11 @@ def setup(client, my_id):
                 await say(event, "⏳ <b>Summarizing</b>…", name="summarize",
                           parse_mode="html")
 
-                # Try Gemini first
-                summary = await summarize_with_gemini(combined)
-                if summary:
-                    output = (f"📝 <b>Chat Summary</b> "
-                              f"<i>(last {len(messages)} messages)</i>\n\n"
-                              f"<blockquote>{brand.esc(summary)}</blockquote>")
-                else:
-                    summary = summarize_locally(combined, max_sentences=7, max_chars=2000)
-                    output = (f"📝 <b>Chat Summary</b> "
-                              f"<i>(local, last {len(messages)} messages)</i>\n\n"
-                              f"<blockquote>{brand.esc(summary)}</blockquote>")
+                # Chat text stays local: Telegram data is never sent to a model
+                summary = summarize_locally(combined, max_sentences=7, max_chars=2000)
+                output = (f"📝 <b>Chat Summary</b> "
+                          f"<i>(local, last {len(messages)} messages)</i>\n\n"
+                          f"<blockquote>{brand.esc(summary)}</blockquote>")
 
                 if len(output) > 4000:
                     import io
@@ -288,9 +283,11 @@ def setup(client, my_id):
 
             # Text summarization
             text = arg_str
+            from_reply = False
             if not text and event.is_reply:
                 reply = await event.get_reply_message()
                 text = reply.text or reply.raw_text
+                from_reply = True
             if not text:
                 await say(event,
                           "❌ No text provided. Use "
@@ -302,8 +299,8 @@ def setup(client, my_id):
             await say(event, "⏳ <b>Summarizing</b>…", name="summarize",
                       parse_mode="html")
 
-            # Try Gemini
-            summary = await summarize_with_gemini(text)
+            # A typed message may go to Gemini; a Telegram reply stays local
+            summary = None if from_reply else await summarize_with_gemini(text)
             if summary:
                 output = (f"📝 <b>Summary</b>\n\n"
                           f"<blockquote>{brand.esc(summary)}</blockquote>")

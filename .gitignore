@@ -22,6 +22,7 @@ mode/settings.json
 # !trivia session token and !guess rounds: runtime state, not source.
 mode/trivia_token.json
 mode/games.json
+mode/ask.json
 # !cauto's on/off switch: one Repl's runtime choice, not source.
 mode/cauto.json
 
@@ -47,3 +48,7 @@ mode/chatstats.json
 
 # A stale concatenated dump of the source tree, kept for years and wrong.
 project_files.txt
+
+# --- !aiml models: rebuilt from data/markov_corpus.txt at runtime ---
+# The old per-chat files were trained on Telegram messages and must not be used.
+ML/models/
